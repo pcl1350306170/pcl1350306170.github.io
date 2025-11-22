@@ -226,6 +226,11 @@
             margin-top: 15px;
             cursor: pointer;
         }
+
+        button, select {
+            -webkit-tap-highlight-color: transparent; /* 去掉点击灰色蒙层 */
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -328,6 +333,47 @@
             winNumberSpan.textContent = targetNumber;
         });
     }
+
+    // ===== 仅在 grid 区域处理滑动手势，不干扰按钮和下拉框 =====
+    const gridElement = document.getElementById('grid');
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    gridElement.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            // 注意：这里不 preventDefault，让点击穿透（但 grid 不是可点击元素，所以安全）
+        }
+    });
+
+    gridElement.addEventListener('touchend', (e) => {
+        if (e.changedTouches.length === 0) return;
+
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+
+        const dx = touchEndX - touchStartX;
+        const dy = touchEndY - touchStartY;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+
+        const MIN_SWIPE_DISTANCE = 20;
+
+        if (absDx >= MIN_SWIPE_DISTANCE || absDy >= MIN_SWIPE_DISTANCE) {
+            // 确认是滑动手势 → 阻止默认滚动等行为
+            e.preventDefault();
+
+            if (absDx > absDy) {
+                if (dx > 0) handleMove(3); // left
+                else handleMove(1);        // right
+            } else {
+                if (dy > 0) handleMove(2); // down
+                else handleMove(0);        // up
+            }
+        }
+        // 如果不是有效滑动，不做 preventDefault，允许系统处理（比如误触无影响）
+    });
 
     // 初始化游戏
     function initGame() {
@@ -481,7 +527,7 @@
     }
 
     // ===== 触屏滑动支持 =====
-    document.addEventListener('touchstart', (e) => {
+   /* document.addEventListener('touchstart', (e) => {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         e.preventDefault();
@@ -505,7 +551,7 @@
         }
         e.preventDefault();
     }, { passive: false });
-
+*/
     // 键盘支持
     document.addEventListener('keydown', (e) => {
         if (e.key.startsWith('Arrow')) {
