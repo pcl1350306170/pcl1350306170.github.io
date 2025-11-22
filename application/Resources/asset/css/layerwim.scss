@@ -1,0 +1,15 @@
+@charset "utf-8";
+/*layer弹窗样式*/
+.layui-layer{
+  border:1px solid #009be0 !important;
+  border-radius: 5px !important;
+  .layui-layer-title{
+    background-color: #dcedfe !important;
+    color:#0097de;
+    span{
+      i{
+        margin-right: 5px;
+      }
+    }
+  }
+}

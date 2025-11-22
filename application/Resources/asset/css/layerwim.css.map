@@ -1,0 +1,7 @@
+{
+"version": 3,
+"mappings": ";AACA,aAAa;AACb,YAAY;EACV,MAAM,EAAC,4BAA4B;EACnC,aAAa,EAAE,cAAc;EAC7B,+BAAkB;IAChB,gBAAgB,EAAE,kBAAkB;IACpC,KAAK,EAAC,OAAO;IAEX,sCAAC;MACC,YAAY,EAAE,GAAG",
+"sources": ["layerwim.scss"],
+"names": [],
+"file": "layerwim.css"
+}

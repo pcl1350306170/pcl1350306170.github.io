@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弹窗式自定义间隔累加计算器</title>
+    <!-- 引入Element Plus CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- 引入Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入Element Plus JS -->
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade { animation: fadeIn 0.3s ease forwards; font-size: 2.2rem !important; }
+
+        /* 整体字体放大1.8倍 */
+        body {
+            font-size: 1.8rem !important;
+            background: #f3f4f6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 2.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .input-item {
+            flex: 1;
+            min-width: 200px;
+        }
+        .el-input__inner{
+            font-size: 3rem !important;
+            height: 10vh;
+        }
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        /* 弹窗样式 */
+        .popup-overlay {
+            background: rgba(0, 0, 0, 0.85);
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .popup-process-container {
+            height: 60vh;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .popup-process {
+            text-align: center;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .popup-num-item {
+            display: inline-block;
+            margin: 12px 8px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            background: #409eff;
+            color: white;
+            font-size: 3rem;
+        }
+
+        .popup-plus-sign {
+            margin: 12px 4px;
+            color: #d1d5db;
+        }
+
+        .popup-result {
+            font-weight: 600;
+            color: white;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- 主页面内容 -->
+    <el-card class="main-container">
+        <div slot="header" class="text-center">
+            <h2>自定义间隔累加计算器</h2>
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="input-group">
+            <div class="input-item">
+                <el-input
+                        v-model.number="startNum"
+                        placeholder="起始数字（默认1）"
+                        type="number"
+                        min="0"
+                ></el-input>
+            </div>
+            <div class="input-item">
+                <el-input
+                        v-model.number="endNum"
+                        placeholder="终止数字（默认100）"
+                        type="number"
+                        min="0"
+                ></el-input>
+            </div>
+            <div class="input-item">
+                <el-input
+                        v-model.number="delayTime"
+                        placeholder="累加间隔（毫秒，默认300）"
+                        type="number"
+                        min="10"
+                ></el-input>
+            </div>
+        </div>
+
+        <!-- 按钮区域 -->
+        <div class="btn-group">
+            <el-button
+                    type="primary"
+                    @click="startCalculation"
+                    :disabled="isCalculating"
+            >
+                开始累加
+            </el-button>
+            <el-button
+                    type="default"
+                    @click="resetForm"
+            >
+                重置
+            </el-button>
+        </div>
+    </el-card>
+
+    <!-- 全屏弹窗 -->
+    <el-dialog
+            title="累加过程展示"
+            v-model="popupVisible"
+            :fullscreen="true"
+            class="popup-overlay"
+            @close="closePopup"
+    >
+        <div class="popup-process-container">
+            <div class="popup-process" ref="popupProcess"></div>
+        </div>
+        <div class="popup-result" slot="footer" class="text-center" v-html="resultText">
+            {{ resultText }}
+        </div>
+    </el-dialog>
+</div>
+
+<script>
+    const { createApp } = Vue;
+    const app = createApp({
+        data() {
+            return {
+                startNum: 1,
+                endNum: 100,
+                delayTime: 300,
+                isCalculating: false,
+                popupVisible: false,
+                resultText: '计算中...'
+            };
+        },
+        methods: {
+            async startCalculation() {
+                if (this.isCalculating) return;
+
+                // 获取输入值（默认值处理）
+                const start = this.startNum || 1;
+                const end = this.endNum || 100;
+                const delay = this.delayTime || 300;
+
+                // 输入校验
+                if (start > end || delay < 10) {
+                    this.$message.error('请确保：起始数字≤终止数字，间隔时间≥10毫秒');
+                    return;
+                }
+
+                // 初始化状态并打开弹窗
+                this.isCalculating = true;
+                this.popupVisible = true;
+                this.resultText = '计算中...';
+
+                // 等待弹窗渲染完成
+                await this.$nextTick();
+
+                // 清空之前的计算过程
+                this.$refs.popupProcess.innerHTML = '';
+
+                let sum = 0;
+                const popupProcess = this.$refs.popupProcess;
+                const popupProcessContainer = popupProcess.parentElement;
+
+                // 循环累加并展示
+                for (let i = start; i <= end; i++) {
+                    if (!this.isCalculating) break; // 若关闭弹窗，停止循环
+
+                    sum += 1; // 每次累加1
+
+                    // 创建数字元素
+                    const numItem = document.createElement('span');
+                    numItem.className = 'popup-num-item animate-fade';
+                    numItem.textContent = '1';
+                    popupProcess.appendChild(numItem);
+
+                    // 拼接加号（最后一个后不加）
+                    if (i < end) {
+                        const plus = document.createElement('span');
+                        plus.className = 'popup-plus-sign animate-fade';
+                        plus.textContent = '+';
+                        popupProcess.appendChild(plus);
+                    }
+
+                    // 自动滚动到最新内容
+                    setTimeout(() => {
+                        popupProcessContainer.scrollTop = popupProcessContainer.scrollHeight;
+                    }, 50);
+
+                    // 按自定义间隔延时
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+
+                // 展示最终结果（未中途关闭弹窗）
+                if (this.isCalculating) {
+                    this.resultText = `最终累加和：<span style="color: #409eff;font-size: 4rem;">${sum}</span>`;
+                }
+
+                this.isCalculating = false;
+            },
+            resetForm() {
+                this.startNum = 1;
+                this.endNum = 100;
+                this.delayTime = 300;
+                this.closePopup();
+            },
+            closePopup() {
+                this.popupVisible = false;
+                // 若计算中，停止计算
+                if (this.isCalculating) {
+                    this.isCalculating = false;
+                }
+            }
+        }
+    });
+
+    // 全局注册Element Plus组件
+    app.use(ElementPlus);
+    app.mount('#app');
+</script>
+</body>
+</html>

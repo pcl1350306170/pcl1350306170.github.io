@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>快速创建测试数据</title>
+    <!-- 引入Vue -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- 引入Element UI -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- 引入axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- 引入变量文件 -->
+    <script src="../../js/_variable.js" type="text/javascript"></script>
+
+    <style>
+        body {
+            padding: 20px;
+        }
+        .form-container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        .el-form-item {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="form-container">
+    <el-form :model="formData" :rules="rules" ref="formData" label-width="220px">
+        <el-form-item label="外部接口地址" prop="url">
+            <el-input v-model="formData.url" placeholder="请输入外部接口地址"></el-input>
+        </el-form-item>
+
+        <el-form-item label="Token" prop="token">
+            <el-input v-model="formData.token" placeholder="可选"></el-input>
+        </el-form-item>
+
+        <el-form-item label="Cookie" prop="cookie">
+            <el-input v-model="formData.cookie" placeholder="可选"></el-input>
+        </el-form-item>
+
+        <el-form-item label="请求方式" prop="method">
+            <el-select v-model="formData.method" placeholder="请选择请求方式">
+                <el-option value="POST" label="POST"></el-option>
+                <el-option value="GET" label="GET"></el-option>
+                <el-option value="PUT" label="PUT"></el-option>
+                <el-option value="DELETE" label="DELETE"></el-option>
+            </el-select>
+        </el-form-item>
+
+        <el-form-item label="请求次数" prop="times">
+            <el-input
+                    v-model="formData.times"
+                    type="number"
+                    min="1"
+                    placeholder="请输入请求次数"
+            ></el-input>
+        </el-form-item>
+
+        <el-form-item label="参数体" prop="body">
+            <el-input
+                    v-model="formData.body"
+                    type="textarea"
+                    placeholder="请输入 JSON 字符串，支持 *i* 作为随机标识"
+                    :rows="8"
+            ></el-input>
+        </el-form-item>
+
+        <el-form-item>
+            <el-button type="primary" @click="submitForm">确认</el-button>
+        </el-form-item>
+    </el-form>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                formData: {
+                    url: '',
+                    token: '',
+                    cookie: '',
+                    method: 'POST',
+                    times: 1,
+                    body: ''
+                },
+                rules: {
+                    url: [
+                        { required: true, message: '请输入外部接口地址', trigger: 'blur' }
+                    ],
+                    times: [
+                        { required: true, message: '请输入请求次数', trigger: 'blur' },
+                        { type: 'number', min: 1, message: '请求次数不能小于1', trigger: 'blur' }
+                    ],
+                    body: [
+                        { required: true, message: '请输入参数体', trigger: 'blur' }
+                    ]
+                }
+            };
+        },
+        methods: {
+            // 生成8位大写字母和数字的组合
+            generateRandomCode() {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let result = '';
+                for (let i = 0; i < 8; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            },
+
+            // 提交表单
+            submitForm() {
+                this.$refs.formData.validate(async (valid) => {
+                    if (valid) {
+                        // 处理参数体中的随机标识
+                        let body = this.formData.body;
+                        // 如需替换*i*为随机码可取消下面这行注释
+                        // body = body.replace(/\*i\*/g, this.generateRandomCode());
+
+                        // 构建请求数据
+                        const requestData = {
+                            url: this.formData.url,
+                            token: this.formData.token || '',
+                            cookie: this.formData.cookie || '',
+                            method: this.formData.method || 'POST',
+                            body: body,
+                            times: parseInt(this.formData.times)
+                        };
+
+                        try {
+                            // 使用axios发送请求
+                            const response = await axios({
+                                url: ajaxFileDealJavaIP + '/yh-mock/create-data',
+                                method: 'post',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                data: requestData
+                            });
+
+                            const res = response.data;
+                            this.$message.success(res.message || "请求成功");
+                        } catch (error) {
+                            // 错误处理
+                            if (error.response) {
+                                this.$message.error(`请求失败: ${error.response.data?.message || '服务器错误'}`);
+                            } else if (error.request) {
+                                this.$message.error('请求无响应，请检查网络');
+                            } else {
+                                this.$message.error('请求失败: ' + error.message);
+                            }
+                        }
+                    } else {
+                        this.$message.error('表单验证失败，请检查输入');
+                        return false;
+                    }
+                });
+            }
+        }
+    });
+</script>
+</body>
+</html>

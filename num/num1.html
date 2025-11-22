@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>触摸数字操作</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #number {
+            font-size: 35rem;
+            width: 100vw;
+            height: 100vh;
+            line-height: 100vh;
+            text-align: center;
+            z-index: 10;
+            position: relative;
+        }
+
+        input {
+            font-size: 1.5rem;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            outline: none;
+            position: fixed;
+            left: 10px;
+            top: 10px;
+            z-index: 90;
+        }
+
+        #confirmBtn {
+            position: fixed;
+            left: 220px;
+            top: 10px;
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: white;
+            color: black;
+            z-index: 90;
+        }
+
+        .input-2 {
+            left: 30%;
+        }
+
+        #countdown {
+            font-size: 6rem;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        #timeUpMessage {
+            width: 100vw;
+            height: 100vh;
+            font-size: 15rem;
+            color: #1a1818;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: none;
+            z-index: 999;
+            text-align: center;
+            background: #fff;
+            white-space: normal;
+            word-break:break-all;
+
+            line-height: 2.2;
+        }
+
+        /* 左右点击区域 */
+        .touch-zone {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            width: 50vw;
+            z-index: 50;
+        }
+
+        .left-zone {
+            left: 0;
+        }
+
+        .right-zone {
+            right: 0;
+        }
+    </style>
+</head>
+<body>
+<div id="number">0</div>
+<input id="inputField" type="number" placeholder="输入数字" />
+<button id="confirmBtn">确定</button>
+<input class="input-2" id="countdownInput" type="number" placeholder="倒计时(分钟)" />
+<div id="countdown"></div>
+<div id="timeUpMessage">时间到啦</div>
+
+<!-- 左右触摸区域 -->
+<div class="touch-zone left-zone" id="leftZone"></div>
+<div class="touch-zone right-zone" id="rightZone"></div>
+
+<script>
+    class TouchNumberControl {
+        constructor() {
+            this.currentNumber = 0;
+            this.lastSpeechTrigger = 0;
+            this.isTimerRunning = false;
+            this.countdownTimer = null;
+
+            this.numberElement = document.getElementById('number');
+            this.inputField = document.getElementById('inputField');
+            this.countdownInput = document.getElementById('countdownInput');
+            this.confirmBtn = document.getElementById('confirmBtn');
+            this.countdownElement = document.getElementById('countdown');
+            this.timeUpMessage = document.getElementById('timeUpMessage');
+            this.leftZone = document.getElementById('leftZone');
+            this.rightZone = document.getElementById('rightZone');
+
+            this.init();
+        }
+
+        init() {
+            this.adjustFontSize(this.currentNumber);
+            this.addTouchEvents();
+        }
+
+        adjustFontSize(num) {
+            const len = num.toString().length;
+            if (len > 10) this.numberElement.style.fontSize = '10rem';
+            else if (len > 9) this.numberElement.style.fontSize = '12rem';
+            else if (len > 8) this.numberElement.style.fontSize = '13rem';
+            else if (len > 7) this.numberElement.style.fontSize = '14rem';
+            else if (len >= 5) this.numberElement.style.fontSize = '22rem';
+            else this.numberElement.style.fontSize = '39rem';
+        }
+
+        updateNumber(newNumber) {
+            if (newNumber >= 0 && Math.floor(newNumber / 10000) > Math.floor(this.lastSpeechTrigger / 10000)) {
+                this.speak("小糖糖，这个数字好大啊");
+                this.lastSpeechTrigger = newNumber;
+            }
+            this.currentNumber = newNumber;
+            this.numberElement.textContent = this.currentNumber;
+            this.adjustFontSize(this.currentNumber);
+        }
+
+        getIncrement() {
+            const len = this.currentNumber.toString().length;
+            if (len > 8) return 10000;
+            else if (len > 5) return 100;
+            else return 1;
+        }
+
+        speak(message) {
+            const synth = window.speechSynthesis;
+            const utterance = new SpeechSynthesisUtterance(message);
+            synth.speak(utterance);
+        }
+
+        startCountdown(minutes) {
+            this.countdownTime = minutes * 60;
+            this.isTimerRunning = true;
+            this.countdownElement.textContent = this.formatTime(this.countdownTime);
+            this.countdownElement.style.display = 'block';
+
+            this.countdownTimer = setInterval(() => {
+                this.countdownTime--;
+                this.countdownElement.textContent = this.formatTime(this.countdownTime);
+                if (this.countdownTime <= 0) {
+                    clearInterval(this.countdownTimer);
+                    this.timeUpMessage.style.display = 'block';
+                    this.numberElement.textContent = '';
+                    this.inputField.disabled = true;
+                    this.countdownInput.disabled = true;
+                    this.confirmBtn.disabled = true;
+                }
+            }, 1000);
+        }
+
+        formatTime(seconds) {
+            const min = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const sec = String(seconds % 60).padStart(2, '0');
+            return `${min}:${sec}`;
+        }
+
+        addTouchEvents() {
+            // 禁用右键菜单（触摸长按可能触发）
+            document.addEventListener('contextmenu', e => e.preventDefault());
+
+            // 左边减
+            this.leftZone.addEventListener('touchstart', () => {
+                this.updateNumber(this.currentNumber - this.getIncrement());
+            });
+
+            // 右边加
+            this.rightZone.addEventListener('touchstart', () => {
+                this.updateNumber(this.currentNumber + this.getIncrement());
+            });
+
+            // 确定按钮设置数字
+            this.confirmBtn.addEventListener('click', () => {
+                const val = parseInt(this.inputField.value, 10);
+                if (!isNaN(val)) {
+                    this.updateNumber(val);
+                    this.inputField.value = '';
+                }
+            });
+
+            // 倒计时按钮（仅回车被取消）
+            this.countdownInput.addEventListener('change', () => {
+                const val = parseInt(this.countdownInput.value, 10);
+                if (!isNaN(val) && val > 0 && !this.isTimerRunning) {
+                    this.startCountdown(val);
+                    this.countdownInput.value = '';
+                }
+            });
+
+            // 支持滑动手势（如安卓自带浏览器支持）
+            document.addEventListener('wheel', (event) => {
+                const inc = this.getIncrement();
+                if (event.deltaY < 0) {
+                    this.updateNumber(this.currentNumber + inc);
+                } else {
+                    this.updateNumber(this.currentNumber - inc);
+                }
+            });
+        }
+    }
+
+    // 启动
+    new TouchNumberControl();
+</script>
+</body>
+</html>

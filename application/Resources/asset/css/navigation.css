@@ -1,0 +1,285 @@
+/*导航页样式*/
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    background-image: url("../../images/navigationbj.png");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+}
+
+.div-body {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+/*标题样式=====START*/
+.div-body .title {
+    width: 28%;
+    height: 8%;
+    position: absolute;
+    top: 4%;
+    left: 36%;
+}
+
+.div-body .title img{
+    width: 100%;
+}
+
+/*标题样式=====END*/
+/*天气====SATRT*/
+.div-body .weather{
+    position: absolute;
+    top: 5%;
+    left: 3%;
+    width: 15%;
+    height: 43px;
+}
+
+.div-body .weather span, .div-body .time span {
+    position: absolute;
+    display: inline-block;
+    height: 43px;
+}
+
+.div-body .weather .span-icon, .div-body .time .span-icon{
+    width: 43px;
+}
+
+.div-body .weather .span-icon img, .div-body .time .span-icon img{
+    width: 43px;
+}
+
+.div-body .weather .span-word, .div-body .time .span-word{
+    line-height: 43px;
+    left: 45px;
+    color:#1cc5f6;
+}
+/*天气====END*/
+/*时间====START*/
+.div-body .time{
+    position: absolute;
+    top: 5%;
+    right: 3%;
+    width: 18%;
+    height: 43px;
+}
+/*时间====END*/
+
+/*中间模块-===START*/
+.div-body .center{
+    width: 74%;
+    height: 80%;
+    position: absolute;
+    top:13%;
+    left: 11%;
+    z-index: 8;
+    cursor: pointer;
+}
+
+.center-lou{
+    position: absolute;
+    width: 56%;
+    height: 50%;
+    top: 40%;
+    left: 22%;
+    background-image: url("../../images/navigationbj-l.png");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    animation: dropcenterloudown 5s linear infinite;
+}
+
+@keyframes dropcenterloudown {
+    0% {
+        opacity: 0.2;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.2;
+    }
+}
+
+.div-body .center .models{
+    position: absolute;
+    background-image: url("../../images/navigationbj-k.png");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    min-width: 10%;
+    height: 10%;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.6em;
+    text-align: center;
+    line-height: 5vh;
+    padding: 15px;
+    white-space: nowrap;
+    transition: .8s all ease-in-out;
+}
+
+.div-body .center .models:hover{
+    line-height: 4.8vh;
+    padding: 20px;
+    height: 11%;
+    min-width: 11%;
+    font-size: 1.8em;
+    color:#ffffff;
+}
+
+/*网格管理*/
+.div-body .center .model-gridManagement{
+    top:18%;
+    left:23%;
+}
+/*大数据中心*/
+.div-body .center .model-BigDataCenter{
+    top: 8.3%;
+    left: 46.5%;
+}
+
+/* 指挥中心  */
+.div-body .center .model-commandCenter {
+    top: 39%;
+    left: 7.5%;
+}
+
+/* 综治维稳  */
+.div-body .center .model-ZongZhiStability {
+    top: 65%;
+    left: 13.6%;
+}
+
+/*  基础支撑 */
+.div-body .center .model-Foundationsupport {
+    top: 84%;
+    left: 35%;
+}
+
+/* 党建管理  */
+.div-body .center .model-Partyconstructionmanagement {
+    top: 84%;
+    left: 57%;
+}
+
+/*  公共服务 */
+.div-body .center .model-publicservice {
+    top: 65%;
+    left: 77%;
+}
+
+/* 协同办公  */
+.div-body .center .model-collaborativeoffice {
+    top: 39%;
+    left: 85%;
+}
+
+/*  考核评估 */
+.div-body .center .model-evaluate {
+    top: 18%;
+    left: 70%;
+}
+
+/*模块的闪烁点====START*/
+
+.round-shineing {
+    position: absolute;
+    left: 12px;
+    top:14px;
+}
+
+.round-shineing .circle {
+    background: #ffffff;
+    border-radius: 100%;
+    width: 4px;
+    height: 4px;
+    z-index: 999;
+    text-align: center;
+    position: absolute;
+    left: 2px;
+    top: 1.8px;
+}
+
+.round-shineing .circle_bottom {
+    background: #1cf0ff;
+    border-radius: 100%;
+    width: 8px;
+    height: 8px;
+    filter: alpha(opacity=40);
+    z-index: 100;
+    position: absolute;
+    box-shadow: #1cf0ff 0px 0px 2.5px;
+}
+
+.round-shineing .animation {;
+    -webkit-animation: twinkling 2.1s infinite ease-in-out;
+    animation: twinkling 2.1s infinite ease-in-out;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
+}
+
+@-webkit-keyframes twinkling {
+    0% {
+        opacity: 0.2;
+        filter: alpha(opacity=20);
+        -webkit-transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        filter: alpha(opacity=50);
+        -webkit-transform: scale(1.12);
+    }
+    100% {
+        opacity: 0.2;
+        filter: alpha(opacity=20);
+        -webkit-transform: scale(1);
+    }
+}
+
+@keyframes twinkling {
+    0% {
+        opacity: 0.2;
+        filter: alpha(opacity=20);
+        -webkit-transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        filter: alpha(opacity=50);
+        -webkit-transform: scale(1.12);
+    }
+    100% {
+        opacity: 0.2;
+        filter: alpha(opacity=20);
+        -webkit-transform: scale(1);
+    }
+}
+/*模块的闪烁点====END*/
+
+/*星空旋转样式===START*/
+.div-body .center-star{
+    width: 90vh;
+    height: 90vh;
+    position: absolute;
+    top: 12%;
+    left: 15%;
+    animation: circleSmall 10s linear infinite;
+    background-image: url("../../images/navigationbj-star.png");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+}
+
+@-webkit-keyframes circleSmall {
+
+    0% {
+        transform: rotateX(30deg) rotateZ(0deg);
+    }
+    100% {
+        transform: rotateX(30deg) rotateZ(360deg);
+    }
+}
+/*星空旋转样式===END*/
+/*中间模块-===END*/

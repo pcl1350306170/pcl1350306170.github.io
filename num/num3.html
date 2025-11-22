@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>儿童数字递增[可选色]</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation; /* 触摸优化 */
+        }
+
+        #number {
+            font-size: 40vh; /* 字体更大 */
+            width: 100vw;
+            height: 100vh;
+            line-height: 100vh;
+            text-align: center;
+            position: relative;
+        }
+
+        #controls {
+            position: fixed;
+            top: 2vh;
+            left: 2vw;
+            z-index: 100;
+        }
+
+        #inputNumber, #inputSpeed {
+            font-size: 5vh;
+            padding: 1vh 2vh;
+            border: none;
+            border-radius: 1vh;
+            outline: none;
+        }
+
+        #inputSpeed {
+            width: 15vw;
+            margin-left: 2vw;
+        }
+
+        .big-button {
+            position: fixed;
+            width: 10vh;
+            height: 10vh;
+            border-radius: 50%;
+            border: none;
+            font-size: 3vh;
+            color: white;
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.1s ease;
+        }
+
+        #setBtn {
+            top: 2vh;
+            right: 2vw;
+            background-color: #4caf50; /* 绿色 */
+        }
+
+        #resetBtn {
+            top: 14vh;
+            right: 2vw;
+            background-color: #f44336; /* 红色 */
+        }
+
+        #colorBtn {
+            top: 26vh;
+            right: 2vw;
+            background-color: #2196f3; /* 蓝色 */
+        }
+
+        .big-button:active {
+            transform: scale(1.2);
+        }
+
+        #colorPicker {
+            display: none;
+            position: fixed;
+            bottom: 2vh;
+            right: 2vw;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+<div id="number">0</div>
+
+<div id="controls">
+    <input id="inputNumber" type="number" placeholder="数字" />
+    <input id="inputSpeed" type="number" placeholder="间隔ms" />
+</div>
+
+<button id="setBtn" class="big-button">确定</button>
+<button id="resetBtn" class="big-button">重置</button>
+<button id="colorBtn" class="big-button">选色</button>
+<input type="color" id="colorPicker" />
+
+<script>
+    const numberEl = document.getElementById('number');
+    const inputNumber = document.getElementById('inputNumber');
+    const inputSpeed = document.getElementById('inputSpeed');
+    const setBtn = document.getElementById('setBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const colorBtn = document.getElementById('colorBtn');
+    const colorPicker = document.getElementById('colorPicker');
+
+    let currentNumber = 0;
+    let timer = null;
+    let interval = 1000; // 默认 1000ms
+    let fixedColor = null; // 是否固定颜色
+
+    function randomColor() {
+        const r = Math.floor(Math.random() * 256);
+        const g = Math.floor(Math.random() * 256);
+        const b = Math.floor(Math.random() * 256);
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    function updateNumberDisplay() {
+        numberEl.textContent = currentNumber;
+        if (fixedColor) {
+            numberEl.style.color = fixedColor;
+        } else {
+            numberEl.style.color = randomColor();
+        }
+    }
+
+    function startIncrement() {
+        if (timer) clearInterval(timer);
+        timer = setInterval(() => {
+            currentNumber++;
+            updateNumberDisplay();
+        }, interval);
+    }
+
+    function resetAll() {
+        if (timer) clearInterval(timer);
+        timer = null;
+        currentNumber = 0;
+        fixedColor = null;
+        updateNumberDisplay();
+        inputNumber.value = '';
+        inputSpeed.value = '';
+    }
+
+    setBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const val = parseInt(inputNumber.value, 10);
+        if (!isNaN(val)) {
+            currentNumber = val;
+            updateNumberDisplay();
+        }
+
+        const speedVal = parseInt(inputSpeed.value, 10);
+        if (!isNaN(speedVal) && speedVal > 0) {
+            interval = speedVal;
+        }
+
+        startIncrement();
+    });
+
+    resetBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        resetAll();
+    });
+
+    colorBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        colorPicker.click();
+    });
+
+    colorPicker.addEventListener('input', (e) => {
+        fixedColor = e.target.value;
+        updateNumberDisplay();
+    });
+
+    // 兼容PC调试
+    setBtn.addEventListener('click', () => setBtn.dispatchEvent(new Event('touchstart')));
+    resetBtn.addEventListener('click', () => resetBtn.dispatchEvent(new Event('touchstart')));
+    colorBtn.addEventListener('click', () => colorBtn.dispatchEvent(new Event('touchstart')));
+</script>
+</body>
+</html>

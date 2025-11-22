@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Iframe 页面选择器</title>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 1.62rem; /* 字体放大2倍 */
+            font-family: sans-serif;
+        }
+
+        #main-iframe {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #select-btn, #refresh-btn {
+            position: fixed;
+            bottom: 40px;
+            width: 160px;
+            height: 160px;
+            background-color: #00aaff;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 15px #00aaff;
+            font-size: 1.5rem;
+            color: white;
+            z-index: 1000;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #select-btn {
+            left: 30%;
+            transform: translateX(-50%);
+        }
+
+        #refresh-btn {
+            left: 70%;
+            transform: translateX(-50%);
+        }
+
+        #select-btn:active, #refresh-btn:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+
+        #select-btn.dragging, #refresh-btn.dragging {
+            opacity: 0.8;
+            box-shadow: 0 0 20px #00aaff;
+        }
+
+        #popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #222;
+            padding: 30px;
+            border-radius: 10px;
+            z-index: 2000;
+            display: none;
+            color: white;
+            width: 1000px;
+            text-align: center;
+            height: 50vh;
+            overflow-y: auto;
+
+        }
+
+        #popup h3 {
+            margin-top: 0;
+            font-size: 2.14rem;
+        }
+
+        .url-option {
+            margin: 20px 0;
+            padding: 20px;
+            background: #444;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.52rem;
+        }
+
+        .url-option:hover {
+            background: #666;
+        }
+
+        #popup-close {
+            margin-top: 20px;
+            padding: 12px 20px;
+            background-color: #555;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.62rem;
+        }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<iframe id="main-iframe" src="../application/editFileName/edit2.html"></iframe>
+
+<!-- 底部按钮 -->
+<button id="select-btn">选择</button>
+<button id="refresh-btn">刷新</button>
+
+<!-- 弹窗选择页面 -->
+<div id="popup">
+    <div class="url-option" data-url="./num1.html">1、数字左右点击</div>
+    <div class="url-option" data-url="./num2.html">2、数字自增，可调速</div>
+    <div class="url-option" data-url="./num3.html">3、数字自增，可变色</div>
+    <div class="url-option" data-url="./num4.html">4、数字+1+1+1..+n..+1</div>
+    <div class="url-option" data-url="./num5.html">5、数字+1+2+3+n</div>
+    <div class="url-option" data-url="../application/editFileName/edit2.html">本地小工具</div>
+    <div class="url-option" data-url="../application/editFileName/createData.html">快速创建数据[调用接口]</div>
+    <div class="url-option" data-url="../application/editFileName/createMock.html">快速创建Mock数据</div>
+    <div class="url-option" data-url="../application/editFileName/createHostData_v.html">创建服务器数据</div>
+    <div class="url-option" data-url="../application/editFileName/web-crawl-processor.html">图片爬取任务开启</div>
+    <div class="url-option" data-url="../application/editFileName/web_crawler.html">txt下载任务开启</div>
+    <div class="url-option" data-url="../application/editFileName/svnCreateDir.html">在svn上面创建目录</div>
+    <div class="url-option" data-url="../application/editFileName/menZhenSavezip.html">门诊项目生成zip</div>
+    <button id="popup-close">关闭</button>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 初始化按钮拖拽功能
+        initDraggableButtons();
+    });
+
+    // 初始化可拖拽按钮
+    function initDraggableButtons() {
+        const buttons = [
+            document.getElementById('select-btn'),
+           // document.getElementById('refresh-btn')
+        ];
+
+        buttons.forEach(button => {
+            if (button) {
+                makeDraggable(button);
+            }
+        });
+    }
+
+    // 使元素可拖拽
+    function makeDraggable(element) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+        // 当鼠标按下时开始拖拽
+        element.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            // 防止按钮点击事件触发
+            e.preventDefault();
+
+            // 获取鼠标初始位置
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+
+            // 当鼠标移动时持续拖动
+            document.onmousemove = elementDrag;
+
+            // 当鼠标释放时停止拖动
+            document.onmouseup = closeDragElement;
+
+            // 添加拖拽状态样式
+            element.classList.add('dragging');
+        }
+
+        function elementDrag(e) {
+            e.preventDefault();
+
+            // 计算新的元素位置
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+
+            // 设置元素新位置，确保不会超出视口
+            const newTop = element.offsetTop - pos2;
+            const newLeft = element.offsetLeft - pos1;
+
+            // 限制在视口内
+            if (newTop > 0 && newTop < window.innerHeight - element.offsetHeight) {
+                element.style.top = newTop + "px";
+            }
+            if (newLeft > 0 && newLeft < window.innerWidth - element.offsetWidth) {
+                element.style.left = newLeft + "px";
+            }
+
+            // 移除transform，因为我们直接设置top和left
+            element.style.transform = "none";
+        }
+
+        function closeDragElement() {
+            // 停止移动
+            document.onmouseup = null;
+            document.onmousemove = null;
+
+            // 移除拖拽状态样式
+            element.classList.remove('dragging');
+        }
+    }
+
+    // 按钮功能逻辑
+    const btnSelect = document.getElementById('select-btn');
+    const btnRefresh = document.getElementById('refresh-btn');
+    const popup = document.getElementById('popup');
+    const iframe = document.getElementById('main-iframe');
+    const closeBtn = document.getElementById('popup-close');
+    const options = document.querySelectorAll('.url-option');
+
+    btnSelect.addEventListener('click', () => {
+        popup.style.display = 'block';
+    });
+
+    closeBtn.addEventListener('click', () => {
+        popup.style.display = 'none';
+    });
+
+    options.forEach(option => {
+        option.addEventListener('click', () => {
+            const url = option.getAttribute('data-url');
+            iframe.src = url;
+            popup.style.display = 'none';
+        });
+    });
+
+    btnRefresh.addEventListener('click', () => {
+        location.reload();
+    });
+</script>
+</body>
+</html>

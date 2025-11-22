@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级数字累加计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-fade { animation: fadeIn 0.3s ease forwards; }
+        .animate-pulse-slow { animation: pulse 2s infinite; }
+        .animate-slide { animation: slideIn 0.5s ease forwards; }
+
+        .num-item {
+            display: inline-block;
+            margin: 12px 8px;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 2.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .current-num {
+            background: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        .processed-num {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+        .plus-sign {
+            font-size: 2.5rem;
+            margin: 12px 4px;
+            color: #64748b;
+            opacity: 0.8;
+        }
+        #process-container {
+            width: 100%;
+            max-height: 50vh;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+        .input-group:focus-within {
+            transform: translateY(-2px);
+        }
+        .input-group input:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 to-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+<div class="w-full max-w-5xl bg-white rounded-2xl shadow-lg p-6 md:p-8 transform transition-all duration-300 hover:shadow-xl">
+    <div class="text-center mb-8 animate-slide">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+            <i class="fa fa-calculator text-indigo-600 mr-3"></i>数字累加计算器
+        </h2>
+        <p class="text-gray-500">动态展示从起始数字到结束数字的累加过程</p>
+    </div>
+
+    <!-- 输入区域 -->
+    <div class="flex flex-col md:flex-row gap-4 mb-8 max-w-md mx-auto">
+        <div class="input-group flex-1">
+            <label for="num1" class="block text-sm font-medium text-gray-700 mb-1">起始数字</label>
+            <input
+                    type="number"
+                    id="num1"
+                    placeholder="例如：1"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg transition-all"
+                    min="0"
+            >
+        </div>
+        <div class="input-group flex-1">
+            <label for="num2" class="block text-sm font-medium text-gray-700 mb-1">结束数字</label>
+            <input
+                    type="number"
+                    id="num2"
+                    placeholder="例如：10"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg transition-all"
+                    min="0"
+            >
+        </div>
+    </div>
+
+    <!-- 控制区域 -->
+    <div class="text-center mb-8">
+        <button
+                id="calcBtn"
+                class="px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-gray-300 disabled:cursor-not-allowed text-lg font-medium shadow-md hover:shadow-lg flex items-center justify-center mx-auto"
+        >
+            <i class="fa fa-play mr-2"></i>开始计算
+        </button>
+        <button
+                id="resetBtn"
+                class="mt-3 px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-300 text-sm font-medium"
+        >
+            <i class="fa fa-refresh mr-1"></i>重置
+        </button>
+    </div>
+
+    <!-- 进度指示器 -->
+    <div id="progress" class="h-2 bg-gray-200 rounded-full mb-6 overflow-hidden hidden">
+        <div id="progress-bar" class="h-full bg-indigo-600 w-0 transition-all duration-300"></div>
+    </div>
+
+    <!-- 滚动容器 + 动态展示区域 -->
+    <div id="process-container">
+        <div id="process" class="text-center text-gray-700 flex flex-wrap justify-center items-center"></div>
+    </div>
+    <div id="result" class="text-center text-3xl font-bold text-gray-800 mt-6 mb-4 opacity-0 transition-opacity duration-500"></div>
+
+    <!-- 统计信息 -->
+    <div id="stats" class="text-center text-gray-500 text-sm mt-4 opacity-0 transition-opacity duration-500">
+        <p>计算了 <span id="count" class="font-semibold text-indigo-600">0</span> 个数字，耗时 <span id="time" class="font-semibold text-indigo-600">0</span> 秒</p>
+    </div>
+</div>
+
+<script>
+    const num1Input = document.getElementById('num1');
+    const num2Input = document.getElementById('num2');
+    const calcBtn = document.getElementById('calcBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const processDom = document.getElementById('process');
+    const resultDom = document.getElementById('result');
+    const processContainer = document.getElementById('process-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressDom = document.getElementById('progress');
+    const countDom = document.getElementById('count');
+    const timeDom = document.getElementById('time');
+    const statsDom = document.getElementById('stats');
+
+    // 重置功能
+    resetBtn.addEventListener('click', () => {
+        num1Input.value = '';
+        num2Input.value = '';
+        processDom.innerHTML = '';
+        resultDom.innerHTML = '';
+        resultDom.classList.add('opacity-0');
+        statsDom.classList.add('opacity-0');
+        progressDom.classList.add('hidden');
+        progressBar.style.width = '0';
+        calcBtn.disabled = false;
+        calcBtn.innerHTML = '<i class="fa fa-play mr-2"></i>开始计算';
+    });
+
+    calcBtn.addEventListener('click', async () => {
+        const num1 = parseInt(num1Input.value);
+        const num2 = parseInt(num2Input.value);
+
+        if (isNaN(num1) || isNaN(num2) || num1 > num2 || num1 < 0 || num2 < 0) {
+            alert('请输入有效的数字，且起始数字≤结束数字（非负整数）');
+            return;
+        }
+
+        // 重置状态
+        processDom.innerHTML = '';
+        resultDom.innerHTML = '';
+        resultDom.classList.add('opacity-0');
+        statsDom.classList.add('opacity-0');
+        calcBtn.disabled = true;
+        calcBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>计算中...';
+        progressDom.classList.remove('hidden');
+        progressBar.style.width = '0';
+
+        let sum = 0;
+        const totalNumbers = num2 - num1 + 1;
+        const startTime = performance.now();
+        // 根据数字数量动态调整延迟，避免计算过多数字时耗时太长
+        const delay = totalNumbers > 50 ? 50 : (totalNumbers > 20 ? 300 : 500);
+
+        for (let i = num1; i <= num2; i++) {
+            sum += i;
+            // 更新进度条
+            const progress = ((i - num1 + 1) / totalNumbers) * 100;
+            progressBar.style.width = `${progress}%`;
+
+            // 数字元素
+            const numItem = document.createElement('span');
+            numItem.className = `num-item current-num animate-fade`;
+            numItem.textContent = i;
+            processDom.appendChild(numItem);
+
+            // 如果不是第一个数字，给前一个数字添加已处理样式
+            if (i > num1) {
+                const prevNum = processDom.children[i - num1 - 1];
+                setTimeout(() => {
+                    prevNum.classList.remove('current-num');
+                    prevNum.classList.add('processed-num');
+                }, delay / 2);
+            }
+
+            // 加号
+            if (i < num2) {
+                const plus = document.createElement('span');
+                plus.className = 'plus-sign animate-fade';
+                plus.textContent = '+';
+                processDom.appendChild(plus);
+            }
+
+            // 自动滚动到最新内容
+            setTimeout(() => {
+                processContainer.scrollTop = processContainer.scrollHeight;
+            }, 50);
+
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        // 计算结束，更新结果
+        const endTime = performance.now();
+        const duration = ((endTime - startTime) / 1000).toFixed(2);
+
+        setTimeout(() => {
+            resultDom.innerHTML = `最终和：<span class="text-4xl text-indigo-600 animate-pulse-slow">${sum}</span>`;
+            resultDom.classList.remove('opacity-0');
+
+            // 更新统计信息
+            countDom.textContent = totalNumbers;
+            timeDom.textContent = duration;
+            statsDom.classList.remove('opacity-0');
+
+            calcBtn.disabled = false;
+            calcBtn.innerHTML = '<i class="fa fa-play mr-2"></i>重新计算';
+            processContainer.scrollTop = processContainer.scrollHeight;
+        }, delay);
+    });
+
+    // 输入框回车键触发计算
+    [num1Input, num2Input].forEach(input => {
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                calcBtn.click();
+            }
+        });
+    });
+</script>
+</body>
+</html>

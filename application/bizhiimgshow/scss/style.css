@@ -1,0 +1,37 @@
+.pageCards {
+  height: 100vh; }
+  .pageCards .header {
+    width: 100%;
+    height: 50px;
+    line-height: 50px;
+    padding-left: 20px; }
+  .pageCards .contents {
+    width: 96%;
+    min-height: 100vh;
+    margin: 0 auto; }
+    .pageCards .contents .card {
+      width: 270px;
+      height: 220px;
+      background: #f2ebcf;
+      margin: 16px;
+      border-radius: 6px;
+      display: inline-block; }
+      .pageCards .contents .card .img {
+        width: 100%; }
+        .pageCards .contents .card .img img {
+          width: 100%; }
+      .pageCards .contents .card .name {
+        width: 100%;
+        height: 80px;
+        line-height: 80px;
+        text-align: center;
+        font-size: 13px;
+        overflow: hidden; }
+  .pageCards .footer {
+    width: 100%;
+    height: 10%;
+    text-align: center; }
+    .pageCards .footer .layui-box {
+      margin: 30px auto; }
+
+/*# sourceMappingURL=style.css.map */

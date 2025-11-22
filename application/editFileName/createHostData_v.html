@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>创建服务器的测试数据</title>
+    <!-- 引入Vue -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- 引入Element UI -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- 引入axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../../js/_variable.js" type="text/javascript"></script>
+    <style>
+        body {
+            padding: 20px;
+        }
+
+        .el-form-item {
+            margin-bottom: 15px;
+        }
+
+        .form-container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .el-select {
+            width: 600px;
+        }
+
+        .file-list-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .file-meta {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* 加载状态提示样式 */
+        .loading-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s;
+        }
+
+        .loading-text {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="form-container">
+    <el-form :model="formData" :rules="rules" ref="formData" label-width="220px">
+        <el-form-item label="数据库地址" prop="dbHost">
+            <el-input v-model="formData.dbHost" placeholder="数据库地址"></el-input>
+        </el-form-item>
+
+        <el-form-item label="端口" prop="dbPort">
+            <el-input v-model="formData.dbPort" placeholder="数据库端口"></el-input>
+        </el-form-item>
+
+        <el-form-item label="数据库名" prop="dbName">
+            <el-input v-model="formData.dbName" placeholder="数据库名"></el-input>
+        </el-form-item>
+
+        <el-form-item label="用户名" prop="username">
+            <el-input v-model="formData.username" placeholder="用户名"></el-input>
+        </el-form-item>
+
+        <el-form-item label="密码" prop="password">
+            <el-select v-model="formData.password" placeholder="请选择密码版本">
+                <el-option value="Yahua@3585668" label="4.0"></el-option>
+                <el-option value="Yahua3585668yh" label="3.0"></el-option>
+                <el-option value="123456" label="123456"></el-option>
+            </el-select>
+        </el-form-item>
+
+        <el-form-item label="操作类型" prop="sqlType">
+            <el-select v-model="formData.sqlType" placeholder="请选择操作类型" @change="handleSqlTypeChange">
+                <el-option value="insertUser" label="添加用户"></el-option>
+                <el-option value="deleteip" label="删除某个ip占用的设备"></el-option>
+                <el-option value="addlabelclass" label="添加护理标签分类"></el-option>
+                <el-option value="addlabel" label="添加护理标签【每个分类下面都添加】"></el-option>
+                <el-option value="mysqldump" label="备份数据库"></el-option>
+                <el-option value="mysqldumpbak_list" label="恢复备份到xx数据库"></el-option>
+            </el-select>
+        </el-form-item>
+
+        <!-- 动态显示的表单项 -->
+        <el-form-item label="添加的账号名" prop="username_emp" v-if="showItem('insertUser')">
+            <el-input v-model="formData.username_emp" placeholder="添加的账号名"></el-input>
+        </el-form-item>
+
+        <el-form-item label="需要删除设备的ip" prop="deleteip" v-if="showItem('deleteip')">
+            <el-input v-model="formData.deleteip" placeholder="需要删除设备的ip"></el-input>
+        </el-form-item>
+
+        <el-form-item label="添加分类数量" prop="addlabelclassnum" v-if="showItem('addlabelclass')">
+            <el-input v-model="formData.addlabelclassnum" placeholder="添加分类数量"></el-input>
+        </el-form-item>
+
+        <el-form-item label="添加护理标签数量" prop="addlabelnum" v-if="showItem('addlabel')">
+            <el-input v-model="formData.addlabelnum" placeholder="添加护理标签数量"></el-input>
+        </el-form-item>
+        <template v-if="showItem('mysqldump')||showItem('mysqldumpbak_list')">
+            <el-form-item label="数据库备份目录" prop="data_bak_dir">
+                <el-input v-model="formData.data_bak_dir" placeholder="数据库备份目录"></el-input>
+            </el-form-item>
+            <el-form-item label="数据库备份备注">
+                <el-input v-model="formData.data_bak_remark" placeholder="数据库备份备注"></el-input>
+            </el-form-item>
+            <el-form-item label="mysql安装目录">
+                <el-input v-model="formData.mysqldump_dir" placeholder="数据库备份目录"></el-input>
+            </el-form-item>
+        </template>
+
+
+        <el-form-item>
+            <el-button
+                    type="primary"
+                    @click="submitForm"
+                    :loading="isSubmitting"
+            >
+                确认
+            </el-button>
+        </el-form-item>
+    </el-form>
+
+    <!-- 文件列表弹窗 -->
+    <el-dialog
+            title="备份文件列表"
+            :visible.sync="fileDialogVisible"
+            width="60%"
+            :before-close="handleDialogClose"
+            :close-on-click-modal="false"
+    >
+        <div v-if="backupFiles.length > 0">
+            <div class="file-list-item" v-for="(file, index) in backupFiles" :key="index">
+                <div class="file-info">
+                    <div class="file-name">{{ file.fileName }}</div>
+                    <div class="file-meta">
+                        大小: {{ (file.sizeKB / 1024).toFixed(2) }} MB | 最后修改: {{ file.lastModified }}
+                    </div>
+                </div>
+                <el-button
+                        type="primary"
+                        size="mini"
+                        @click="startBackup(file, index)"
+                        :loading="isSubmitting"
+                >
+                    开始恢复备份
+                </el-button>
+            </div>
+        </div>
+        <div v-else>
+            没有找到备份文件
+        </div>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="fileDialogVisible = false" :disabled="isSubmitting">关闭</el-button>
+        </span>
+    </el-dialog>
+
+    <!-- 全局加载状态 -->
+    <div v-if="showLoading" class="loading-mask">
+        <el-loading-spinner type="circle"></el-loading-spinner>
+        <div class="loading-text">{{ loadingText }}</div>
+    </div>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                formData: {
+                    dbHost: '192.168.31.82',
+                    dbPort: '3306',
+                    dbName: 'YHDB',
+                    username: 'root',
+                    password: 'Yahua@3585668',
+                    sqlType: 'insertUser',
+                    username_emp: 'gz',
+                    deleteip: '192.168.3.199',
+                    data_bak_dir: 'C:\\www\\test\\data_bak',
+                    data_bak_remark: '',
+                    mysqldump_dir: 'D:\\tools\\xampp\\mysql\\bin\\mysqldump.exe',
+                    addlabelclassnum: '5',
+                    addlabelnum: '15'
+                },
+                rules: {
+                    dbHost: [
+                        {required: true, message: '请输入数据库地址', trigger: 'blur'}
+                    ],
+                    dbPort: [
+                        {required: true, message: '请输入数据库端口', trigger: 'blur'}
+                    ],
+                    dbName: [
+                        {required: true, message: '请输入数据库名', trigger: 'blur'}
+                    ],
+                    username: [
+                        {required: true, message: '请输入用户名', trigger: 'blur'}
+                    ],
+                    password: [
+                        {required: true, message: '请选择密码', trigger: 'change'}
+                    ],
+                    sqlType: [
+                        {required: true, message: '请选择操作类型', trigger: 'change'}
+                    ],
+                    username_emp: [
+                        {required: true, message: '请输入添加的账号名', trigger: 'blur'}
+                    ],
+                    deleteip: [
+                        {required: true, message: '请输入需要删除设备的ip', trigger: 'blur'}
+                    ],
+                    data_bak_dir: [
+                        {required: true, message: '请输入数据库备份目录', trigger: 'blur'}
+                    ],
+                    addlabelclassnum: [
+                        {required: true, message: '请输入添加分类数量', trigger: 'blur'}
+                    ],
+                    addlabelnum: [
+                        {required: true, message: '请输入添加护理标签数量', trigger: 'blur'}
+                    ]
+                },
+                // 文件列表弹窗相关
+                fileDialogVisible: false,
+                backupFiles: [],
+                // 保存原始的sqlType用于恢复
+                originalSqlType: '',
+                // 加载状态相关
+                showLoading: false,
+                loadingText: '处理中，请稍候...',
+                isSubmitting: false
+            };
+        },
+        methods: {
+            // 判断是否显示特定的表单项
+            showItem(type) {
+                return this.formData.sqlType === type;
+            },
+
+            // 处理操作类型变化
+            handleSqlTypeChange() {
+                // 可以在这里添加额外的逻辑
+            },
+
+            // 关闭弹窗时恢复原始的sqlType
+            handleDialogClose() {
+                if (!this.isSubmitting) {
+                    this.fileDialogVisible = false;
+                    this.formData.sqlType = this.originalSqlType;
+                }
+            },
+
+            // 开始备份操作
+            startBackup(file) {
+                // 拼接参数
+                this.formData.data_bak_dir = this.formData.data_bak_dir + '\\' + file.fileName;
+                // 保存原始的sqlType以便之后恢复
+                this.originalSqlType = this.formData.sqlType;
+                // 修改操作类型
+                this.formData.sqlType = 'mysqldumpbak_restore';
+
+                // 关闭文件列表弹窗
+                this.fileDialogVisible = false;
+
+                // 调用提交表单方法进行备份操作
+                this.submitForm();
+            },
+
+            // 提交表单
+            submitForm() {
+                this.$refs.formData.validate(async (valid) => {
+                    if (valid) {
+                        // 设置加载状态
+                        this.showLoading = true;
+                        this.isSubmitting = true;
+
+                        // 根据操作类型设置不同的加载提示
+                        if (this.formData.sqlType === 'mysqldump') {
+                            this.loadingText = '正在备份数据库，请稍候...\n此操作可能需要几分钟时间';
+                        } else if (this.formData.sqlType === 'mysqldumpbak_list') {
+                            this.loadingText = '正在获取备份文件列表，请稍候...';
+                        } else if (this.formData.sqlType === 'mysqldumpbak_restore') {
+                            this.loadingText = '正在恢复数据库，请稍候...\n此操作可能需要较长时间，请不要关闭页面';
+                        } else {
+                            this.loadingText = '处理中，请稍候...';
+                        }
+
+                        // 构建请求数据
+                        const requestData = {
+                            dbHost: this.formData.dbHost,
+                            dbPort: this.formData.dbPort,
+                            dbName: this.formData.dbName,
+                            username: this.formData.username,
+                            password: this.formData.password,
+                            sqlType: this.formData.sqlType
+                        };
+
+                        // 根据操作类型添加相应参数
+                        if (requestData.sqlType === 'insertUser') {
+                            requestData.username_emp = this.formData.username_emp;
+                        } else if (requestData.sqlType === 'deleteip') {
+                            requestData.deleteip = this.formData.deleteip;
+                        } else if (requestData.sqlType === 'addlabelclass') {
+                            requestData.addlabelclassnum = this.formData.addlabelclassnum;
+                        } else if (requestData.sqlType === 'addlabel') {
+                            requestData.addlabelnum = this.formData.addlabelnum;
+                        } else if (requestData.sqlType === 'mysqldump' || requestData.sqlType === 'mysqldumpbak_list' || requestData.sqlType === 'mysqldumpbak_restore') {
+                            requestData.data_bak_dir = this.formData.data_bak_dir;
+                            requestData.data_bak_remark = this.formData.data_bak_remark;
+                            requestData.mysqldump_dir = this.formData.mysqldump_dir;
+                        }
+
+                        try {
+                            // 使用axios发送请求
+                            const response = await axios({
+                                url: ajaxFileDealJavaIP + '/yh-mock/create-host-data',
+                                method: 'post',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                data: requestData
+                            });
+
+                            const res = response.data;
+                            if (res.status === 'error') {
+                                // 错误提示：使用Element的MessageBox弹窗
+                                this.$alert(res.message || "请求失败", "操作失败", {
+                                    confirmButtonText: "确定",
+                                    type: "error"
+                                });
+                            } else {
+                                if(requestData.sqlType === 'mysqldumpbak_list'){
+                                    console.log(JSON.stringify(res));
+                                    // 保存文件列表
+                                    this.backupFiles = res.files || [];
+                                    // 如果有文件则显示弹窗
+                                    if (this.backupFiles.length > 0) {
+                                        this.fileDialogVisible = true;
+                                    } else {
+                                        this.$alert("没有找到备份文件", "提示", {
+                                            confirmButtonText: "确定",
+                                            type: "info"
+                                        });
+                                    }
+                                } else {
+                                    this.$alert(res.message || "请求成功", "操作成功", {
+                                        confirmButtonText: "确定",
+                                        type: "success"
+                                    });
+
+                                    // 如果是恢复操作，成功后恢复原始的sqlType
+                                    if (requestData.sqlType === 'mysqldumpbak_restore' && this.originalSqlType) {
+                                        this.formData.sqlType = this.originalSqlType;
+                                        this.originalSqlType = '';
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            // 错误处理：使用Element的MessageBox弹窗
+                            let errorMsg = '';
+                            if (error.response) {
+                                errorMsg = `请求失败: ${error.response.data?.message || '服务器错误'}`;
+                            } else if (error.request) {
+                                errorMsg = '请求无响应，请检查网络或联系管理员';
+                            } else {
+                                errorMsg = '请求失败: ' + error.message;
+                            }
+
+                            this.$alert(errorMsg, "错误提示", {
+                                confirmButtonText: "确定",
+                                type: "error"
+                            });
+
+                            // 如果是恢复操作，失败后也恢复原始的sqlType
+                            if (requestData.sqlType === 'mysqldumpbak_restore' && this.originalSqlType) {
+                                this.formData.sqlType = this.originalSqlType;
+                                this.originalSqlType = '';
+                            }
+                        } finally {
+                            // 无论成功失败，都关闭加载状态
+                            this.showLoading = false;
+                            this.isSubmitting = false;
+                        }
+                    } else {
+                        // 表单验证失败：使用Element的Message提示（轻量级）
+                        this.$message({
+                            message: '表单验证失败，请检查输入',
+                            type: 'error',
+                            showClose: true
+                        });
+                        return false;
+                    }
+                });
+            }
+
+        },
+        mounted() {
+        }
+    });
+</script>
+</body>
+</html>

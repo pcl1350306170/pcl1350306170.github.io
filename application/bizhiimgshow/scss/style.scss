@@ -1,0 +1,46 @@
+@charset "utf-8";
+.pageCards{
+  height: 100vh;
+  .header{
+    width: 100%;
+    height: 50px;
+    line-height: 50px;
+    padding-left: 20px;
+  }
+  .contents{
+    width: 96%;
+    min-height: 100vh;
+    margin: 0 auto;
+    .card{
+      width: 270px;
+      height: 220px;
+      background: #f2ebcf;
+      margin: 16px;
+      border-radius: 6px;
+      display: inline-block;
+      .img{
+        width: 100%;
+        //height: calc(100% - 40px);
+        img{
+          width: 100%;
+        }
+      }
+      .name{
+        width: 100%;
+        height: 80px;
+        line-height: 80px;
+        text-align: center;
+        font-size: 13px;
+        overflow: hidden;
+      }
+    }
+  }
+  .footer{
+    width: 100%;
+    height: 10%;
+    text-align: center;
+    .layui-box{
+      margin: 30px auto;
+    }
+  }
+}

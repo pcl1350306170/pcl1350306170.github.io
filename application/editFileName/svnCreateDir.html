@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SVN目录创建与文件上传</title>
+    <!-- 引入Vue 2 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- 引入Element UI -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- 引入axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../../js/_variable.js" type="text/javascript"></script>
+    <style>
+        body {
+            padding: 30px;
+            background-color: #f5f7fa;
+        }
+        .form-container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+        }
+        .el-form-item {
+            margin-bottom: 22px;
+        }
+        .el-input, .el-select {
+            width: 100%;
+        }
+        .el-button--primary {
+            width: 100%;
+            height: 40px;
+            font-size: 16px;
+        }
+        .result-card {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ebeef5;
+        }
+        .result-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: #1f2d3d;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="form-container">
+    <!-- 表单区域 -->
+    <el-form :model="formData" :rules="formRules" ref="svnForm" label-width="160px">
+        <!-- 业务类型（单选） -->
+        <el-form-item label="业务类型" prop="businessType">
+            <el-radio-group v-model="formData.businessType" @change="handleBusinessTypeChange">
+                <el-radio label="病房">病房</el-radio>
+                <el-radio label="门诊">门诊</el-radio>
+            </el-radio-group>
+        </el-form-item>
+
+        <!-- SVN用户名 -->
+        <el-form-item label="本地上传文件目录" prop="bakFileDir">
+            <el-input
+                    v-model="formData.bakFileDir"
+                    placeholder="本地上传文件目录"
+            ></el-input>
+            <div slot="help" class="el-form-item__help">
+                解释：本地已经存在的压缩包和升级说明，上传到svn，直接在这个基础上修改
+            </div>
+        </el-form-item>
+        <el-form-item label="SVN用户名" prop="svnUsername">
+            <el-input
+                    v-model="formData.svnUsername"
+                    placeholder="请输入SVN登录用户名"
+                    disabled
+            ></el-input>
+        </el-form-item>
+
+        <!-- SVN密码 -->
+        <el-form-item label="SVN密码" prop="svnPassword">
+            <el-input
+                    v-model="formData.svnPassword"
+                    placeholder="请输入SVN登录密码"
+                    type="password"
+                    disabled
+            ></el-input>
+        </el-form-item>
+
+        <!-- SVN父目录地址 -->
+        <el-form-item label="SVN父目录地址" prop="svnParentUrl">
+            <el-input
+                    v-model="formData.svnParentUrl"
+                    placeholder="请输入SVN父目录URL"
+            ></el-input>
+        </el-form-item>
+
+        <!-- 订单名 -->
+        <el-form-item label="订单名" prop="newDirectoryName">
+            <el-input
+                    v-model="formData.newDirectoryName"
+                    placeholder="请输入订单名（格式：YYYY-NNNN目录描述）"
+            ></el-input>
+            <div slot="help" class="el-form-item__help">
+                示例：2025-1999曾子善全孝道
+            </div>
+        </el-form-item>
+        <el-form-item label="svn本地目录" prop="svnLocalDirectory">
+            <el-input
+                    v-model="formData.svnLocalDirectory"
+                    placeholder="请输入svn本地目录"
+            ></el-input>
+            <div slot="help" class="el-form-item__help">
+                说明：调用svn，把文件检出到本地
+            </div>
+        </el-form-item>
+
+        <!-- 提交按钮 -->
+        <el-form-item>
+            <el-button
+                    type="primary"
+                    @click="submitSvnForm"
+                    :loading="submitLoading"
+            >
+                <i class="el-icon-upload" v-if="!submitLoading"></i>
+                <i class="el-icon-loading" v-if="submitLoading"></i>
+                {{ submitLoading ? '提交中...' : '创建目录并上传文件' }}
+            </el-button>
+        </el-form-item>
+    </el-form>
+
+    <!-- 结果展示区域 -->
+    <el-card v-if="showResult" class="result-card">
+        <div class="result-title">操作结果</div>
+        <el-descriptions :column="1" border>
+            <el-descriptions-item label="状态">
+                <el-tag type="success" v-if="resultSuccess">成功</el-tag>
+                <el-tag type="danger" v-else>失败</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="提示信息">{{ resultMessage }}</el-descriptions-item>
+            <el-descriptions-item label="SVN目录地址" v-if="resultSuccess && resultData.svnUrl">
+                <el-input
+                        v-model="resultData.svnUrl"
+                        readonly
+                        style="margin-top: 5px;"
+                ></el-input>
+            </el-descriptions-item>
+            <el-descriptions-item label="上传ZIP文件名" v-if="resultSuccess && resultData.zipName">
+                <span>{{ resultData.zipName }}</span>
+            </el-descriptions-item>
+        </el-descriptions>
+    </el-card>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                // 表单数据（初始默认业务类型为"病房"）
+                formData: {
+                    businessType: '病房', // 默认选中"病房"
+                    svnUsername: 'pangchunlei',
+                    bakFileDir: 'C:\\www\\test\\门诊\\801S-订单\\前端',
+                    svnPassword: '888888',
+                    svnParentUrl: 'https://192.168.30.124/svn/智慧病房特殊订单',
+                    svnLocalDirectory: 'C:\\www\\yh\\SVN',
+                    newDirectoryName: '2099-1999曾子善全孝道'
+                },
+                // 表单验证规则
+                formRules: {
+                    businessType: [
+                        { required: true, message: '请选择业务类型', trigger: 'change' }
+                    ],
+                    svnUsername: [
+                        { required: true, message: 'SVN用户名不能为空', trigger: 'blur' }
+                    ],
+                    svnPassword: [
+                        { required: true, message: 'SVN密码不能为空', trigger: 'blur' }
+                    ],
+                    svnParentUrl: [
+                        { required: true, message: 'SVN父目录地址不能为空', trigger: 'blur' },
+                        { type: 'url', message: '请输入有效的URL格式', trigger: 'blur' }
+                    ],
+                    svnLocalDirectory: [
+                    ],
+                    newDirectoryName: [
+                        { required: true, message: '订单名不能为空', trigger: 'blur' },
+                        {
+                            pattern: /^\d{4}-\d{4}.+/,
+                            message: '目录名称格式错误（正确格式：YYYY-NNNN目录描述）',
+                            trigger: 'blur'
+                        }
+                    ]
+                },
+                // 提交状态
+                submitLoading: false,
+                // 结果展示相关
+                showResult: false,
+                resultSuccess: false,
+                resultMessage: '',
+                resultData: {} // 存储返回的svnUrl和zipName
+            };
+        },
+        methods: {
+            /**
+             * 业务类型切换事件：根据选择切换默认参数
+             */
+            handleBusinessTypeChange(val) {
+                if (val === '病房') {
+                    // 病房默认参数
+                    this.formData.svnUsername = 'pangchunlei';
+                    this.formData.bakFileDir = 'C:\\www\\test\\门诊\\801S-订单\\前端';
+                    this.formData.svnPassword = '888888';
+                    this.formData.svnParentUrl = 'https://192.168.30.124/svn/智慧病房特殊订单/南京市妇幼保健院';
+                    this.formData.newDirectoryName = '2099-1999曾子善全孝道';
+                    this.formData.svnLocalDirectory = 'G:\\CODE\\Yarward\\SVN';
+                } else if (val === '门诊') {
+                    // 门诊默认参数
+                    this.formData.svnUsername = 'pangchunlei';
+                    this.formData.svnPassword = '666666';
+                    this.formData.bakFileDir = 'C:\\www\\test\\门诊\\801S-订单\\前端';
+                    this.formData.svnParentUrl = 'https://192.168.30.134/svn/门诊/YM-801S/7.特殊订单/2025年特殊订单';
+                    this.formData.newDirectoryName = '2025-1999曾子善全孝道';
+                    this.formData.svnLocalDirectory = 'G:\\CODE\\Yarward\\SVN\\0门诊';
+                }
+                // 隐藏之前的结果
+                this.showResult = false;
+            },
+
+            /**
+             * 提交表单：调用SVN接口
+             */
+            submitSvnForm() {
+                // 表单验证
+                this.$refs.svnForm.validate(async (isValid) => {
+                    if (!isValid) return;
+
+                    // 显示加载状态
+                    this.submitLoading = true;
+                    // 隐藏之前的结果
+                    this.showResult = false;
+                    if(!this.formData.svnLocalDirectory.includes(this.formData.newDirectoryName))this.formData.svnLocalDirectory = this.formData.svnLocalDirectory+"\\"+this.formData.newDirectoryName
+                    try {
+                        // 调用接口
+                        const response = await axios({
+                            url: ajaxFileDealJavaIP+'/blog-api/v1/svn/create-directory-and-upload',
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json;charset=UTF-8'
+                            },
+                            data: this.formData // 直接传递表单数据（与接口参数名完全匹配）
+                        });
+
+                        // 处理响应（假设接口返回格式与Result工具类一致：{code: 200, message: "", data: {}}）
+                        const res = response.data;
+                        if (res.resultCode === 200 && res.message === "SUCCESS") {
+                            // 成功场景：提取data中的zipName和svnUrl
+                            this.resultSuccess = true;
+                            this.resultMessage = "SVN目录创建及文件上传成功";
+                            this.resultData = {
+                                zipName: res.data.zipName || "未知文件名", // 兼容可能的空值
+                                svnUrl: res.data.svnUrl || ""
+                            };
+
+                            // 额外处理：若svnUrl包含编码字符（如中文），自动解码显示（避免"%E5%89%8D%E7%AB%AF"这类编码）
+                            if (this.resultData.svnUrl) {
+                                try {
+                                    this.resultData.svnUrl = decodeURIComponent(this.resultData.svnUrl);
+                                } catch (e) {
+                                    // 解码失败时保留原始URL，不影响显示
+                                    console.log("SVN URL解码失败，使用原始地址", e);
+                                }
+                            }
+                        } else {
+                            // 失败场景：根据接口返回的message提示
+                            this.resultSuccess = false;
+                            this.resultMessage = `操作失败：${res.message || "未知错误"}`;
+                            this.resultData = {}; // 清空之前的结果数据
+                        }
+                    } catch (error) {
+                        // 网络错误处理
+                        this.resultSuccess = false;
+                        if (error.response) {
+                            // 服务器返回错误
+                            this.resultMessage = `请求失败（${error.response.status}）：${error.response.data?.message || '服务器异常'}`;
+                        } else if (error.request) {
+                            // 无响应
+                            this.resultMessage = '请求无响应，请检查接口地址或网络连接';
+                        } else {
+                            // 请求配置错误
+                            this.resultMessage = `请求失败：${error.message}`;
+                        }
+                    } finally {
+                        // 隐藏加载状态，显示结果
+                        this.submitLoading = false;
+                        this.showResult = true;
+                    }
+                });
+            }
+        },
+        mounted() {
+            // 页面加载完成后，初始化表单验证
+            this.$nextTick(() => {
+                this.$refs.svnForm.validate(() => {});
+            });
+        }
+    });
+</script>
+</body>
+</html>

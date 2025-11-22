@@ -1,0 +1,45 @@
+.fileEdit{
+  width: 80%;
+  margin: 0 auto;
+  height: 100%;
+  padding: 20px 40px;
+  h2{
+    margin: 20px 10px;
+  }
+  .layui-input-block{
+    margin: 0;
+    .layui-input{
+      width: 800px;
+    }
+  }
+  .layui-form-item{
+    .layui-form-label{
+      width: 120px;
+    }
+  }
+  .layui-form-item:last-child{
+    text-align: center;
+    margin-top: 30px;
+  }
+}
+.dom-iframe{
+  width: 100%;
+  height: 100%;
+  iframe{
+    width: 100%;
+    height: 100%;
+  }
+}
+body{
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+body::after{
+  background-image: url("../../../img/992.jpg");
+  opacity: 0.3;
+}
+

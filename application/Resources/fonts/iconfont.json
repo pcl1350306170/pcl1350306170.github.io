@@ -1,0 +1,163 @@
+{
+  "id": "1465341",
+  "name": "vue-admin",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "521047",
+      "name": "删除",
+      "font_class": "shanchu",
+      "unicode": "e61c",
+      "unicode_decimal": 58908
+    },
+    {
+      "icon_id": "905447",
+      "name": "查看",
+      "font_class": "chakan",
+      "unicode": "e69a",
+      "unicode_decimal": 59034
+    },
+    {
+      "icon_id": "1190643",
+      "name": "人员",
+      "font_class": "renyuan",
+      "unicode": "e7e6",
+      "unicode_decimal": 59366
+    },
+    {
+      "icon_id": "1973238",
+      "name": "文件",
+      "font_class": "wenjian",
+      "unicode": "e60f",
+      "unicode_decimal": 58895
+    },
+    {
+      "icon_id": "2468143",
+      "name": "三相不平衡评价",
+      "font_class": "sanxiangbupinghengpingjia",
+      "unicode": "e614",
+      "unicode_decimal": 58900
+    },
+    {
+      "icon_id": "2958959",
+      "name": "事件管理",
+      "font_class": "shijianguanli",
+      "unicode": "e611",
+      "unicode_decimal": 58897
+    },
+    {
+      "icon_id": "2959070",
+      "name": "人员类型",
+      "font_class": "renyuanleixing",
+      "unicode": "e62c",
+      "unicode_decimal": 58924
+    },
+    {
+      "icon_id": "4157683",
+      "name": "文件",
+      "font_class": "Shapecopy",
+      "unicode": "e61a",
+      "unicode_decimal": 58906
+    },
+    {
+      "icon_id": "4485667",
+      "name": "搜索",
+      "font_class": "sousuo",
+      "unicode": "e600",
+      "unicode_decimal": 58880
+    },
+    {
+      "icon_id": "5110403",
+      "name": "左",
+      "font_class": "zuo",
+      "unicode": "e63d",
+      "unicode_decimal": 58941
+    },
+    {
+      "icon_id": "5485649",
+      "name": "上传 (1)",
+      "font_class": "shangchuan",
+      "unicode": "e612",
+      "unicode_decimal": 58898
+    },
+    {
+      "icon_id": "5485684",
+      "name": "右 (1)",
+      "font_class": "you",
+      "unicode": "e626",
+      "unicode_decimal": 58918
+    },
+    {
+      "icon_id": "5634797",
+      "name": "php",
+      "font_class": "php",
+      "unicode": "f20e",
+      "unicode_decimal": 61966
+    },
+    {
+      "icon_id": "6527119",
+      "name": "人员3",
+      "font_class": "renyuan1",
+      "unicode": "e645",
+      "unicode_decimal": 58949
+    },
+    {
+      "icon_id": "6773127",
+      "name": "文件-人员名册",
+      "font_class": "wj-rymc",
+      "unicode": "e74b",
+      "unicode_decimal": 59211
+    },
+    {
+      "icon_id": "7325991",
+      "name": "编辑_",
+      "font_class": "bianji_",
+      "unicode": "e68e",
+      "unicode_decimal": 59022
+    },
+    {
+      "icon_id": "7550210",
+      "name": "添加",
+      "font_class": "tianjia",
+      "unicode": "e68a",
+      "unicode_decimal": 59018
+    },
+    {
+      "icon_id": "8169800",
+      "name": "人员",
+      "font_class": "renyuan2",
+      "unicode": "e610",
+      "unicode_decimal": 58896
+    },
+    {
+      "icon_id": "8676500",
+      "name": "上传",
+      "font_class": "shangchuan1",
+      "unicode": "e63a",
+      "unicode_decimal": 58938
+    },
+    {
+      "icon_id": "8680652",
+      "name": "MBE风格常用图标-上传",
+      "font_class": "MBEfenggechangyongtubiao-shangchuan",
+      "unicode": "e61e",
+      "unicode_decimal": 58910
+    },
+    {
+      "icon_id": "9592598",
+      "name": "HTSCIT_下载",
+      "font_class": "xiazai",
+      "unicode": "e64c",
+      "unicode_decimal": 58956
+    },
+    {
+      "icon_id": "10088950",
+      "name": "修改",
+      "font_class": "icon_function_xiugai",
+      "unicode": "e88d",
+      "unicode_decimal": 59533
+    }
+  ]
+}
