@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>宝宝数字乐园</title>
+    <style>
+        /* ...（样式部分完全不变，此处省略以节省篇幅）... */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            touch-action: none;
+        }
+
+        body {
+            font-family: "Comic Sans MS", "Microsoft YaHei", cursive, sans-serif;
+            background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 15px;
+            color: #2c3e50;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #ff6f61;
+            margin: 10px 0;
+            text-shadow: 1px 1px 2px white;
+        }
+
+        .difficulty-selector {
+            margin: 10px 0;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .difficulty-selector label {
+            font-weight: bold;
+            color: #e17055;
+            margin-right: 8px;
+        }
+
+        .difficulty-selector select {
+            font-size: 1rem;
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        .target {
+            background: #ffeaa7;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 12px;
+            font-weight: bold;
+            color: #e17055;
+        }
+
+        .score-board {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 10px 0;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+
+        .score-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2d3436;
+        }
+
+        .grid {
+            background-color: #b2bec3;
+            border-radius: 12px;
+            padding: 8px;
+            margin: 0 auto;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        .cell {
+            background-color: #dfe6e9;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #2d3436;
+            transition: all 0.15s ease;
+        }
+
+        .cell-4   { background: #ffeaa7; color: #2d3436; }
+        .cell-8   { background: #fdcb6e; color: white; }
+        .cell-16  { background: #e17055; color: white; font-size: 1.5rem; }
+        .cell-32  { background: #d63031; color: white; font-size: 1.5rem; }
+        .cell-64  { background: #fd79a8; color: white; font-size: 1.5rem; }
+        .cell-128 { background: #6c5ce7; color: white; font-size: 1.4rem; animation: pulse 1s infinite; }
+        .cell-256 { background: #a29bfe; color: white; font-size: 1.4rem; }
+        .cell-512 { background: #55efc4; color: white; font-size: 1.4rem; }
+        .cell-1024{ background: #00cec9; color: white; font-size: 1.3rem; }
+        .cell-2048{ background: #0984e3; color: white; font-size: 1.3rem; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .controls {
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 50px;
+            background: #55efc4;
+            color: #2d3436;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #00b894;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+
+        .audio-controls {
+            margin: 12px 0;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .audio-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            background: #74b9ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #4a4a4a;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .win-message, .lose-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            z-index: 100;
+            display: none;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .win-message h2 {
+            color: #ffd32a;
+            margin-bottom: 20px;
+            font-size: 2.2rem;
+        }
+
+        .lose-message h2 {
+            color: #ff7675;
+            margin-bottom: 20px;
+            font-size: 2.2rem;
+        }
+
+        .play-again-btn {
+            padding: 12px 30px;
+            font-size: 1.3rem;
+            background: #55efc4;
+            color: #2d3436;
+            border: none;
+            border-radius: 50px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <h1>🎈 宝宝数字乐园 🎈</h1>
+
+    <!-- 难度选择器 -->
+    <div class="difficulty-selector">
+        <label for="difficulty">难度：</label>
+        <select id="difficulty">
+            <option value="128">简单 (128)</option>
+            <option value="256">较易 (256)</option>
+            <option value="512">一般 (512)</option>
+            <option value="1024">较难 (1024)</option>
+            <option value="2048">挑战 (2048)</option>
+        </select>
+    </div>
+
+    <div class="target">目标：合成 <strong id="target-display">128</strong>！</div>
+
+    <div class="score-board">
+        <div class="score-value" id="score">0</div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="controls">
+        <button id="new-game">新游戏</button>
+    </div>
+
+    <div class="audio-controls">
+        <button class="audio-btn" id="sound-on">🔊</button>
+        <button class="audio-btn" id="sound-off">🔇</button>
+    </div>
+
+    <div class="instructions">
+        👉 用手指<strong>上下左右滑动</strong>移动方块<br/>
+        相同数字会合并变大！
+    </div>
+</div>
+
+<!-- 胜利/失败弹窗 -->
+<div class="win-message" id="win-message">
+    <h2>🎉 太棒啦！</h2>
+    <p>你合成 <span id="win-number">128</span> 啦！</p>
+    <button class="play-again-btn" id="play-again-win">再玩一次</button>
+</div>
+
+<div class="lose-message" id="lose-message">
+    <h2>🤗 再试一次吧！</h2>
+    <p>没有可移动的方块了</p>
+    <button class="play-again-btn" id="play-again-lose">重新开始</button>
+</div>
+
+<!-- 音频元素 -->
+<audio id="move-sound" src="sounds/move.mp3" preload="auto"></audio>
+<audio id="merge-sound" src="sounds/merge.mp3" preload="auto"></audio>
+<audio id="win-sound" src="sounds/win.mp3" preload="auto"></audio>
+<audio id="lose-sound" src="sounds/lose.mp3" preload="auto"></audio>
+<audio id="new-tile-sound" src="sounds/new-tile.mp3" preload="auto"></audio>
+
+<script>
+    // ===== 难度配置（核心！）=====
+    const DIFFICULTY_OPTIONS = [128, 256, 512, 1024, 2048];
+    let targetNumber = parseInt(localStorage.getItem('baby2048_target') || '128');
+
+    // 游戏状态
+    let board = [];
+    let score = 0;
+    let soundEnabled = true;
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    // DOM 元素
+    const gridElement = document.getElementById('grid');
+    const scoreElement = document.getElementById('score');
+    const targetDisplay = document.getElementById('target-display');
+    const winNumberSpan = document.getElementById('win-number');
+    const difficultySelect = document.getElementById('difficulty');
+    const winMessage = document.getElementById('win-message');
+    const loseMessage = document.getElementById('lose-message');
+
+    // 音频元素
+    const moveSound = document.getElementById('move-sound');
+    const mergeSound = document.getElementById('merge-sound');
+    const winSound = document.getElementById('win-sound');
+    const loseSound = document.getElementById('lose-sound');
+    const newTileSound = document.getElementById('new-tile-sound');
+
+    // 初始化难度选择器
+    function initDifficultySelector() {
+        difficultySelect.value = targetNumber;
+        targetDisplay.textContent = targetNumber;
+        winNumberSpan.textContent = targetNumber;
+
+        difficultySelect.addEventListener('change', () => {
+            targetNumber = parseInt(difficultySelect.value);
+            localStorage.setItem('baby2048_target', targetNumber.toString());
+            targetDisplay.textContent = targetNumber;
+            winNumberSpan.textContent = targetNumber;
+        });
+    }
+
+    // 初始化游戏
+    function initGame() {
+        board = Array(4).fill().map(() => Array(4).fill(0));
+        score = 0;
+        scoreElement.textContent = score;
+        addRandomTile();
+        addRandomTile();
+        renderBoard();
+        winMessage.style.display = 'none';
+        loseMessage.style.display = 'none';
+    }
+
+    // 渲染棋盘
+    function renderBoard() {
+        gridElement.innerHTML = '';
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (board[r][c] !== 0) {
+                    cell.textContent = board[r][c];
+                    cell.classList.add(`cell-${board[r][c]}`);
+                }
+                gridElement.appendChild(cell);
+            }
+        }
+    }
+
+    // 添加随机方块（根据难度微调初始值）
+    function addRandomTile() {
+        const emptyCells = [];
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                if (board[r][c] === 0) {
+                    emptyCells.push({ r, c });
+                }
+            }
+        }
+        if (emptyCells.length > 0) {
+            const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            // 初始数字：目标越低，起始越大（更简单）
+            let tileValue;
+            if (targetNumber <= 256) {
+                tileValue = Math.random() < 0.7 ? 8 : 4;
+            } else if (targetNumber <= 1024) {
+                tileValue = Math.random() < 0.8 ? 4 : 2;
+            } else {
+                tileValue = Math.random() < 0.9 ? 2 : 4;
+            }
+            board[randomCell.r][randomCell.c] = tileValue;
+            if (soundEnabled) newTileSound.play().catch(e => console.log("音频播放被阻止"));
+        }
+    }
+
+    // 移动逻辑（向左）
+    function moveLeft() {
+        let moved = false;
+        for (let r = 0; r < 4; r++) {
+            let row = board[r].filter(val => val !== 0);
+            let newRow = [];
+            let i = 0;
+            while (i < row.length) {
+                if (i + 1 < row.length && row[i] === row[i + 1]) {
+                    const mergedValue = row[i] * 2;
+                    newRow.push(mergedValue);
+                    score += mergedValue;
+                    i += 2;
+                    if (soundEnabled) mergeSound.play().catch(e => console.log("音频播放被阻止"));
+                    // 检查是否达到当前目标
+                    if (mergedValue === targetNumber) {
+                        setTimeout(showWin, 300);
+                    }
+                } else {
+                    newRow.push(row[i]);
+                    i++;
+                }
+            }
+            while (newRow.length < 4) {
+                newRow.push(0);
+            }
+            if (newRow.some((val, idx) => val !== board[r][idx])) {
+                moved = true;
+            }
+            board[r] = newRow;
+        }
+        return moved;
+    }
+
+    // 矩阵旋转
+    function rotateBoard(clockwise = true) {
+        const newBoard = Array(4).fill().map(() => Array(4).fill(0));
+        if (clockwise) {
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    newBoard[c][3 - r] = board[r][c];
+                }
+            }
+        } else {
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    newBoard[3 - c][r] = board[r][c];
+                }
+            }
+        }
+        board = newBoard;
+    }
+
+    // 处理方向移动
+    function handleMove(direction) {
+        let moved = false;
+        switch (direction) {
+            case 0: rotateBoard(false); moved = moveLeft(); rotateBoard(true); break;
+            case 1: rotateBoard(true); rotateBoard(true); moved = moveLeft(); rotateBoard(true); rotateBoard(true); break;
+            case 2: rotateBoard(true); moved = moveLeft(); rotateBoard(false); break;
+            case 3: moved = moveLeft(); break;
+        }
+        if (moved) {
+            if (soundEnabled) moveSound.play().catch(e => console.log("音频播放被阻止"));
+            addRandomTile();
+            renderBoard();
+            scoreElement.textContent = score;
+            if (!canMove()) {
+                setTimeout(showLose, 500);
+            }
+        }
+    }
+
+    // 检查是否还能移动
+    function canMove() {
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                if (board[r][c] === 0) return true;
+                if (r < 3 && board[r][c] === board[r+1][c]) return true;
+                if (c < 3 && board[r][c] === board[r][c+1]) return true;
+            }
+        }
+        return false;
+    }
+
+    // 显示胜利
+    function showWin() {
+        winMessage.style.display = 'flex';
+        if (soundEnabled) winSound.play().catch(e => console.log("音频播放被阻止"));
+    }
+
+    // 显示失败
+    function showLose() {
+        loseMessage.style.display = 'flex';
+        if (soundEnabled) loseSound.play().catch(e => console.log("音频播放被阻止"));
+    }
+
+    // ===== 触屏滑动支持 =====
+    document.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchend', (e) => {
+        if (!e.changedTouches.length) return;
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const dx = touchEndX - touchStartX;
+        const dy = touchEndY - touchStartY;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+
+        if (absDx > 30 || absDy > 30) {
+            if (absDx > absDy) {
+                if (dx > 0) handleMove(3); else handleMove(1);
+            } else {
+                if (dy > 0) handleMove(2); else handleMove(0);
+            }
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    // 键盘支持
+    document.addEventListener('keydown', (e) => {
+        if (e.key.startsWith('Arrow')) {
+            e.preventDefault();
+            let dir;
+            switch (e.key) {
+                case 'ArrowUp': dir = 0; break;
+                case 'ArrowRight': dir = 1; break;
+                case 'ArrowDown': dir = 2; break;
+                case 'ArrowLeft': dir = 3; break;
+            }
+            handleMove(dir);
+        }
+    });
+
+    // 按钮事件
+    document.getElementById('new-game').addEventListener('click', initGame);
+    document.getElementById('play-again-win').addEventListener('click', initGame);
+    document.getElementById('play-again-lose').addEventListener('click', initGame);
+
+    // 音频开关
+    document.getElementById('sound-on').addEventListener('click', () => soundEnabled = true);
+    document.getElementById('sound-off').addEventListener('click', () => soundEnabled = false);
+
+    // 启动
+    initDifficultySelector();
+    initGame();
+</script>
+</body>
+</html>
