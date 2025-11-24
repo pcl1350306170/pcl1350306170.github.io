@@ -4,41 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>弹窗式自定义间隔累加计算器</title>
-    <!-- 引入Element Plus CSS -->
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
-    <!-- 引入Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- 引入Element Plus JS -->
     <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
     <style>
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade { animation: fadeIn 0.3s ease forwards; font-size: 2.2rem !important; }
+        .animate-fade { animation: fadeIn 0.3s ease forwards; }
 
-        /* 整体字体放大1.8倍 */
         body {
-            font-size: 1.8rem !important;
+            font-size: clamp(1rem, 2.5vw, 1.8rem);
             background: #f3f4f6;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 16px;
             box-sizing: border-box;
         }
 
         .main-container {
             width: 100%;
             max-width: 1000px;
-            padding: 2.5rem;
+            padding: clamp(1rem, 4vw, 2.5rem);
         }
 
         .input-group {
             margin-bottom: 1.5rem;
             display: flex;
-            gap: 1.5rem;
+            gap: clamp(0.8rem, 2vw, 1.5rem);
             flex-wrap: wrap;
         }
 
@@ -46,15 +42,18 @@
             flex: 1;
             min-width: 200px;
         }
-        .el-input__inner{
-            font-size: 3rem !important;
-            height: 10vh;
+
+        .el-input__inner {
+            font-size: clamp(1.2rem, 3vw, 1.8rem) !important;
+            height: clamp(40px, 10vh, 60px);
         }
+
         .btn-group {
             display: flex;
             justify-content: center;
-            gap: 1.5rem;
+            gap: clamp(0.8rem, 2vw, 1.5rem);
             margin-top: 1.5rem;
+            flex-wrap: wrap;
         }
 
         /* 弹窗样式 */
@@ -74,7 +73,7 @@
             overflow-y: auto;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 0.5rem;
-            padding: 1.5rem;
+            padding: clamp(0.8rem, 2vw, 1.5rem);
             margin-bottom: 1.5rem;
         }
 
@@ -84,29 +83,57 @@
             flex-wrap: wrap;
             justify-content: center;
             align-items: center;
-            gap: 0.5rem;
+            gap: clamp(0.2rem, 1vw, 0.5rem);
         }
 
         .popup-num-item {
             display: inline-block;
-            margin: 12px 8px;
-            padding: 12px 20px;
+            margin: clamp(6px, 1vw, 12px);
+            padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 20px);
             border-radius: 8px;
             font-weight: 600;
             background: #409eff;
             color: white;
-            font-size: 3rem;
+            font-size: clamp(1.2rem, 4vw, 2rem);
         }
 
         .popup-plus-sign {
-            margin: 12px 4px;
+            margin: clamp(6px, 1vw, 12px) clamp(2px, 0.5vw, 4px);
             color: #d1d5db;
+            font-size: clamp(1rem, 3vw, 1.5rem);
         }
 
         .popup-result {
             font-weight: 600;
             color: white;
             text-align: center;
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+        }
+
+        /* 平板优化 */
+        @media (min-width: 768px) {
+            .popup-num-item {
+                font-size: clamp(1.5rem, 4vw, 3rem);
+            }
+            .popup-plus-sign {
+                font-size: clamp(1.2rem, 3vw, 2rem);
+            }
+            .popup-result {
+                font-size: clamp(1.5rem, 3vw, 2rem);
+            }
+        }
+
+        /* 大屏优化 */
+        @media (min-width: 1024px) {
+            .popup-num-item {
+                font-size: clamp(2rem, 4vw, 4rem);
+            }
+            .popup-plus-sign {
+                font-size: clamp(1.5rem, 3vw, 3rem);
+            }
+            .popup-result {
+                font-size: clamp(1.8rem, 3vw, 2.5rem);
+            }
         }
     </style>
 </head>
@@ -139,9 +166,11 @@
             <div class="input-item">
                 <el-input
                         v-model.number="delayTime"
-                        placeholder="累加间隔（毫秒，默认300）"
+                        placeholder="累加间隔（秒，默认0.5）"
                         type="number"
-                        min="10"
+                        :step="0.01"
+                        min="0.01"
+                        max="10"
                 ></el-input>
             </div>
         </div>
@@ -188,7 +217,7 @@
             return {
                 startNum: 1,
                 endNum: 100,
-                delayTime: 300,
+                delayTime: 0.5, // 默认 0.5 秒
                 isCalculating: false,
                 popupVisible: false,
                 resultText: '计算中...'
@@ -201,13 +230,16 @@
                 // 获取输入值（默认值处理）
                 const start = this.startNum || 1;
                 const end = this.endNum || 100;
-                const delay = this.delayTime || 300;
+                let delay = this.delayTime || 0.5; // 秒转毫秒
 
                 // 输入校验
-                if (start > end || delay < 10) {
-                    this.$message.error('请确保：起始数字≤终止数字，间隔时间≥10毫秒');
+                if (start > end || delay < 0.01) {
+                    this.$message.error('请确保：起始数字≤终止数字，间隔时间≥0.01秒');
                     return;
                 }
+
+                // 转换为毫秒
+                delay = delay * 1000;
 
                 // 初始化状态并打开弹窗
                 this.isCalculating = true;
@@ -255,7 +287,7 @@
 
                 // 展示最终结果（未中途关闭弹窗）
                 if (this.isCalculating) {
-                    this.resultText = `最终累加和：<span style="color: #409eff;font-size: 4rem;">${sum}</span>`;
+                    this.resultText = `最终累加和：<span style="color: #409eff;font-size: clamp(2rem, 5vw, 4rem);">${sum}</span>`;
                 }
 
                 this.isCalculating = false;
@@ -263,7 +295,7 @@
             resetForm() {
                 this.startNum = 1;
                 this.endNum = 100;
-                this.delayTime = 300;
+                this.delayTime = 0.5; // 重置为默认 0.5 秒
                 this.closePopup();
             },
             closePopup() {
@@ -276,7 +308,6 @@
         }
     });
 
-    // 全局注册Element Plus组件
     app.use(ElementPlus);
     app.mount('#app');
 </script>
