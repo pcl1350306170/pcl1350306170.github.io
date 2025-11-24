@@ -13,7 +13,7 @@
             width: 100vw;
             height: 100vh;
             overflow: hidden;
-            font-size: 1.62rem; /* 字体放大2倍 */
+            font-size: 16px; /* 基准字体大小 */
             font-family: sans-serif;
         }
 
@@ -29,13 +29,13 @@
         #select-btn, #refresh-btn {
             position: fixed;
             bottom: 40px;
-            width: 160px;
-            height: 160px;
+            width: 70px; /* 响应式宽度 */
+            height: 70px; /* ≥44px */
             background-color: #00aaff;
             border-radius: 50%;
             border: none;
             box-shadow: 0 0 15px #00aaff;
-            font-size: 1.5rem;
+            font-size: 0.9rem; /* 适配小屏幕 */
             color: white;
             z-index: 1000;
             cursor: pointer;
@@ -67,30 +67,32 @@
             left: 50%;
             transform: translate(-50%, -50%);
             background: #222;
-            padding: 30px;
+            padding: 20px; /* 响应式内边距 */
             border-radius: 10px;
             z-index: 2000;
             display: none;
             color: white;
-            width: 1000px;
+            width: min(90%, 800px); /* 响应式宽度 */
+            max-width: 800px;
             text-align: center;
-            height: 50vh;
+            max-height: 70vh; /* 响应式高度 */
             overflow-y: auto;
-
         }
 
         #popup h3 {
             margin-top: 0;
-            font-size: 2.14rem;
+            font-size: 1.2rem; /* 响应式字体 */
         }
 
         .url-option {
-            margin: 20px 0;
-            padding: 20px;
+            margin: 10px 0; /* 响应式间距 */
+            padding: 16px; /* ≥44px 高度 */
             background: #444;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 1.52rem;
+            font-size: 0.95rem; /* ≥16px */
+            text-align: left; /* 左对齐，便于阅读 */
+            transition: background 0.2s;
         }
 
         .url-option:hover {
@@ -98,19 +100,54 @@
         }
 
         #popup-close {
-            margin-top: 20px;
-            padding: 12px 20px;
+            margin-top: 15px;
+            padding: 12px 20px; /* ≥44px 高度 */
             background-color: #555;
             border: none;
             color: white;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 1.62rem;
+            font-size: 0.95rem;
+            width: 100%;
+        }
+
+        /* 平板适配 */
+        @media (min-width: 768px) {
+            #select-btn, #refresh-btn {
+                width: 90px;
+                height: 90px;
+                font-size: 1.1rem;
+            }
+
+            #popup {
+                padding: 30px;
+                max-height: 50vh;
+            }
+
+            #popup h3 {
+                font-size: 1.4rem;
+            }
+
+            .url-option {
+                padding: 20px;
+                font-size: 1.1rem;
+            }
+
+            #popup-close {
+                padding: 14px 24px;
+                font-size: 1.1rem;
+            }
+        }
+
+        /* 大屏优化 */
+        @media (min-width: 1024px) {
+            #popup {
+                width: 900px;
+            }
         }
     </style>
 </head>
 <body>
-<canvas id="canvas"></canvas>
 <iframe id="main-iframe" src="../application/editFileName/edit2.html"></iframe>
 
 <!-- 底部按钮 -->
@@ -119,37 +156,65 @@
 
 <!-- 弹窗选择页面 -->
 <div id="popup">
-    <div class="url-option" data-url="./num1.html">1、数字左右点击</div>
-    <div class="url-option" data-url="./num2.html">2、数字自增，可调速</div>
-    <div class="url-option" data-url="./num3.html">3、数字自增，可变色</div>
-    <div class="url-option" data-url="./num4.html">4、数字+1+1+1..+n..+1</div>
-    <div class="url-option" data-url="./num5.html">5、数字+1+2+3+n</div>
-    <div class="url-option" data-url="./Game/2048/index.html">6、数字2048[固定难度，可手滑]</div>
-    <div class="url-option" data-url="./Game/2048/index2.html">7、数字2048[可复活，最大65,536]</div>
-    <div class="url-option" data-url="./Game/2048/index3.html">8、数字2048[可调难度，点击]</div>
-    <div class="url-option" data-url="./Game/powerNOf2/index.html">2的次幂乐园</div>
-    <div class="url-option" data-url="../application/editFileName/edit2.html">本地小工具</div>
-    <div class="url-option" data-url="../application/editFileName/createData.html">快速创建数据[调用接口]</div>
-    <div class="url-option" data-url="../application/editFileName/createMock.html">快速创建Mock数据</div>
-    <div class="url-option" data-url="../application/editFileName/createHostData_v.html">创建服务器数据</div>
-    <div class="url-option" data-url="../application/editFileName/web-crawl-processor.html">图片爬取任务开启</div>
-    <div class="url-option" data-url="../application/editFileName/web_crawler.html">txt下载任务开启</div>
-    <div class="url-option" data-url="../application/editFileName/svnCreateDir.html">在svn上面创建目录</div>
-    <div class="url-option" data-url="../application/editFileName/menZhenSavezip.html">门诊项目生成zip</div>
+    <h3>选择页面</h3>
+    <div id="options-container">
+        <!-- 选项将通过 JavaScript 动态生成 -->
+    </div>
     <button id="popup-close">关闭</button>
 </div>
 
 <script>
+    // 页面配置（易于扩展）
+    const pageConfig = [
+        { name: "1、数字左右点击", url: "./num1.html" },
+        { name: "2、数字自增，可调速", url: "./num2.html" },
+        { name: "3、数字自增，可变色", url: "./num3.html" },
+        { name: "4、数字+1+1+1..+n..+1", url: "./num4.html" },
+        { name: "5、数字+1+2+3+n", url: "./num5.html" },
+        { name: "6、数字2048[固定难度，可手滑]", url: "./Game/2048/index.html" },
+        { name: "7、数字2048[可复活，最大65,536]", url: "./Game/2048/index2.html" },
+        { name: "8、数字2048[可调难度，点击]", url: "./Game/2048/index3.html" },
+        { name: "2的次幂乐园", url: "./Game/powerNOf2/index.html" },
+        { name: "本地小工具", url: "../application/editFileName/edit2.html" },
+        { name: "快速创建数据[调用接口]", url: "../application/editFileName/createData.html" },
+        { name: "快速创建Mock数据", url: "../application/editFileName/createMock.html" },
+        { name: "创建服务器数据", url: "../application/editFileName/createHostData_v.html" },
+        { name: "图片爬取任务开启", url: "../application/editFileName/web-crawl-processor.html" },
+       // { name: "txt下载任务开启", url: "../application/editFileName/web_crawler.html" },
+        { name: "在svn上面创建目录", url: "../application/editFileName/svnCreateDir.html" },
+        { name: "门诊项目生成zip", url: "../application/editFileName/menZhenSavezip.html" }
+    ];
+
     document.addEventListener('DOMContentLoaded', () => {
+        // 渲染页面选项
+        renderPageOptions();
+
         // 初始化按钮拖拽功能
         initDraggableButtons();
+
+        // 绑定事件
+        bindEvents();
     });
+
+    // 渲染页面选项
+    function renderPageOptions() {
+        const container = document.getElementById('options-container');
+        container.innerHTML = ''; // 清空
+
+        pageConfig.forEach(item => {
+            const option = document.createElement('div');
+            option.className = 'url-option';
+            option.textContent = item.name;
+            option.setAttribute('data-url', item.url);
+            container.appendChild(option);
+        });
+    }
 
     // 初始化可拖拽按钮
     function initDraggableButtons() {
         const buttons = [
             document.getElementById('select-btn'),
-           // document.getElementById('refresh-btn')
+            document.getElementById('refresh-btn')
         ];
 
         buttons.forEach(button => {
@@ -163,41 +228,27 @@
     function makeDraggable(element) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
-        // 当鼠标按下时开始拖拽
         element.onmousedown = dragMouseDown;
 
         function dragMouseDown(e) {
-            // 防止按钮点击事件触发
             e.preventDefault();
-
-            // 获取鼠标初始位置
             pos3 = e.clientX;
             pos4 = e.clientY;
-
-            // 当鼠标移动时持续拖动
             document.onmousemove = elementDrag;
-
-            // 当鼠标释放时停止拖动
             document.onmouseup = closeDragElement;
-
-            // 添加拖拽状态样式
             element.classList.add('dragging');
         }
 
         function elementDrag(e) {
             e.preventDefault();
-
-            // 计算新的元素位置
             pos1 = pos3 - e.clientX;
             pos2 = pos4 - e.clientY;
             pos3 = e.clientX;
             pos4 = e.clientY;
 
-            // 设置元素新位置，确保不会超出视口
             const newTop = element.offsetTop - pos2;
             const newLeft = element.offsetLeft - pos1;
 
-            // 限制在视口内
             if (newTop > 0 && newTop < window.innerHeight - element.offsetHeight) {
                 element.style.top = newTop + "px";
             }
@@ -205,48 +256,56 @@
                 element.style.left = newLeft + "px";
             }
 
-            // 移除transform，因为我们直接设置top和left
             element.style.transform = "none";
         }
 
         function closeDragElement() {
-            // 停止移动
             document.onmouseup = null;
             document.onmousemove = null;
-
-            // 移除拖拽状态样式
             element.classList.remove('dragging');
         }
     }
 
-    // 按钮功能逻辑
-    const btnSelect = document.getElementById('select-btn');
-    const btnRefresh = document.getElementById('refresh-btn');
-    const popup = document.getElementById('popup');
-    const iframe = document.getElementById('main-iframe');
-    const closeBtn = document.getElementById('popup-close');
-    const options = document.querySelectorAll('.url-option');
+    // 绑定事件
+    function bindEvents() {
+        const btnSelect = document.getElementById('select-btn');
+        const btnRefresh = document.getElementById('refresh-btn');
+        const popup = document.getElementById('popup');
+        const closeBtn = document.getElementById('popup-close');
+        const iframe = document.getElementById('main-iframe');
 
-    btnSelect.addEventListener('click', () => {
-        popup.style.display = 'block';
-    });
+        // 选择按钮
+        btnSelect.addEventListener('click', () => {
+            popup.style.display = 'block';
+        });
 
-    closeBtn.addEventListener('click', () => {
-        popup.style.display = 'none';
-    });
-
-    options.forEach(option => {
-        option.addEventListener('click', () => {
-            const url = option.getAttribute('data-url');
-            iframe.src = url;
-            window.open(url)
+        // 关闭弹窗
+        closeBtn.addEventListener('click', () => {
             popup.style.display = 'none';
         });
-    });
 
-    btnRefresh.addEventListener('click', () => {
-        location.reload();
-    });
+        // 点击弹窗外部关闭
+        popup.addEventListener('click', (e) => {
+            if (e.target === popup) {
+                popup.style.display = 'none';
+            }
+        });
+
+        // 选项点击事件（事件委托）
+        document.getElementById('options-container').addEventListener('click', (e) => {
+            if (e.target.classList.contains('url-option')) {
+                const url = e.target.getAttribute('data-url');
+                iframe.src = url;
+                // window.open(url); // 如果需要新开窗口，取消注释
+                popup.style.display = 'none';
+            }
+        });
+
+        // 刷新按钮
+        btnRefresh.addEventListener('click', () => {
+            location.reload();
+        });
+    }
 </script>
 </body>
 </html>
