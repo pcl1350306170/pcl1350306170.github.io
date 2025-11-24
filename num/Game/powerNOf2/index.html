@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>2的次幂乐园</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: "Comic Sans MS", "Marker Felt", "Arial Rounded MT Bold", sans-serif;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 16px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 16px 0;
+        }
+
+        h1 {
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            color: #d32f2f;
+            text-shadow: 2px 2px 0 #fff, -1px -1px 0 #fff;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 3.5vw, 1.2rem);
+            color: #5d4037;
+            opacity: 0.9;
+        }
+
+        /* 输入区域 */
+        .input-area {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 500px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        label {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #e91e63;
+        }
+
+        input[type="number"] {
+            flex: 1;
+            padding: 14px;
+            font-size: 1.2rem;
+            border: 3px solid #4fc3f7;
+            border-radius: 14px;
+            outline: none;
+            min-height: 48px;
+            text-align: center;
+            font-weight: bold;
+            color: #1976d2;
+        }
+
+        input[type="number"]:focus {
+            border-color: #0288d1;
+            box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.2);
+        }
+
+        button {
+            background: linear-gradient(to bottom, #4caf50, #2e7d32);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            min-width: 100px;
+            min-height: 48px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        button:hover,
+        button:focus {
+            transform: scale(1.03);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.25);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        /* 结果区域 */
+        .result-container {
+            background: white;
+            border-radius: 20px;
+            padding: 16px;
+            margin-top: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            height: 60vh;
+            max-height: 600px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+
+        .result-list {
+            list-style: none;
+        }
+
+        .result-item {
+            padding: 14px;
+            margin: 8px 0;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-radius: 14px;
+            font-size: clamp(1rem, 4vw, 1.3rem);
+            font-weight: bold;
+            color: #0d47a1;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeInUp 0.4s forwards;
+            border-left: 6px solid #2196f3;
+            white-space: normal;
+            word-break: break-all;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .result-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .result-container::-webkit-scrollbar-thumb {
+            background: #90caf9;
+            border-radius: 4px;
+        }
+
+        @media (min-width: 768px) {
+            .input-group { gap: 20px; }
+            input[type="number"], button {
+                font-size: 1.3rem;
+                padding: 16px 24px;
+                min-height: 56px;
+            }
+            .result-item { font-size: 1.4rem; padding: 18px; }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #757575;
+            font-style: italic;
+        }
+
+        /* 禁用按钮状态 */
+        .btn-disabled {
+            background: #bdbdbd !important;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>✨ 2 的次幂乐园 ✨</h1>
+        <p class="subtitle">输入一个数字，看看 2 的幂有多大！</p>
+    </header>
+
+    <div class="input-area">
+        <label for="nInput">请输入 N（最大 1000）：</label>
+        <div class="input-group">
+            <input type="number" id="nInput" min="1" max="1000" placeholder="例如：10" />
+            <button id="goBtn">开始计算</button>
+        </div>
+    </div>
+
+    <div class="result-container" id="resultContainer">
+        <div class="loading">点击“开始计算”查看结果 👇</div>
+    </div>
+</div>
+
+<script>
+    // 预计算 2^1 到 2^1000（字符串形式，精确无误）
+    const precomputedPowers = (() => {
+        const powers = [];
+        let value = 2n;
+        powers[1] = "2";
+        for (let i = 2; i <= 1000; i++) {
+            value *= 2n;
+            powers[i] = value.toString();
+        }
+        return powers;
+    })();
+
+    const nInput = document.getElementById('nInput');
+    const goBtn = document.getElementById('goBtn');
+    const resultContainer = document.getElementById('resultContainer');
+
+    let isRunning = false; // 防止重复点击
+
+    nInput.addEventListener('input', () => {
+        let val = parseInt(nInput.value);
+        if (isNaN(val) || val < 1) nInput.value = '';
+        else if (val > 1000) nInput.value = '1000';
+    });
+
+    function startCalculation(n) {
+        if (isRunning) return;
+        isRunning = true;
+        goBtn.classList.add('btn-disabled');
+        goBtn.textContent = '计算中...';
+
+        // 清空结果区
+        const ul = document.createElement('ul');
+        ul.className = 'result-list';
+        resultContainer.innerHTML = '';
+        resultContainer.appendChild(ul);
+
+        let current = 1;
+        const interval = setInterval(() => {
+            if (current > n) {
+                clearInterval(interval);
+                isRunning = false;
+                goBtn.classList.remove('btn-disabled');
+                goBtn.textContent = '开始计算';
+                return;
+            }
+
+            const li = document.createElement('li');
+            li.className = 'result-item';
+            li.textContent = `2^${current} = ${precomputedPowers[current]}`;
+            ul.appendChild(li);
+
+            // 滚动到底部（轻微延迟确保元素已渲染）
+            setTimeout(() => {
+                resultContainer.scrollTop = resultContainer.scrollHeight;
+            }, 50);
+
+            current++;
+        }, 500); // 每 0.5 秒显示一行
+    }
+
+    goBtn.addEventListener('click', () => {
+        const n = parseInt(nInput.value);
+        if (!n || n < 1 || n > 1000) {
+            alert('请输入 1 到 1000 之间的整数！');
+            return;
+        }
+        startCalculation(n);
+    });
+
+    nInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') goBtn.click();
+    });
+</script>
+</body>
+</html>

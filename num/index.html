@@ -124,6 +124,10 @@
     <div class="url-option" data-url="./num3.html">3、数字自增，可变色</div>
     <div class="url-option" data-url="./num4.html">4、数字+1+1+1..+n..+1</div>
     <div class="url-option" data-url="./num5.html">5、数字+1+2+3+n</div>
+    <div class="url-option" data-url="./Game/2048/index.html">6、数字2048[固定难度，可手滑]</div>
+    <div class="url-option" data-url="./Game/2048/index2.html">7、数字2048[可复活，最大65,536]</div>
+    <div class="url-option" data-url="./Game/2048/index3.html">8、数字2048[可调难度，点击]</div>
+    <div class="url-option" data-url="./Game/powerNOf2/index.html">2的次幂乐园</div>
     <div class="url-option" data-url="../application/editFileName/edit2.html">本地小工具</div>
     <div class="url-option" data-url="../application/editFileName/createData.html">快速创建数据[调用接口]</div>
     <div class="url-option" data-url="../application/editFileName/createMock.html">快速创建Mock数据</div>
@@ -235,6 +239,7 @@
         option.addEventListener('click', () => {
             const url = option.getAttribute('data-url');
             iframe.src = url;
+            window.open(url)
             popup.style.display = 'none';
         });
     });
