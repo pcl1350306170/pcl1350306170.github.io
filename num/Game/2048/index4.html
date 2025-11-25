@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>宝宝数字乐园</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: "Comic Sans MS", "Microsoft YaHei", cursive, sans-serif;
+            background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 15px;
+            color: #2c3e50;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #ff6f61;
+            margin: 10px 0;
+            text-shadow: 1px 1px 2px white;
+        }
+
+        .target {
+            background: #ffeaa7;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 12px;
+            font-weight: bold;
+            color: #e17055;
+        }
+
+        .score-board {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 10px 0;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+
+        .score-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2d3436;
+        }
+
+        .grid {
+            background-color: #b2bec3;
+            border-radius: 12px;
+            padding: 8px;
+            margin: 0 auto 15px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        .cell {
+            background-color: #dfe6e9;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #2d3436;
+            transition: all 0.15s ease;
+        }
+
+        .cell-4   { background: #ffeaa7; color: #2d3436; }
+        .cell-8   { background: #fdcb6e; color: white; }
+        .cell-16  { background: #e17055; color: white; font-size: 1.5rem; }
+        .cell-32  { background: #d63031; color: white; font-size: 1.5rem; }
+        .cell-64  { background: #fd79a8; color: white; font-size: 1.5rem; }
+        .cell-128 { background: #6c5ce7; color: white; font-size: 1.4rem; animation: pulse 1s infinite; }
+        .cell-256 { background: #a29bfe; color: white; font-size: 1.4rem; animation: pulse 1s infinite; }
+        .cell-512 { background: #fd79a8; color: white; font-size: 1.4rem; animation: pulse 1s infinite; }
+        .cell-1024{ background: #fdcb6e; color: white; font-size: 1.2rem; animation: pulse 1s infinite; }
+        .cell-2048{ background: #e17055; color: white; font-size: 1.2rem; animation: pulse 1s infinite; }
+        .cell-4096{ background: #d63031; color: white; font-size: 1.1rem; animation: pulse 1s infinite; }
+        .cell-8192{ background: #6c5ce7; color: white; font-size: 1.1rem; animation: pulse 1s infinite; }
+        .cell-16384{ background: #00b894; color: white; font-size: 1rem; animation: pulse 1s infinite; }
+        .cell-32768{ background: #e84393; color: white; font-size: 1rem; animation: pulse 1s infinite; }
+        .cell-65536{ background: #2d3436; color: white; font-size: 1rem; animation: pulse 1s infinite; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .controls {
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .direction-btn {
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 50px;
+            background: #55efc4;
+            color: #2d3436;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #00b894;
+            transition: transform 0.1s;
+            user-select: none;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .direction-btn:active {
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+
+        .direction-btn.up { background: #74b9ff; color: white; }
+        .direction-btn.down { background: #74b9ff; color: white; }
+        .direction-btn.left { background: #74b9ff; color: white; }
+        .direction-btn.right { background: #74b9ff; color: white; }
+
+        button {
+            padding: 10px 18px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 50px;
+            background: #55efc4;
+            color: #2d3436;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #00b894;
+            transition: transform 0.1s;
+            user-select: none;
+        }
+
+        button:active {
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+
+        .revive-btn {
+            background: #ff9ff3;
+            color: white;
+            box-shadow: 0 3px 0 #f368e0;
+        }
+
+        .revive-btn:disabled {
+            background: #b2bec3;
+            color: #636e72;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .audio-controls {
+            margin: 12px 0;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .audio-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            background: #74b9ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #4a4a4a;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .win-message, .lose-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            z-index: 100;
+            display: none;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .win-message h2 {
+            color: #ffd32a;
+            margin-bottom: 20px;
+            font-size: 2.2rem;
+        }
+
+        .lose-message h2 {
+            color: #ff7675;
+            margin-bottom: 20px;
+            font-size: 2.2rem;
+        }
+
+        .play-again-btn {
+            padding: 12px 30px;
+            font-size: 1.3rem;
+            background: #55efc4;
+            color: #2d3436;
+            border: none;
+            border-radius: 50px;
+            margin-top: 15px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .difficulty-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            z-index: 1000;
+            display: none;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .difficulty-title {
+            font-size: 1.8rem;
+            color: #ffd32a;
+            margin-bottom: 20px;
+        }
+
+        .difficulty-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-width: 350px;
+            margin: 0 auto;
+        }
+
+        .difficulty-btn-modal {
+            padding: 12px 8px;
+            font-size: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            color: #2d3436;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .difficulty-btn-modal.active {
+            background: #55efc4;
+            border-color: #00b894;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .close-difficulty {
+            padding: 12px 30px;
+            font-size: 1.3rem;
+            background: #74b9ff;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            margin-top: 20px;
+            cursor: pointer;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <h1>🎈 宝宝数字乐园 🎈</h1>
+    <div class="target">目标：合成 <strong id="target-value">128</strong>！</div>
+
+    <div class="score-board">
+        <div class="score-value" id="score">0</div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="controls">
+        <button class="direction-btn up" id="up-btn">↑</button>
+        <div style="display: flex; gap: 12px;">
+            <button class="direction-btn left" id="left-btn">←</button>
+            <button class="direction-btn down" id="down-btn">↓</button>
+            <button class="direction-btn right" id="right-btn">→</button>
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <button id="new-game">新游戏</button>
+            <button class="revive-btn" id="revive-btn" disabled>✨ 复活 (剩余: 5)</button>
+        </div>
+    </div>
+
+    <div class="audio-controls">
+        <button class="audio-btn" id="sound-on">🔊</button>
+        <button class="audio-btn" id="sound-off">🔇</button>
+    </div>
+
+    <div class="instructions">
+        👉 点击方向按钮移动方块<br/>
+        相同数字会合并变大！<br/>
+        <span style="color: #e17055; font-weight: bold;">点击屏幕7次可选择难度</span>
+    </div>
+</div>
+
+<!-- 胜利/失败弹窗 -->
+<div class="win-message" id="win-message">
+    <h2>🎉 太棒啦！</h2>
+    <p id="win-text">你合成 128 啦！</p>
+    <button class="play-again-btn" id="play-again-win">再玩一次</button>
+</div>
+
+<div class="lose-message" id="lose-message">
+    <h2>🤗 再试一次吧！</h2>
+    <p>没有可移动的方块了</p>
+    <button class="play-again-btn" id="play-again-lose">重新开始</button>
+</div>
+
+<!-- 难度选择弹窗 -->
+<div class="difficulty-modal" id="difficulty-modal">
+    <div class="difficulty-title">🎯 选择难度</div>
+    <div class="difficulty-options">
+        <button class="difficulty-btn-modal active" data-value="128">128</button>
+        <button class="difficulty-btn-modal" data-value="256">256</button>
+        <button class="difficulty-btn-modal" data-value="512">512</button>
+        <button class="difficulty-btn-modal" data-value="1024">1024</button>
+        <button class="difficulty-btn-modal" data-value="2048">2048</button>
+        <button class="difficulty-btn-modal" data-value="4096">4096</button>
+        <button class="difficulty-btn-modal" data-value="8192">8192</button>
+        <button class="difficulty-btn-modal" data-value="16384">16384</button>
+        <button class="difficulty-btn-modal" data-value="32768">32768</button>
+        <button class="difficulty-btn-modal" data-value="65536">65536</button>
+        <button class="difficulty-btn-modal" data-value="131072">131,072</button>
+        <button class="difficulty-btn-modal" data-value="262144">262,144</button>
+    </div>
+    <button class="close-difficulty" id="close-difficulty">关闭</button>
+</div>
+
+<!-- 音频元素（隐藏） -->
+<audio id="move-sound" src="sounds/move.mp3" preload="auto"></audio>
+<audio id="merge-sound" src="sounds/merge.mp3" preload="auto"></audio>
+<audio id="win-sound" src="sounds/win.mp3" preload="auto"></audio>
+<audio id="lose-sound" src="sounds/lose.mp3" preload="auto"></audio>
+<audio id="new-tile-sound" src="sounds/new-tile.mp3" preload="auto"></audio>
+
+<script>
+    // 游戏状态
+    let board = [];
+    let score = 0;
+    let soundEnabled = true;
+    let targetValue = 128;
+    let clickCount = 0;
+    let lastClickTime = 0;
+    let reviveCount = 5; // 初始复活次数改为5
+    let previousBoard = null;
+    let previousScore = 0;
+
+    // DOM 元素
+    const gridElement = document.getElementById('grid');
+    const scoreElement = document.getElementById('score');
+    const winMessage = document.getElementById('win-message');
+    const loseMessage = document.getElementById('lose-message');
+    const targetValueElement = document.getElementById('target-value');
+    const winTextElement = document.getElementById('win-text');
+    const difficultyModal = document.getElementById('difficulty-modal');
+    const reviveBtn = document.getElementById('revive-btn');
+
+    // 音频元素
+    const moveSound = document.getElementById('move-sound');
+    const mergeSound = document.getElementById('merge-sound');
+    const winSound = document.getElementById('win-sound');
+    const loseSound = document.getElementById('lose-sound');
+    const newTileSound = document.getElementById('new-tile-sound');
+
+    // 保存当前状态用于复活
+    function saveState() {
+        previousBoard = JSON.parse(JSON.stringify(board));
+        previousScore = score;
+    }
+
+    // 恢复上一状态（复活）
+    function restoreState() {
+        if (reviveCount <= 0) return;
+        if (previousBoard) {
+            board = JSON.parse(JSON.stringify(previousBoard));
+            score = previousScore;
+            scoreElement.textContent = score;
+            renderBoard();
+            reviveCount--;
+            updateReviveButton();
+            console.log("复活成功，剩余次数:", reviveCount);
+        }
+    }
+
+    // 复活：保留棋盘上4个最大数字，清空其他
+    function useRevive() {
+        if (reviveCount <= 0) return;
+
+        // 找出所有非0数字及其位置
+        const valuesWithPos = [];
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                if (board[r][c] !== 0) {
+                    valuesWithPos.push({ value: board[r][c], r, c });
+                }
+            }
+        }
+
+        // 按数值降序排序
+        valuesWithPos.sort((a, b) => b.value - a.value);
+
+        // 取前4个最大值
+        const top4 = valuesWithPos.slice(0, 4);
+
+        // 清空棋盘
+        board = Array(4).fill().map(() => Array(4).fill(0));
+
+        // 将4个最大值随机放置到空位
+        const emptyCells = [];
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                emptyCells.push({ r, c });
+            }
+        }
+
+        for (let i = 0; i < Math.min(4, top4.length); i++) {
+            const randomIndex = Math.floor(Math.random() * emptyCells.length);
+            const pos = emptyCells[randomIndex];
+            board[pos.r][pos.c] = top4[i].value;
+            // 从空位列表中移除已占用的
+            emptyCells.splice(randomIndex, 1);
+        }
+
+        renderBoard();
+        reviveCount--;
+        updateReviveButton();
+        console.log("复活成功，保留了4个最大数字，剩余次数:", reviveCount);
+    }
+
+    // 更新复活按钮显示
+    function updateReviveButton() {
+        reviveBtn.textContent = `✨ 复活 (剩余: ${reviveCount})`;
+        if (reviveCount <= 0) {
+            reviveBtn.disabled = true;
+        }
+    }
+
+    // 初始化游戏
+    function initGame() {
+        board = Array(4).fill().map(() => Array(4).fill(0));
+        score = 0;
+        reviveCount = 5;
+        previousBoard = null;
+        previousScore = 0;
+        updateReviveButton();
+        scoreElement.textContent = score;
+        addRandomTile();
+        addRandomTile();
+        renderBoard();
+        winMessage.style.display = 'none';
+        loseMessage.style.display = 'none';
+    }
+
+    // 渲染棋盘
+    function renderBoard() {
+        gridElement.innerHTML = '';
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (board[r][c] !== 0) {
+                    cell.textContent = board[r][c];
+                    cell.classList.add(`cell-${board[r][c]}`);
+                }
+                gridElement.appendChild(cell);
+            }
+        }
+    }
+
+    // 根据难度调整初始数字生成策略
+    function addRandomTile() {
+        const emptyCells = [];
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                if (board[r][c] === 0) {
+                    emptyCells.push({ r, c });
+                }
+            }
+        }
+        if (emptyCells.length > 0) {
+            const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+
+            // 计算最小初始值（目标难度的 1/64）
+            const minInitialValue = targetValue >> 6; // 相当于除以 2^6
+            let tileValue;
+
+            // 根据难度范围确定初始值
+            if (targetValue <= 256) {
+                // 128/256: 生成 4, 8
+                tileValue = Math.random() < 0.7 ? 8 : 4;
+                tileValue = Math.max(tileValue, minInitialValue);
+            } else if (targetValue <= 2048) {
+                // 512/1024/2048: 生成 16, 32
+                tileValue = Math.random() < 0.7 ? 32 : 16;
+                tileValue = Math.max(tileValue, minInitialValue);
+            } else if (targetValue <= 8192) {
+                // 4096/8192: 生成 64, 128
+                tileValue = Math.random() < 0.7 ? 128 : 64;
+                tileValue = Math.max(tileValue, minInitialValue);
+            } else if (targetValue <= 32768) {
+                // 16384/32768: 生成 256, 512
+                tileValue = Math.random() < 0.7 ? 512 : 256;
+                tileValue = Math.max(tileValue, minInitialValue);
+            } else if (targetValue <= 131072) {
+                // 65536/131072: 生成 1024, 2048
+                tileValue = Math.random() < 0.7 ? 2048 : 1024;
+                tileValue = Math.max(tileValue, minInitialValue);
+            } else {
+                // 262144+: 生成 4096, 8192
+                tileValue = Math.random() < 0.7 ? 8192 : 4096;
+                tileValue = Math.max(tileValue, minInitialValue);
+            }
+
+            board[randomCell.r][randomCell.c] = tileValue;
+            if (soundEnabled) newTileSound.play().catch(e => console.log("音频播放被阻止"));
+        }
+    }
+
+    // 移动逻辑（向左）
+    function moveLeft() {
+        let moved = false;
+        for (let r = 0; r < 4; r++) {
+            let row = board[r].filter(val => val !== 0);
+            let newRow = [];
+            let i = 0;
+            while (i < row.length) {
+                if (i + 1 < row.length && row[i] === row[i + 1]) {
+                    const mergedValue = row[i] * 2;
+                    newRow.push(mergedValue);
+                    score += mergedValue;
+                    i += 2;
+                    if (soundEnabled) mergeSound.play().catch(e => console.log("音频播放被阻止"));
+                    if (mergedValue === targetValue) {
+                        setTimeout(showWin, 300);
+                    }
+                } else {
+                    newRow.push(row[i]);
+                    i++;
+                }
+            }
+            while (newRow.length < 4) {
+                newRow.push(0);
+            }
+            if (newRow.some((val, idx) => val !== board[r][idx])) {
+                moved = true;
+            }
+            board[r] = newRow;
+        }
+        return moved;
+    }
+
+    // 矩阵旋转
+    function rotateBoard(clockwise = true) {
+        const newBoard = Array(4).fill().map(() => Array(4).fill(0));
+        if (clockwise) {
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    newBoard[c][3 - r] = board[r][c];
+                }
+            }
+        } else {
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    newBoard[3 - c][r] = board[r][c];
+                }
+            }
+        }
+        board = newBoard;
+    }
+
+    // 处理方向移动
+    function handleMove(direction) {
+        // 保存当前状态
+        saveState();
+
+        let moved = false;
+        switch (direction) {
+            case 0: // up
+                rotateBoard(false);
+                moved = moveLeft();
+                rotateBoard(true);
+                break;
+            case 1: // right
+                rotateBoard(true);
+                rotateBoard(true);
+                moved = moveLeft();
+                rotateBoard(true);
+                rotateBoard(true);
+                break;
+            case 2: // down
+                rotateBoard(true);
+                moved = moveLeft();
+                rotateBoard(false);
+                break;
+            case 3: // left
+                moved = moveLeft();
+                break;
+        }
+        if (moved) {
+            if (soundEnabled) moveSound.play().catch(e => console.log("音频播放被阻止"));
+            addRandomTile();
+            renderBoard();
+            scoreElement.textContent = score;
+            if (!canMove()) {
+                setTimeout(showLose, 500);
+            }
+        } else {
+            // 如果没移动成功，恢复状态
+            board = JSON.parse(JSON.stringify(previousBoard));
+            score = previousScore;
+        }
+    }
+
+    // 检查是否还能移动
+    function canMove() {
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                if (board[r][c] === 0) return true;
+                if (r < 3 && board[r][c] === board[r+1][c]) return true;
+                if (c < 3 && board[r][c] === board[r][c+1]) return true;
+            }
+        }
+        return false;
+    }
+
+    // 显示胜利
+    function showWin() {
+        winTextElement.textContent = `你合成 ${targetValue} 啦！`;
+        winMessage.style.display = 'flex';
+        if (soundEnabled) winSound.play().catch(e => console.log("音频播放被阻止"));
+    }
+
+    // 显示失败
+    function showLose() {
+        loseMessage.style.display = 'flex';
+        if (soundEnabled) loseSound.play().catch(e => console.log("音频播放被阻止"));
+    }
+
+    // 方向按钮事件
+    document.getElementById('up-btn').addEventListener('click', () => handleMove(0));
+    document.getElementById('right-btn').addEventListener('click', () => handleMove(1));
+    document.getElementById('down-btn').addEventListener('click', () => handleMove(2));
+    document.getElementById('left-btn').addEventListener('click', () => handleMove(3));
+
+    // 复活按钮事件
+    reviveBtn.addEventListener('click', () => {
+        if (reviveCount > 0) {
+            useRevive();
+        }
+    });
+
+    // 难度选择 - 点击屏幕7次触发
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('direction-btn') ||
+            e.target.classList.contains('difficulty-btn-modal') ||
+            e.target.classList.contains('close-difficulty') ||
+            e.target.id === 'new-game' ||
+            e.target.id === 'revive-btn' ||
+            e.target.classList.contains('audio-btn') ||
+            e.target.classList.contains('play-again-btn')) {
+            return;
+        }
+
+        const now = Date.now();
+        if (now - lastClickTime > 500) {
+            clickCount = 1;
+        } else {
+            clickCount++;
+        }
+        lastClickTime = now;
+
+        if (clickCount >= 7) {
+            clickCount = 0;
+            difficultyModal.style.display = 'flex';
+
+            document.querySelectorAll('.difficulty-btn-modal').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseInt(btn.getAttribute('data-value')) === targetValue) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+    });
+
+    // 难度选择按钮事件
+    document.querySelectorAll('.difficulty-btn-modal').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.difficulty-btn-modal').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            targetValue = parseInt(btn.getAttribute('data-value'));
+            targetValueElement.textContent = targetValue;
+            initGame();
+        });
+    });
+
+    // 关闭难度选择弹窗
+    document.getElementById('close-difficulty').addEventListener('click', () => {
+        difficultyModal.style.display = 'none';
+    });
+
+    // 按钮事件
+    document.getElementById('new-game').addEventListener('click', initGame);
+    document.getElementById('play-again-win').addEventListener('click', initGame);
+    document.getElementById('play-again-lose').addEventListener('click', initGame);
+
+    // 音频开关
+    document.getElementById('sound-on').addEventListener('click', () => {
+        soundEnabled = true;
+    });
+    document.getElementById('sound-off').addEventListener('click', () => {
+        soundEnabled = false;
+    });
+
+    // 启动游戏
+    initGame();
+</script>
+</body>
+</html>

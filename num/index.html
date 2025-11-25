@@ -174,6 +174,8 @@
         { name: "6、数字2048[固定难度，可手滑]", url: "./Game/2048/index.html" },
         { name: "7、数字2048[可复活，最大65,536]", url: "./Game/2048/index2.html" },
         { name: "8、数字2048[可调难度，点击]", url: "./Game/2048/index3.html" },
+        { name: "9、数字2048[可复活，最大262,144，低难度]", url: "./Game/2048/index4.html" },
+        { name: "9、数字计算", url: "./Game/numericalOperations/index.html" },
         { name: "2的次幂乐园", url: "./Game/powerNOf2/index.html" },
         { name: "本地小工具", url: "../application/editFileName/edit2.html" },
         { name: "快速创建数据[调用接口]", url: "../application/editFileName/createData.html" },
@@ -296,7 +298,7 @@
             if (e.target.classList.contains('url-option')) {
                 const url = e.target.getAttribute('data-url');
                 iframe.src = url;
-                // window.open(url); // 如果需要新开窗口，取消注释
+                 window.open(url); // 如果需要新开窗口，取消注释
                 popup.style.display = 'none';
             }
         });
