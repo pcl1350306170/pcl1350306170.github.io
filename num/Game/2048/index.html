@@ -9,7 +9,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            touch-action: none; /* 禁用双指缩放，提升滑动手感 */
+            touch-action: manipulation; /* 允许点击事件 */
         }
 
         body {
@@ -67,7 +67,7 @@
             background-color: #b2bec3;
             border-radius: 12px;
             padding: 8px;
-            margin: 0 auto;
+            margin: 0 auto 15px;
             width: 100%;
             aspect-ratio: 1 / 1;
             display: grid;
@@ -100,6 +100,42 @@
             font-size: 1.4rem;
             animation: pulse 1s infinite;
         }
+        .cell-256 {
+            background: #a29bfe;
+            color: white;
+            font-size: 1.4rem;
+            animation: pulse 1s infinite;
+        }
+        .cell-512 {
+            background: #fd79a8;
+            color: white;
+            font-size: 1.4rem;
+            animation: pulse 1s infinite;
+        }
+        .cell-1024 {
+            background: #fdcb6e;
+            color: white;
+            font-size: 1.2rem;
+            animation: pulse 1s infinite;
+        }
+        .cell-2048 {
+            background: #e17055;
+            color: white;
+            font-size: 1.2rem;
+            animation: pulse 1s infinite;
+        }
+        .cell-4096 {
+            background: #d63031;
+            color: white;
+            font-size: 1.1rem;
+            animation: pulse 1s infinite;
+        }
+        .cell-8192 {
+            background: #6c5ce7;
+            color: white;
+            font-size: 1.1rem;
+            animation: pulse 1s infinite;
+        }
 
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -125,6 +161,7 @@
             cursor: pointer;
             box-shadow: 0 3px 0 #00b894;
             transition: transform 0.1s;
+            user-select: none; /* 防止文本选择 */
         }
 
         button:active {
@@ -151,6 +188,7 @@
             color: white;
             border: none;
             cursor: pointer;
+            user-select: none; /* 防止文本选择 */
         }
 
         .instructions {
@@ -204,13 +242,79 @@
             border-radius: 50px;
             margin-top: 15px;
             cursor: pointer;
+            user-select: none; /* 防止文本选择 */
+        }
+
+        .difficulty-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            z-index: 1000;
+            display: none;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .difficulty-title {
+            font-size: 1.8rem;
+            color: #ffd32a;
+            margin-bottom: 20px;
+        }
+
+        .difficulty-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-width: 350px;
+            margin: 0 auto;
+        }
+
+        .difficulty-btn-modal {
+            padding: 12px 8px;
+            font-size: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            color: #2d3436;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none; /* 防止文本选择 */
+        }
+
+        .difficulty-btn-modal.active {
+            background: #55efc4;
+            border-color: #00b894;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .close-difficulty {
+            padding: 12px 30px;
+            font-size: 1.3rem;
+            background: #74b9ff;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            margin-top: 20px;
+            cursor: pointer;
+            user-select: none; /* 防止文本选择 */
         }
     </style>
 </head>
 <body>
 <div class="game-container">
     <h1>🎈 宝宝数字乐园 🎈</h1>
-    <div class="target">目标：合成 <strong>128</strong>！</div>
+    <div class="target">目标：合成 <strong id="target-value">128</strong>！</div>
 
     <div class="score-board">
         <div class="score-value" id="score">0</div>
@@ -229,14 +333,15 @@
 
     <div class="instructions">
         👉 用手指<strong>上下左右滑动</strong>移动方块<br/>
-        相同数字会合并变大！
+        相同数字会合并变大！<br/>
+        <span style="color: #e17055; font-weight: bold;">点击屏幕7次可选择难度</span>
     </div>
 </div>
 
 <!-- 胜利/失败弹窗 -->
 <div class="win-message" id="win-message">
     <h2>🎉 太棒啦！</h2>
-    <p>你合成 128 啦！</p>
+    <p id="win-text">你合成 128 啦！</p>
     <button class="play-again-btn" id="play-again-win">再玩一次</button>
 </div>
 
@@ -244,6 +349,21 @@
     <h2>🤗 再试一次吧！</h2>
     <p>没有可移动的方块了</p>
     <button class="play-again-btn" id="play-again-lose">重新开始</button>
+</div>
+
+<!-- 难度选择弹窗 -->
+<div class="difficulty-modal" id="difficulty-modal">
+    <div class="difficulty-title">🎯 选择难度</div>
+    <div class="difficulty-options">
+        <button class="difficulty-btn-modal active" data-value="128">128</button>
+        <button class="difficulty-btn-modal" data-value="256">256</button>
+        <button class="difficulty-btn-modal" data-value="512">512</button>
+        <button class="difficulty-btn-modal" data-value="1024">1024</button>
+        <button class="difficulty-btn-modal" data-value="2048">2048</button>
+        <button class="difficulty-btn-modal" data-value="4096">4096</button>
+        <button class="difficulty-btn-modal" data-value="8192">8192</button>
+    </div>
+    <button class="close-difficulty" id="close-difficulty">关闭</button>
 </div>
 
 <!-- 音频元素（隐藏） -->
@@ -260,12 +380,18 @@
     let soundEnabled = true;
     let touchStartX = 0;
     let touchStartY = 0;
+    let targetValue = 128;
+    let clickCount = 0;
+    let lastClickTime = 0;
 
     // DOM 元素
     const gridElement = document.getElementById('grid');
     const scoreElement = document.getElementById('score');
     const winMessage = document.getElementById('win-message');
     const loseMessage = document.getElementById('lose-message');
+    const targetValueElement = document.getElementById('target-value');
+    const winTextElement = document.getElementById('win-text');
+    const difficultyModal = document.getElementById('difficulty-modal');
 
     // 音频元素
     const moveSound = document.getElementById('move-sound');
@@ -334,7 +460,7 @@
                     score += mergedValue;
                     i += 2;
                     if (soundEnabled) mergeSound.play().catch(e => console.log("音频播放被阻止"));
-                    if (mergedValue === 128) {
+                    if (mergedValue === targetValue) {
                         setTimeout(showWin, 300);
                     }
                 } else {
@@ -422,6 +548,7 @@
 
     // 显示胜利
     function showWin() {
+        winTextElement.textContent = `你合成 ${targetValue} 啦！`;
         winMessage.style.display = 'flex';
         if (soundEnabled) winSound.play().catch(e => console.log("音频播放被阻止"));
     }
@@ -482,6 +609,46 @@
             }
             handleMove(dir);
         }
+    });
+
+    // 难度选择 - 点击屏幕7次触发
+    document.addEventListener('click', (e) => {
+        const now = Date.now();
+        if (now - lastClickTime > 500) { // 500ms 内连续点击
+            clickCount = 1;
+        } else {
+            clickCount++;
+        }
+        lastClickTime = now;
+
+        if (clickCount >= 7) {
+            clickCount = 0;
+            difficultyModal.style.display = 'flex';
+
+            // 设置当前难度按钮为选中状态
+            document.querySelectorAll('.difficulty-btn-modal').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseInt(btn.getAttribute('data-value')) === targetValue) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+    });
+
+    // 难度选择按钮事件
+    document.querySelectorAll('.difficulty-btn-modal').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.difficulty-btn-modal').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            targetValue = parseInt(btn.getAttribute('data-value'));
+            targetValueElement.textContent = targetValue;
+            initGame();
+        });
+    });
+
+    // 关闭难度选择弹窗
+    document.getElementById('close-difficulty').addEventListener('click', () => {
+        difficultyModal.style.display = 'none';
     });
 
     // 按钮事件
