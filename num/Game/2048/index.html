@@ -9,7 +9,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            touch-action: manipulation; /* 允许点击事件 */
+            touch-action: none; /* 禁用双指缩放，提升滑动手感 */
         }
 
         body {
@@ -36,6 +36,7 @@
             color: #ff6f61;
             margin: 10px 0;
             text-shadow: 1px 1px 2px white;
+            cursor: pointer; /* 使标题可点击用于滑动检测 */
         }
 
         .target {
@@ -67,7 +68,7 @@
             background-color: #b2bec3;
             border-radius: 12px;
             padding: 8px;
-            margin: 0 auto 15px;
+            margin: 0 auto;
             width: 100%;
             aspect-ratio: 1 / 1;
             display: grid;
@@ -104,37 +105,21 @@
             background: #a29bfe;
             color: white;
             font-size: 1.4rem;
-            animation: pulse 1s infinite;
         }
         .cell-512 {
             background: #fd79a8;
             color: white;
             font-size: 1.4rem;
-            animation: pulse 1s infinite;
         }
         .cell-1024 {
             background: #fdcb6e;
-            color: white;
-            font-size: 1.2rem;
-            animation: pulse 1s infinite;
+            color: #2d3436;
+            font-size: 1.3rem;
         }
         .cell-2048 {
             background: #e17055;
             color: white;
             font-size: 1.2rem;
-            animation: pulse 1s infinite;
-        }
-        .cell-4096 {
-            background: #d63031;
-            color: white;
-            font-size: 1.1rem;
-            animation: pulse 1s infinite;
-        }
-        .cell-8192 {
-            background: #6c5ce7;
-            color: white;
-            font-size: 1.1rem;
-            animation: pulse 1s infinite;
         }
 
         @keyframes pulse {
@@ -161,7 +146,6 @@
             cursor: pointer;
             box-shadow: 0 3px 0 #00b894;
             transition: transform 0.1s;
-            user-select: none; /* 防止文本选择 */
         }
 
         button:active {
@@ -188,7 +172,6 @@
             color: white;
             border: none;
             cursor: pointer;
-            user-select: none; /* 防止文本选择 */
         }
 
         .instructions {
@@ -203,34 +186,36 @@
         }
 
         .win-message, .lose-message {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 300px;
             background: rgba(0,0,0,0.85);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 2rem;
+            font-size: 1.5rem;
             z-index: 100;
             display: none;
             padding: 20px;
+            border-radius: 12px;
             text-align: center;
         }
 
         .win-message h2 {
             color: #ffd32a;
             margin-bottom: 20px;
-            font-size: 2.2rem;
+            font-size: 1.8rem;
         }
 
         .lose-message h2 {
             color: #ff7675;
             margin-bottom: 20px;
-            font-size: 2.2rem;
+            font-size: 1.8rem;
         }
 
         .play-again-btn {
@@ -242,72 +227,6 @@
             border-radius: 50px;
             margin-top: 15px;
             cursor: pointer;
-            user-select: none; /* 防止文本选择 */
-        }
-
-        .difficulty-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.85);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-            z-index: 1000;
-            display: none;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .difficulty-title {
-            font-size: 1.8rem;
-            color: #ffd32a;
-            margin-bottom: 20px;
-        }
-
-        .difficulty-options {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            max-width: 350px;
-            margin: 0 auto;
-        }
-
-        .difficulty-btn-modal {
-            padding: 12px 8px;
-            font-size: 1rem;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            background: white;
-            color: #2d3436;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-            user-select: none; /* 防止文本选择 */
-        }
-
-        .difficulty-btn-modal.active {
-            background: #55efc4;
-            border-color: #00b894;
-            color: white;
-            transform: scale(1.05);
-        }
-
-        .close-difficulty {
-            padding: 12px 30px;
-            font-size: 1.3rem;
-            background: #74b9ff;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            margin-top: 20px;
-            cursor: pointer;
-            user-select: none; /* 防止文本选择 */
         }
     </style>
 </head>
@@ -333,15 +252,14 @@
 
     <div class="instructions">
         👉 用手指<strong>上下左右滑动</strong>移动方块<br/>
-        相同数字会合并变大！<br/>
-        <span style="color: #e17055; font-weight: bold;">点击屏幕7次可选择难度</span>
+        相同数字会合并变大！
     </div>
 </div>
 
 <!-- 胜利/失败弹窗 -->
 <div class="win-message" id="win-message">
     <h2>🎉 太棒啦！</h2>
-    <p id="win-text">你合成 128 啦！</p>
+    <p>你合成 <span id="win-target">128</span> 啦！</p>
     <button class="play-again-btn" id="play-again-win">再玩一次</button>
 </div>
 
@@ -349,21 +267,6 @@
     <h2>🤗 再试一次吧！</h2>
     <p>没有可移动的方块了</p>
     <button class="play-again-btn" id="play-again-lose">重新开始</button>
-</div>
-
-<!-- 难度选择弹窗 -->
-<div class="difficulty-modal" id="difficulty-modal">
-    <div class="difficulty-title">🎯 选择难度</div>
-    <div class="difficulty-options">
-        <button class="difficulty-btn-modal active" data-value="128">128</button>
-        <button class="difficulty-btn-modal" data-value="256">256</button>
-        <button class="difficulty-btn-modal" data-value="512">512</button>
-        <button class="difficulty-btn-modal" data-value="1024">1024</button>
-        <button class="difficulty-btn-modal" data-value="2048">2048</button>
-        <button class="difficulty-btn-modal" data-value="4096">4096</button>
-        <button class="difficulty-btn-modal" data-value="8192">8192</button>
-    </div>
-    <button class="close-difficulty" id="close-difficulty">关闭</button>
 </div>
 
 <!-- 音频元素（隐藏） -->
@@ -374,298 +277,351 @@
 <audio id="new-tile-sound" src="sounds/new-tile.mp3" preload="auto"></audio>
 
 <script>
-    // 游戏状态
-    let board = [];
-    let score = 0;
-    let soundEnabled = true;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let targetValue = 128;
-    let clickCount = 0;
-    let lastClickTime = 0;
+    class NumberGame {
+        constructor() {
+            // 游戏状态
+            this.board = [];
+            this.score = 0;
+            this.soundEnabled = true;
+            this.touchStartX = 0;
+            this.touchStartY = 0;
 
-    // DOM 元素
-    const gridElement = document.getElementById('grid');
-    const scoreElement = document.getElementById('score');
-    const winMessage = document.getElementById('win-message');
-    const loseMessage = document.getElementById('lose-message');
-    const targetValueElement = document.getElementById('target-value');
-    const winTextElement = document.getElementById('win-text');
-    const difficultyModal = document.getElementById('difficulty-modal');
+            // 难度相关
+            this.difficulties = [128, 256, 512, 1024, 2048];
+            this.currentDifficultyIndex = 0; // 默认为128
 
-    // 音频元素
-    const moveSound = document.getElementById('move-sound');
-    const mergeSound = document.getElementById('merge-sound');
-    const winSound = document.getElementById('win-sound');
-    const loseSound = document.getElementById('lose-sound');
-    const newTileSound = document.getElementById('new-tile-sound');
+            // 滑动检测
+            this.titleTouchStartX = 0;
+            this.titleTouchStartY = 0;
+            this.rightSwipeCount = 0;
+            this.leftSwipeCount = 0;
 
-    // 初始化游戏
-    function initGame() {
-        board = Array(4).fill().map(() => Array(4).fill(0));
-        score = 0;
-        scoreElement.textContent = score;
-        addRandomTile();
-        addRandomTile();
-        renderBoard();
-        winMessage.style.display = 'none';
-        loseMessage.style.display = 'none';
-    }
+            // DOM 元素
+            this.gridElement = document.getElementById('grid');
+            this.scoreElement = document.getElementById('score');
+            this.winMessage = document.getElementById('win-message');
+            this.loseMessage = document.getElementById('lose-message');
+            this.targetValueElement = document.getElementById('target-value');
+            this.winTargetElement = document.getElementById('win-target');
 
-    // 渲染棋盘
-    function renderBoard() {
-        gridElement.innerHTML = '';
-        for (let r = 0; r < 4; r++) {
-            for (let c = 0; c < 4; c++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                if (board[r][c] !== 0) {
-                    cell.textContent = board[r][c];
-                    cell.classList.add(`cell-${board[r][c]}`);
-                }
-                gridElement.appendChild(cell);
-            }
+            // 音频元素
+            this.moveSound = document.getElementById('move-sound');
+            this.mergeSound = document.getElementById('merge-sound');
+            this.winSound = document.getElementById('win-sound');
+            this.loseSound = document.getElementById('lose-sound');
+            this.newTileSound = document.getElementById('new-tile-sound');
+
+            this.initEventListeners();
+            this.initGame();
         }
-    }
 
-    // 添加随机方块（4 或 8，8 的概率更高）
-    function addRandomTile() {
-        const emptyCells = [];
-        for (let r = 0; r < 4; r++) {
-            for (let c = 0; c < 4; c++) {
-                if (board[r][c] === 0) {
-                    emptyCells.push({ r, c });
-                }
-            }
-        }
-        if (emptyCells.length > 0) {
-            const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-            // 70% 概率出 8，30% 出 4（比原版更容易）
-            board[randomCell.r][randomCell.c] = Math.random() < 0.7 ? 8 : 4;
-            if (soundEnabled) newTileSound.play().catch(e => console.log("音频播放被阻止"));
-        }
-    }
+        initEventListeners() {
+            // 滑动检测 - 棋盘区域
+            this.gridElement.addEventListener('touchstart', (e) => {
+                this.touchStartX = e.touches[0].clientX;
+                this.touchStartY = e.touches[0].clientY;
+                e.preventDefault();
+            }, { passive: false });
 
-    // 移动逻辑（向左）
-    function moveLeft() {
-        let moved = false;
-        for (let r = 0; r < 4; r++) {
-            let row = board[r].filter(val => val !== 0);
-            let newRow = [];
-            let i = 0;
-            while (i < row.length) {
-                if (i + 1 < row.length && row[i] === row[i + 1]) {
-                    const mergedValue = row[i] * 2;
-                    newRow.push(mergedValue);
-                    score += mergedValue;
-                    i += 2;
-                    if (soundEnabled) mergeSound.play().catch(e => console.log("音频播放被阻止"));
-                    if (mergedValue === targetValue) {
-                        setTimeout(showWin, 300);
+            this.gridElement.addEventListener('touchend', (e) => {
+                if (!e.changedTouches.length) return;
+                const touchEndX = e.changedTouches[0].clientX;
+                const touchEndY = e.changedTouches[0].clientY;
+                const dx = touchEndX - this.touchStartX;
+                const dy = touchEndY - this.touchStartY;
+                const absDx = Math.abs(dx);
+                const absDy = Math.abs(dy);
+
+                // 判断主要滑动方向
+                if (absDx > 30 || absDy > 30) {
+                    if (absDx > absDy) {
+                        // 左右滑动
+                        if (dx > 0) {
+                            this.handleMove(3); // left
+                        } else {
+                            this.handleMove(1); // right
+                        }
+                    } else {
+                        // 上下滑动
+                        if (dy > 0) {
+                            this.handleMove(2); // down
+                        } else {
+                            this.handleMove(0); // up
+                        }
                     }
-                } else {
-                    newRow.push(row[i]);
-                    i++;
                 }
-            }
-            while (newRow.length < 4) {
-                newRow.push(0);
-            }
-            if (newRow.some((val, idx) => val !== board[r][idx])) {
-                moved = true;
-            }
-            board[r] = newRow;
-        }
-        return moved;
-    }
+                e.preventDefault();
+            }, { passive: false });
 
-    // 矩阵旋转
-    function rotateBoard(clockwise = true) {
-        const newBoard = Array(4).fill().map(() => Array(4).fill(0));
-        if (clockwise) {
-            for (let r = 0; r < 4; r++) {
-                for (let c = 0; c < 4; c++) {
-                    newBoard[c][3 - r] = board[r][c];
+            // 滑动检测 - 标题区域（难度选择和复活）
+            const titleElement = document.querySelector('h1');
+            titleElement.addEventListener('touchstart', (e) => {
+                this.titleTouchStartX = e.touches[0].clientX;
+                this.titleTouchStartY = e.touches[0].clientY;
+                e.preventDefault();
+            }, { passive: false });
+
+            titleElement.addEventListener('touchend', (e) => {
+                if (!e.changedTouches.length) return;
+                const touchEndX = e.changedTouches[0].clientX;
+                const touchEndY = e.changedTouches[0].clientY;
+                const dx = touchEndX - this.titleTouchStartX;
+                const dy = touchEndY - this.titleTouchStartY;
+                const absDx = Math.abs(dx);
+                const absDy = Math.abs(dy);
+
+                if (absDx > 30 || absDy > 30) {
+                    if (absDx > absDy) {
+                        if (dx > 0) {
+                            // 向右滑动 - 切换难度
+                            this.rightSwipeCount++;
+                            if (this.rightSwipeCount >= 3) {
+                                this.changeDifficulty();
+                                this.rightSwipeCount = 0;
+                            }
+                        } else {
+                            // 向左滑动 - 复活
+                            this.leftSwipeCount++;
+                            if (this.leftSwipeCount >= 3) {
+                                this.revive();
+                                this.leftSwipeCount = 0;
+                            }
+                        }
+                    }
                 }
-            }
-        } else {
-            for (let r = 0; r < 4; r++) {
-                for (let c = 0; c < 4; c++) {
-                    newBoard[3 - c][r] = board[r][c];
-                }
-            }
-        }
-        board = newBoard;
-    }
+                e.preventDefault();
+            }, { passive: false });
 
-    // 处理方向移动
-    function handleMove(direction) {
-        let moved = false;
-        switch (direction) {
-            case 0: // up
-                rotateBoard(false);
-                moved = moveLeft();
-                rotateBoard(true);
-                break;
-            case 1: // right
-                rotateBoard(true);
-                rotateBoard(true);
-                moved = moveLeft();
-                rotateBoard(true);
-                rotateBoard(true);
-                break;
-            case 2: // down
-                rotateBoard(true);
-                moved = moveLeft();
-                rotateBoard(false);
-                break;
-            case 3: // left
-                moved = moveLeft();
-                break;
-        }
-        if (moved) {
-            if (soundEnabled) moveSound.play().catch(e => console.log("音频播放被阻止"));
-            addRandomTile();
-            renderBoard();
-            scoreElement.textContent = score;
-            if (!canMove()) {
-                setTimeout(showLose, 500);
-            }
-        }
-    }
-
-    // 检查是否还能移动
-    function canMove() {
-        for (let r = 0; r < 4; r++) {
-            for (let c = 0; c < 4; c++) {
-                if (board[r][c] === 0) return true;
-                if (r < 3 && board[r][c] === board[r+1][c]) return true;
-                if (c < 3 && board[r][c] === board[r][c+1]) return true;
-            }
-        }
-        return false;
-    }
-
-    // 显示胜利
-    function showWin() {
-        winTextElement.textContent = `你合成 ${targetValue} 啦！`;
-        winMessage.style.display = 'flex';
-        if (soundEnabled) winSound.play().catch(e => console.log("音频播放被阻止"));
-    }
-
-    // 显示失败
-    function showLose() {
-        loseMessage.style.display = 'flex';
-        if (soundEnabled) loseSound.play().catch(e => console.log("音频播放被阻止"));
-    }
-
-    // ===== 触屏滑动支持 =====
-    document.addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        e.preventDefault();
-    }, { passive: false });
-
-    document.addEventListener('touchend', (e) => {
-        if (!e.changedTouches.length) return;
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-        const dx = touchEndX - touchStartX;
-        const dy = touchEndY - touchStartY;
-        const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
-
-        // 判断主要滑动方向
-        if (absDx > 30 || absDy > 30) {
-            if (absDx > absDy) {
-                // 左右滑动
-                if (dx > 0) {
-                    handleMove(3); // left
-                } else {
-                    handleMove(1); // right
-                }
-            } else {
-                // 上下滑动
-                if (dy > 0) {
-                    handleMove(2); // down
-                } else {
-                    handleMove(0); // up
-                }
-            }
-        }
-        e.preventDefault();
-    }, { passive: false });
-
-    // 键盘支持（调试用）
-    document.addEventListener('keydown', (e) => {
-        if (e.key.startsWith('Arrow')) {
-            e.preventDefault();
-            let dir;
-            switch (e.key) {
-                case 'ArrowUp': dir = 0; break;
-                case 'ArrowRight': dir = 1; break;
-                case 'ArrowDown': dir = 2; break;
-                case 'ArrowLeft': dir = 3; break;
-            }
-            handleMove(dir);
-        }
-    });
-
-    // 难度选择 - 点击屏幕7次触发
-    document.addEventListener('click', (e) => {
-        const now = Date.now();
-        if (now - lastClickTime > 500) { // 500ms 内连续点击
-            clickCount = 1;
-        } else {
-            clickCount++;
-        }
-        lastClickTime = now;
-
-        if (clickCount >= 7) {
-            clickCount = 0;
-            difficultyModal.style.display = 'flex';
-
-            // 设置当前难度按钮为选中状态
-            document.querySelectorAll('.difficulty-btn-modal').forEach(btn => {
-                btn.classList.remove('active');
-                if (parseInt(btn.getAttribute('data-value')) === targetValue) {
-                    btn.classList.add('active');
+            // 键盘支持（调试用）
+            document.addEventListener('keydown', (e) => {
+                if (e.key.startsWith('Arrow')) {
+                    e.preventDefault();
+                    let dir;
+                    switch (e.key) {
+                        case 'ArrowUp': dir = 0; break;
+                        case 'ArrowRight': dir = 1; break;
+                        case 'ArrowDown': dir = 2; break;
+                        case 'ArrowLeft': dir = 3; break;
+                    }
+                    this.handleMove(dir);
                 }
             });
+
+            // 按钮事件
+            document.getElementById('new-game').addEventListener('click', () => this.initGame());
+            document.getElementById('play-again-win').addEventListener('click', () => this.initGame());
+            document.getElementById('play-again-lose').addEventListener('click', () => this.initGame());
+
+            // 音频开关
+            document.getElementById('sound-on').addEventListener('click', () => {
+                this.soundEnabled = true;
+            });
+            document.getElementById('sound-off').addEventListener('click', () => {
+                this.soundEnabled = false;
+            });
         }
-    });
 
-    // 难度选择按钮事件
-    document.querySelectorAll('.difficulty-btn-modal').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.difficulty-btn-modal').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            targetValue = parseInt(btn.getAttribute('data-value'));
-            targetValueElement.textContent = targetValue;
-            initGame();
-        });
-    });
+        initGame() {
+            this.board = Array(4).fill().map(() => Array(4).fill(0));
+            this.score = 0;
+            this.scoreElement.textContent = this.score;
+            this.addRandomTile();
+            this.addRandomTile();
+            this.renderBoard();
+            this.winMessage.style.display = 'none';
+            this.loseMessage.style.display = 'none';
 
-    // 关闭难度选择弹窗
-    document.getElementById('close-difficulty').addEventListener('click', () => {
-        difficultyModal.style.display = 'none';
-    });
+            // 更新目标值显示
+            const currentTarget = this.difficulties[this.currentDifficultyIndex];
+            this.targetValueElement.textContent = currentTarget;
+            this.winTargetElement.textContent = currentTarget;
+        }
 
-    // 按钮事件
-    document.getElementById('new-game').addEventListener('click', initGame);
-    document.getElementById('play-again-win').addEventListener('click', initGame);
-    document.getElementById('play-again-lose').addEventListener('click', initGame);
+        renderBoard() {
+            this.gridElement.innerHTML = '';
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (this.board[r][c] !== 0) {
+                        cell.textContent = this.board[r][c];
+                        cell.classList.add(`cell-${this.board[r][c]}`);
+                    }
+                    this.gridElement.appendChild(cell);
+                }
+            }
+        }
 
-    // 音频开关
-    document.getElementById('sound-on').addEventListener('click', () => {
-        soundEnabled = true;
-    });
-    document.getElementById('sound-off').addEventListener('click', () => {
-        soundEnabled = false;
-    });
+        addRandomTile() {
+            const emptyCells = [];
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    if (this.board[r][c] === 0) {
+                        emptyCells.push({ r, c });
+                    }
+                }
+            }
+            if (emptyCells.length > 0) {
+                const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                // 70% 概率出 8，30% 出 4（比原版更容易）
+                this.board[randomCell.r][randomCell.c] = Math.random() < 0.7 ? 8 : 4;
+                if (this.soundEnabled) this.newTileSound.play().catch(e => console.log("音频播放被阻止"));
+            }
+        }
+
+        moveLeft() {
+            let moved = false;
+            for (let r = 0; r < 4; r++) {
+                let row = this.board[r].filter(val => val !== 0);
+                let newRow = [];
+                let i = 0;
+                while (i < row.length) {
+                    if (i + 1 < row.length && row[i] === row[i + 1]) {
+                        const mergedValue = row[i] * 2;
+                        newRow.push(mergedValue);
+                        this.score += mergedValue;
+                        if (this.soundEnabled) this.mergeSound.play().catch(e => console.log("音频播放被阻止"));
+                        if (mergedValue === this.difficulties[this.currentDifficultyIndex]) {
+                            setTimeout(() => this.showWin(), 300);
+                        }
+                    } else {
+                        newRow.push(row[i]);
+                        i++;
+                    }
+                }
+                while (newRow.length < 4) {
+                    newRow.push(0);
+                }
+                if (newRow.some((val, idx) => val !== this.board[r][idx])) {
+                    moved = true;
+                }
+                this.board[r] = newRow;
+            }
+            return moved;
+        }
+
+        rotateBoard(clockwise = true) {
+            const newBoard = Array(4).fill().map(() => Array(4).fill(0));
+            if (clockwise) {
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        newBoard[c][3 - r] = this.board[r][c];
+                    }
+                }
+            } else {
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        newBoard[3 - c][r] = this.board[r][c];
+                    }
+                }
+            }
+            this.board = newBoard;
+        }
+
+        handleMove(direction) {
+            // 如果有弹窗显示，则不处理滑动
+            if (this.winMessage.style.display === 'flex' || this.loseMessage.style.display === 'flex') {
+                return;
+            }
+
+            let moved = false;
+            switch (direction) {
+                case 0: // up
+                    this.rotateBoard(false);
+                    moved = this.moveLeft();
+                    this.rotateBoard(true);
+                    break;
+                case 1: // right
+                    this.rotateBoard(true);
+                    this.rotateBoard(true);
+                    moved = this.moveLeft();
+                    this.rotateBoard(true);
+                    this.rotateBoard(true);
+                    break;
+                case 2: // down
+                    this.rotateBoard(true);
+                    moved = this.moveLeft();
+                    this.rotateBoard(false);
+                    break;
+                case 3: // left
+                    moved = this.moveLeft();
+                    break;
+            }
+            if (moved) {
+                if (this.soundEnabled) this.moveSound.play().catch(e => console.log("音频播放被阻止"));
+                this.addRandomTile();
+                this.renderBoard();
+                this.scoreElement.textContent = this.score;
+                if (!this.canMove()) {
+                    setTimeout(() => this.showLose(), 500);
+                }
+            }
+        }
+
+        canMove() {
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    if (this.board[r][c] === 0) return true;
+                    if (r < 3 && this.board[r][c] === this.board[r+1][c]) return true;
+                    if (c < 3 && this.board[r][c] === this.board[r][c+1]) return true;
+                }
+            }
+            return false;
+        }
+
+        showWin() {
+            this.winMessage.style.display = 'flex';
+            if (this.soundEnabled) this.winSound.play().catch(e => console.log("音频播放被阻止"));
+        }
+
+        showLose() {
+            this.loseMessage.style.display = 'flex';
+            if (this.soundEnabled) this.loseSound.play().catch(e => console.log("音频播放被阻止"));
+        }
+
+        changeDifficulty() {
+            this.currentDifficultyIndex = (this.currentDifficultyIndex + 1) % this.difficulties.length;
+            const newTarget = this.difficulties[this.currentDifficultyIndex];
+            this.targetValueElement.textContent = newTarget;
+            this.winTargetElement.textContent = newTarget;
+
+            // 改变难度后重新开始游戏
+            this.initGame();
+        }
+
+        revive() {
+            // 关闭弹窗
+            this.winMessage.style.display = 'none';
+            this.loseMessage.style.display = 'none';
+
+            // 获取所有数字并找到最大的3个
+            const allNumbers = [];
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    if (this.board[r][c] !== 0) {
+                        allNumbers.push({r, c, value: this.board[r][c]});
+                    }
+                }
+            }
+
+            // 按值排序，取最大的3个
+            allNumbers.sort((a, b) => b.value - a.value);
+            const topThree = allNumbers.slice(0, 3);
+
+            // 清空棋盘
+            this.board = Array(4).fill().map(() => Array(4).fill(0));
+
+            // 保留最大的3个数字
+            for (const item of topThree) {
+                this.board[item.r][item.c] = item.value;
+            }
+
+            this.renderBoard();
+        }
+    }
 
     // 启动游戏
-    initGame();
+    const game = new NumberGame();
 </script>
 </body>
 </html>
