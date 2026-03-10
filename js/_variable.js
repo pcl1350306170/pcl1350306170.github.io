@@ -18,7 +18,7 @@ try {
     // 检查是否为 pcl1350306170.github.io 域名
     if (URLL.includes('pcl1350306170.github.io')) {
         // 特殊处理：使用指定IP
-        ajaxFileDealJavaIP = 'http://192.168.18.218:28019';
+        ajaxFileDealJavaIP = 'http://192.168.18.228:28019';
     } else {
         // 创建URL对象解析当前地址
         const urlObj = new URL(URLL);
