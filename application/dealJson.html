@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>JSON数据分组处理工具</title>
+    <title>JSON数据分组及剧情提取处理工具</title>
     <!-- 引入Vue -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     <!-- 引入Element UI -->
@@ -99,12 +99,50 @@
         .result-textarea {
             min-height: 300px;
         }
+
+        .tab-content {
+            margin-top: 20px;
+        }
+
+        .tab-header {
+            display: flex;
+            border-bottom: 1px solid #e4e7ed;
+            margin-bottom: 15px;
+        }
+
+        .tab-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-right: 4px;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .tab-item.active {
+            background-color: #fff;
+            border-color: #e4e7ed;
+            color: #409EFF;
+            font-weight: bold;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .action-buttons {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
 <div id="app" class="form-container">
     <div class="input-section">
-        <h2>JSON数据分组处理工具</h2>
+        <h2>JSON数据分组及剧情提取处理工具</h2>
         <el-form :model="formData" :rules="rules" ref="formData" label-width="120px">
             <el-form-item label="通用要求" prop="commonRequirement">
                 <el-input
@@ -150,34 +188,76 @@
         </el-form>
     </div>
 
-    <div class="output-section" v-if="processedResults.length > 0">
-        <h3>处理结果</h3>
-        <div class="result-item" v-for="(group, index) in processedResults" :key="index">
-            <div class="result-title">{{ group.title }}</div>
-            <el-input
-                    type="textarea"
-                    class="result-textarea"
-                    :value="group.content"
-                    :readonly="true"
-                    :autosize="{ minRows: 6, maxRows: 20 }"
-            ></el-input>
-            <div style="margin-top: 10px;">
-                <el-button
-                        type="primary"
-                        size="small"
-                        @click="copyToClipboard(group.content)"
-                        class="copy-btn"
-                >
-                    一键复制
-                </el-button>
-                <el-button
-                        type="info"
-                        size="small"
-                        @click="copyToClipboardWithPrefix(group.content, group.title)"
-                        class="copy-btn"
-                >
-                    复制带标题
-                </el-button>
+    <div class="tab-content" v-if="processedResults.length > 0 || extractedJson">
+        <div class="tab-header">
+            <div
+                    class="tab-item"
+                    :class="{ active: activeTab === 'group' }"
+                    @click="activeTab = 'group'"
+            >
+                分组结果
+            </div>
+            <div
+                    class="tab-item"
+                    :class="{ active: activeTab === 'extract' }"
+                    @click="activeTab = 'extract'"
+            >
+                剧情提取
+            </div>
+        </div>
+
+        <div class="tab-panel" :class="{ active: activeTab === 'group' }">
+            <h3>分组处理结果</h3>
+            <div class="result-item" v-for="(group, index) in processedResults" :key="'group-' + index">
+                <div class="result-title">{{ group.title }}</div>
+                <el-input
+                        type="textarea"
+                        class="result-textarea"
+                        :value="group.content"
+                        :readonly="true"
+                        :autosize="{ minRows: 6, maxRows: 20 }"
+                ></el-input>
+                <div class="action-buttons">
+                    <el-button
+                            type="primary"
+                            size="small"
+                            @click="copyToClipboard(group.content)"
+                            class="copy-btn"
+                    >
+                        一键复制
+                    </el-button>
+                    <el-button
+                            type="info"
+                            size="small"
+                            @click="copyToClipboardWithPrefix(group.content, group.title)"
+                            class="copy-btn"
+                    >
+                        复制带标题
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-panel" :class="{ active: activeTab === 'extract' }">
+            <h3>剧情提取结果</h3>
+            <div class="result-item">
+                <el-input
+                        type="textarea"
+                        class="result-textarea"
+                        :value="extractedJson"
+                        :readonly="true"
+                        :autosize="{ minRows: 10, maxRows: 30 }"
+                ></el-input>
+                <div class="action-buttons">
+                    <el-button
+                            type="primary"
+                            size="small"
+                            @click="copyToClipboard(extractedJson)"
+                            class="copy-btn"
+                    >
+                        一键复制剧情JSON
+                    </el-button>
+                </div>
             </div>
         </div>
     </div>
@@ -244,9 +324,11 @@
                     ]
                 },
                 processedResults: [],
+                extractedJson: '',
                 isProcessing: false,
                 showLoading: false,
-                loadingText: '处理中，请稍候...'
+                loadingText: '处理中，请稍候...',
+                activeTab: 'group'
             };
         },
         methods: {
@@ -303,6 +385,16 @@
 
                             this.processedResults = results;
 
+                            // 提取剧情内容生成新的JSON
+                            const extractedObj = {};
+                            jsonData.forEach((item, index) => {
+                                const num = item.num || String(index + 1);
+                                const key = String(parseInt(num) * 10).padStart(4, '0') + '.png';
+                                extractedObj[key] = item.plotContent;
+                            });
+
+                            this.extractedJson = JSON.stringify(extractedObj, null, 2);
+
                             this.$message({
                                 message: '处理完成！',
                                 type: 'success',
@@ -356,6 +448,8 @@
                     this.formData.groupCount = 4;
                     this.formData.jsonData = '';
                     this.processedResults = [];
+                    this.extractedJson = '';
+                    this.activeTab = 'group';
 
                     this.$message({
                         type: 'success',

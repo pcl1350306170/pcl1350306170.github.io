@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>极简番茄钟 - 超大字体版</title>
+  <style>
+    /* --- CSS 变量与全局重置 --- */
+    :root {
+      /* 浅色模式默认值 */
+      --bg-color: #f4f4f9;
+      --text-color: #2d2d2d;
+      --secondary-text: #666;
+      --card-bg: #ffffff;
+      --accent-color: #ff6b6b;
+      --break-color: #4ecdc4;
+      --btn-bg: #2d2d2d;
+      --btn-text: #ffffff;
+      --shadow: 0 10px 30px rgba(0,0,0,0.08);
+
+      /* 基础字体大小：提升 300% (原基准约 16px -> 现基准约 48px) */
+      --font-base: 300%;
+      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --transition-speed: 0.3s;
+    }
+
+    /* 暗黑模式变量覆盖 */
+    [data-theme="dark"] {
+      --bg-color: #1a1a1a;
+      --text-color: #e0e0e0;
+      --secondary-text: #a0a0a0;
+      --card-bg: #2d2d2d;
+      --btn-bg: #ffffff;
+      --btn-text: #1a1a1a;
+      --shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      outline: none;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background-color 0.5s ease, color 0.5s ease;
+      overflow: hidden;
+      font-size: 16px; /* 基准字体，通过 rem/em 或 calc 放大 */
+    }
+
+    /* --- 顶部栏 (时间与主题切换) --- */
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+    }
+
+    .current-time {
+      font-size: 4.2rem; /* 相对于放大的 base */
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--secondary-text);
+    }
+
+    .theme-toggle {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 50%;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .theme-toggle:hover {
+      background-color: rgba(128,128,128, 0.1);
+    }
+
+    .theme-toggle svg {
+      width: 1.5rem;
+      height: 1.5rem;
+      fill: var(--text-color);
+    }
+
+    /* --- 主容器 --- */
+    .container {
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+      padding: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* --- 模式切换标签 --- */
+    .modes {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: 2px solid transparent;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: var(--secondary-text);
+      padding: 0.5rem 1.5rem;
+      border-radius: 50px;
+      transition: all var(--transition-speed);
+      font-weight: 700;
+    }
+
+    .mode-btn.active {
+      background-color: rgba(128,128,128, 0.1);
+      color: var(--text-color);
+      border-color: var(--text-color);
+    }
+
+    .mode-btn:hover {
+      color: var(--text-color);
+    }
+
+    /* --- 倒计时显示区域 (超大字体) --- */
+    .timer-display {
+      /* 核心放大逻辑：基于视口宽度，但限制最大值以确保不溢出 */
+      font-size: 25vw;
+      line-height: 1;
+      margin: 1rem 0;
+      font-weight: 800; /* 加粗以配合大字体 */
+      font-variant-numeric: tabular-nums;
+      cursor: default;
+      user-select: none;
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    @media (min-width: 768px) {
+      .timer-display {
+        font-size: 18rem; /* 桌面端固定超大尺寸 */
+      }
+    }
+
+    .status-text {
+      font-size: 1.5rem;
+      color: var(--secondary-text);
+      margin-bottom: 4rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* --- 控制按钮组 --- */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .btn {
+      border: none;
+      padding: 1.2rem 3rem;
+      font-size: 1.5rem;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+      font-weight: 700;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      min-width: 160px;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn-primary {
+      background-color: var(--btn-bg);
+      color: var(--btn-text);
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--secondary-text);
+      box-shadow: none;
+      min-width: auto;
+      padding: 1.2rem;
+      font-size: 1.2rem;
+    }
+
+    .btn-secondary:hover {
+      color: var(--text-color);
+      background-color: rgba(128,128,128, 0.1);
+    }
+
+    /* --- 动态背景呼吸效果 --- */
+    .breathing-bg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 70%);
+      border-radius: 50%;
+      z-index: 0;
+      pointer-events: none;
+      animation: breathe 4s infinite ease-in-out;
+      opacity: 0;
+      transition: background 0.5s ease;
+    }
+
+    [data-theme="dark"] .breathing-bg {
+      background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0) 70%);
+    }
+
+    body.focus-mode .breathing-bg {
+      background: radial-gradient(circle, rgba(255, 107, 107, 0.15) 0%, rgba(255,255,255,0) 70%);
+      opacity: 1;
+    }
+
+    body.break-mode .breathing-bg {
+      background: radial-gradient(circle, rgba(78, 205, 196, 0.15) 0%, rgba(255,255,255,0) 70%);
+      opacity: 1;
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.3); }
+    }
+
+    /* --- 模态框 (设置) --- */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 100;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--card-bg);
+      padding: 3rem;
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      width: 90%;
+      max-width: 500px;
+      transform: translateY(20px);
+      transition: transform 0.3s;
+      color: var(--text-color);
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal h2 {
+      margin-bottom: 2rem;
+      font-size: 2rem;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .setting-item {
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .setting-item label {
+      font-size: 1.3rem;
+      color: var(--secondary-text);
+      font-weight: 600;
+    }
+
+    .setting-item input {
+      width: 80px;
+      padding: 0.8rem;
+      border: 2px solid rgba(128,128,128, 0.2);
+      border-radius: 12px;
+      text-align: center;
+      font-size: 1.5rem;
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-weight: bold;
+    }
+
+    .setting-item input:focus {
+      border-color: var(--text-color);
+    }
+
+    .modal-actions {
+      margin-top: 2.5rem;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-save {
+      background-color: var(--btn-bg);
+      color: var(--btn-text);
+      border: none;
+      padding: 1rem 2.5rem;
+      border-radius: 15px;
+      cursor: pointer;
+      font-size: 1.3rem;
+      font-weight: 700;
+      transition: opacity 0.2s;
+    }
+
+    .btn-save:hover {
+      opacity: 0.9;
+    }
+
+    /* --- 全屏提示 --- */
+    .fullscreen-hint {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 10px 25px;
+      border-radius: 30px;
+      font-size: 1rem;
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+      z-index: 200;
+    }
+  </style>
+</head>
+<body class="focus-mode">
+
+<!-- 背景呼吸光效 -->
+<div class="breathing-bg"></div>
+
+<!-- 顶部栏：时间与主题切换 -->
+<div class="top-bar">
+  <div class="current-time" id="clockDisplay">00:00:00</div>
+  <button class="theme-toggle" id="themeToggleBtn" title="切换暗黑/明亮模式">
+    <!-- 太阳图标 (默认显示，暗黑模式下切换为月亮) -->
+    <svg id="icon-sun" viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>
+    <!-- 月亮图标 (隐藏，JS 控制切换) -->
+    <svg id="icon-moon" viewBox="0 0 24 24" style="display:none;"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+  </button>
+</div>
+
+<div class="container">
+  <!-- 模式切换 -->
+  <div class="modes">
+    <button class="mode-btn active" data-mode="focus">专注</button>
+    <button class="mode-btn" data-mode="shortBreak">短休息</button>
+    <button class="mode-btn" data-mode="longBreak">长休息</button>
+  </div>
+
+  <!-- 状态文本 -->
+  <div class="status-text" id="statusText">专注中</div>
+
+  <!-- 倒计时数字 -->
+  <div class="timer-display" id="timerDisplay">25:00</div>
+
+  <!-- 控制按钮 -->
+  <div class="controls">
+    <button class="btn btn-secondary" id="resetBtn">重置</button>
+    <button class="btn btn-primary" id="toggleBtn">开始</button>
+    <button class="btn btn-secondary" id="settingsBtn">设置</button>
+  </div>
+</div>
+
+<!-- 设置模态框 -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>时间设置 (分钟)</h2>
+    <div class="setting-item">
+      <label>专注时长</label>
+      <input type="number" id="focusInput" min="1" max="120" value="25">
+    </div>
+    <div class="setting-item">
+      <label>短休息</label>
+      <input type="number" id="shortBreakInput" min="1" max="60" value="5">
+    </div>
+    <div class="setting-item">
+      <label>长休息</label>
+      <input type="number" id="longBreakInput" min="1" max="120" value="15">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" id="saveSettingsBtn">保存并关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="fullscreen-hint" id="fullscreenHint">已进入全屏模式 (按 Esc 退出)</div>
+
+<script>
+  /**
+   * 极简番茄钟 - 超大字体增强版
+   * 新增：暗黑模式、右上角时钟、字体放大
+   */
+
+          // --- 配置与状态 ---
+  const CONFIG = {
+            focus: 25,
+            shortBreak: 5,
+            longBreak: 15
+          };
+
+  const STATE = {
+    mode: 'focus',
+    timeLeft: 25 * 60,
+    isRunning: false,
+    timerId: null,
+    endTime: null,
+    initialTime: 25 * 60
+  };
+
+  // --- DOM 元素 ---
+  const els = {
+    timerDisplay: document.getElementById('timerDisplay'),
+    statusText: document.getElementById('statusText'),
+    toggleBtn: document.getElementById('toggleBtn'),
+    resetBtn: document.getElementById('resetBtn'),
+    settingsBtn: document.getElementById('settingsBtn'),
+    modal: document.getElementById('settingsModal'),
+    saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+    modeBtns: document.querySelectorAll('.mode-btn'),
+    inputs: {
+      focus: document.getElementById('focusInput'),
+      shortBreak: document.getElementById('shortBreakInput'),
+      longBreak: document.getElementById('longBreakInput')
+    },
+    fullscreenHint: document.getElementById('fullscreenHint'),
+    clockDisplay: document.getElementById('clockDisplay'),
+    themeToggleBtn: document.getElementById('themeToggleBtn'),
+    iconSun: document.getElementById('icon-sun'),
+    iconMoon: document.getElementById('icon-moon')
+  };
+
+  // --- 初始化 ---
+  function init() {
+    loadSettings();
+    loadTheme();
+    updateClock(); // 立即更新一次时钟
+    setInterval(updateClock, 1000); // 启动时钟计时器
+    updateDisplay();
+    setupEventListeners();
+    requestNotificationPermission();
+  }
+
+  // --- 时钟功能 ---
+  function updateClock() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    els.clockDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+  }
+
+  // --- 暗黑模式功能 ---
+  function loadTheme() {
+    const savedTheme = localStorage.getItem('tomatoTheme');
+    if (savedTheme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      updateThemeIcons(true);
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      updateThemeIcons(false);
+    }
+  }
+
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('tomatoTheme', 'light');
+      updateThemeIcons(false);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('tomatoTheme', 'dark');
+      updateThemeIcons(true);
+    }
+  }
+
+  function updateThemeIcons(isDark) {
+    if (isDark) {
+      els.iconSun.style.display = 'none';
+      els.iconMoon.style.display = 'block';
+    } else {
+      els.iconSun.style.display = 'block';
+      els.iconMoon.style.display = 'none';
+    }
+  }
+
+  // --- 核心计时逻辑 ---
+  function startTimer() {
+    if (STATE.isRunning) return;
+
+    STATE.isRunning = true;
+    STATE.endTime = Date.now() + STATE.timeLeft * 1000;
+    els.toggleBtn.textContent = '暂停';
+
+    STATE.timerId = setInterval(() => {
+      const now = Date.now();
+      const remaining = Math.ceil((STATE.endTime - now) / 1000);
+
+      if (remaining <= 0) {
+        finishTimer();
+      } else {
+        STATE.timeLeft = remaining;
+        updateDisplay();
+        document.title = `${formatTime(remaining)} - ${getStateLabel()}`;
+      }
+    }, 250);
+  }
+
+  function pauseTimer() {
+    if (!STATE.isRunning) return;
+    STATE.isRunning = false;
+    clearInterval(STATE.timerId);
+    els.toggleBtn.textContent = '开始';
+    document.title = '极简番茄钟';
+  }
+
+  function resetTimer() {
+    pauseTimer();
+    STATE.timeLeft = STATE.initialTime;
+    updateDisplay();
+    document.title = '极简番茄钟';
+  }
+
+  function finishTimer() {
+    pauseTimer();
+    STATE.timeLeft = 0;
+    updateDisplay();
+    playAlarmSound();
+    sendNotification();
+    document.title = '时间到！';
+
+    let flashCount = 0;
+    const flashInterval = setInterval(() => {
+      const originalBg = getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim();
+      document.body.style.backgroundColor = flashCount % 2 === 0 ? '#fff' : (originalBg || '#f4f4f9');
+      // 如果是暗黑模式，闪烁色需要调整
+      if (document.documentElement.getAttribute('data-theme') === 'dark') {
+        document.body.style.backgroundColor = flashCount % 2 === 0 ? '#333' : '#1a1a1a';
+      }
+
+      flashCount++;
+      if (flashCount > 6) {
+        clearInterval(flashInterval);
+        document.body.style.backgroundColor = '';
+      }
+    }, 300);
+  }
+
+  // --- 界面更新 ---
+  function updateDisplay() {
+    const timeStr = formatTime(STATE.timeLeft);
+    els.timerDisplay.textContent = timeStr;
+
+    if (STATE.mode === 'focus') {
+      els.statusText.textContent = '专注中';
+      document.body.className = 'focus-mode';
+    } else if (STATE.mode === 'shortBreak') {
+      els.statusText.textContent = '短休息';
+      document.body.className = 'break-mode';
+    } else {
+      els.statusText.textContent = '长休息';
+      document.body.className = 'break-mode';
+    }
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function getStateLabel() {
+    if (STATE.mode === 'focus') return '专注中';
+    if (STATE.mode === 'shortBreak') return '短休息';
+    return '长休息';
+  }
+
+  function switchMode(mode) {
+    STATE.mode = mode;
+    STATE.initialTime = CONFIG[mode] * 60;
+    resetTimer();
+
+    els.modeBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+  }
+
+  // --- 音频合成 ---
+  function playAlarmSound() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+
+      const playBeep = (time, freq) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(0.5, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+        osc.start(time);
+        osc.stop(time + 0.5);
+      };
+
+      const now = ctx.currentTime;
+      playBeep(now, 880);
+      playBeep(now + 0.6, 880);
+      playBeep(now + 1.2, 880);
+
+    } catch (e) {
+      console.error("Audio playback failed", e);
+    }
+  }
+
+  // --- 通知 API ---
+  function requestNotificationPermission() {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }
+
+  function sendNotification() {
+    if ("Notification" in window && Notification.permission === "granted") {
+      const msg = STATE.mode === 'focus' ? "休息一下吧！" : "专注时间到，开始工作！";
+      new Notification("番茄钟提醒", { body: msg });
+    }
+  }
+
+  // --- 设置与存储 ---
+  function loadSettings() {
+    const saved = localStorage.getItem('tomatoConfig');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      CONFIG.focus = parsed.focus;
+      CONFIG.shortBreak = parsed.shortBreak;
+      CONFIG.longBreak = parsed.longBreak;
+      els.inputs.focus.value = CONFIG.focus;
+      els.inputs.shortBreak.value = CONFIG.shortBreak;
+      els.inputs.longBreak.value = CONFIG.longBreak;
+    }
+    STATE.initialTime = CONFIG[STATE.mode] * 60;
+    STATE.timeLeft = STATE.initialTime;
+  }
+
+  function saveSettings() {
+    const f = parseInt(els.inputs.focus.value) || 25;
+    const s = parseInt(els.inputs.shortBreak.value) || 5;
+    const l = parseInt(els.inputs.longBreak.value) || 15;
+
+    CONFIG.focus = f;
+    CONFIG.shortBreak = s;
+    CONFIG.longBreak = l;
+    localStorage.setItem('tomatoConfig', JSON.stringify(CONFIG));
+
+    if (!STATE.isRunning) {
+      STATE.initialTime = CONFIG[STATE.mode] * 60;
+      STATE.timeLeft = STATE.initialTime;
+      updateDisplay();
+    }
+    closeModal();
+  }
+
+  function openModal() { els.modal.classList.add('open'); }
+  function closeModal() { els.modal.classList.remove('open'); }
+
+  // --- 全屏功能 ---
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => console.log(err));
+      els.fullscreenHint.style.opacity = '1';
+      setTimeout(() => els.fullscreenHint.style.opacity = '0', 2000);
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+    }
+  }
+
+  // --- 事件监听 ---
+  function setupEventListeners() {
+    els.toggleBtn.addEventListener('click', () => STATE.isRunning ? pauseTimer() : startTimer());
+    els.resetBtn.addEventListener('click', resetTimer);
+
+    els.modeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (STATE.isRunning && confirm("切换模式将重置当前计时，确定吗？")) {
+          switchMode(btn.dataset.mode);
+        } else if (!STATE.isRunning) {
+          switchMode(btn.dataset.mode);
+        }
+      });
+    });
+
+    els.settingsBtn.addEventListener('click', openModal);
+    els.saveSettingsBtn.addEventListener('click', saveSettings);
+    els.modal.addEventListener('click', (e) => { if (e.target === els.modal) closeModal(); });
+
+    // 主题切换
+    els.themeToggleBtn.addEventListener('click', toggleTheme);
+
+    // 全屏
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'F11') { e.preventDefault(); toggleFullscreen(); }
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        STATE.isRunning ? pauseTimer() : startTimer();
+      }
+      if (e.code === 'Escape') closeModal();
+    });
+  }
+
+  init();
+</script>
+</body>
+</html>
