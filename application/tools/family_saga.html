@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三大家族族谱管理系统 - 小说助手</title>
+    <style>
+        :root {
+            --xiao-color: #8e44ad; /* 萧家紫 */
+            --wang-color: #c0392b; /* 王家红 */
+            --li-color: #27ae60;   /* 李家绿 */
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #2c3e50;
+            --text-sub: #7f8c8d;
+            --border-radius: 12px;
+            --shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- 顶部导航 --- */
+        header {
+            background: var(--card-bg);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        h1 { font-size: 1.5rem; font-weight: 700; color: var(--text-main); }
+        .subtitle { font-size: 0.9rem; color: var(--text-sub); margin-left: 10px; }
+
+        .controls { display: flex; gap: 1rem; }
+
+        button {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary { background-color: #3498db; color: white; }
+        .btn-primary:hover { background-color: #2980b9; }
+
+        .btn-danger { background-color: #e74c3c; color: white; }
+        .btn-danger:hover { background-color: #c0392b; }
+
+        .btn-outline { background: transparent; border: 1px solid #ddd; color: var(--text-main); }
+        .btn-outline:hover { background: #f0f0f0; }
+
+        /* --- 家族标签页 --- */
+        .tabs {
+            display: flex;
+            padding: 1rem 2rem 0;
+            gap: 1rem;
+        }
+
+        .tab {
+            padding: 0.8rem 2rem;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-sub);
+            background: #e0e0e0;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .tab.active {
+            color: white;
+            transform: translateY(2px);
+        }
+
+        .tab[data-family="xiao"].active { background-color: var(--xiao-color); }
+        .tab[data-family="wang"].active { background-color: var(--wang-color); }
+        .tab[data-family="li"].active { background-color: var(--li-color); }
+
+        /* --- 主内容区 --- */
+        main {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            align-content: start;
+        }
+
+        /* --- 人物卡片 --- */
+        .character-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-top: 4px solid #ccc;
+            cursor: pointer;
+        }
+
+        .character-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .character-card.xiao { border-top-color: var(--xiao-color); }
+        .character-card.wang { border-top-color: var(--wang-color); }
+        .character-card.li { border-top-color: var(--li-color); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.8rem;
+        }
+
+        .char-name { font-size: 1.4rem; font-weight: 700; }
+        .char-gen { font-size: 0.8rem; background: #eee; padding: 2px 8px; border-radius: 10px; color: #666; }
+
+        .char-info { font-size: 0.9rem; color: var(--text-sub); margin-bottom: 0.5rem; line-height: 1.4; }
+        .char-relations { font-size: 0.85rem; color: #555; background: #f9f9f9; padding: 0.5rem; border-radius: 6px; margin-top: 0.5rem; }
+        .relation-tag { display: inline-block; margin: 2px; padding: 2px 6px; background: #fff; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem; }
+
+        .status-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .status-alive { background-color: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
+        .status-dead { background-color: #95a5a6; }
+
+        /* --- 模态框 --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+        .modal {
+            background: white;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 16px;
+            padding: 2rem;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-title { font-size: 1.5rem; font-weight: 700; }
+        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        .form-row { display: flex; gap: 1rem; }
+        .form-row .form-group { flex: 1; }
+
+        .relation-list { margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem; }
+        .relation-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            margin-bottom: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .relation-type { font-weight: 600; color: var(--text-sub); font-size: 0.8rem; margin-right: 0.5rem; }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem;
+            color: var(--text-sub);
+        }
+        .empty-state p { margin-bottom: 1rem; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>家族史诗管理器 <span class="subtitle">小说创作助手</span></h1>
+    </div>
+    <div class="controls">
+        <button class="btn-outline" onclick="app.resetData()">重置所有数据</button>
+        <button class="btn-primary" onclick="app.openAddModal()">+ 新增人物</button>
+    </div>
+</header>
+
+<div class="tabs">
+    <button class="tab active" data-family="xiao" onclick="app.switchFamily('xiao')">萧家 (主角)</button>
+    <button class="tab" data-family="wang" onclick="app.switchFamily('wang')">王家</button>
+    <button class="tab" data-family="li" onclick="app.switchFamily('li')">李家</button>
+</div>
+
+<main id="characterList">
+    <!-- 人物卡片将在这里渲染 -->
+</main>
+
+<!-- 人物详情/编辑模态框 -->
+<div class="modal-overlay" id="charModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">人物详情</h2>
+            <button class="close-btn" onclick="app.closeModal()">&times;</button>
+        </div>
+
+        <form id="charForm" onsubmit="app.saveCharacter(event)">
+            <input type="hidden" id="charId">
+            <input type="hidden" id="charFamily">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>姓名</label>
+                    <input type="text" id="charName" required placeholder="例如：萧骏">
+                </div>
+                <div class="form-group">
+                    <label>世代 (1-4+)</label>
+                    <select id="charGen">
+                        <option value="1">第一代 (高祖)</option>
+                        <option value="2">第二代 (曾祖)</option>
+                        <option value="3">第三代 (祖父)</option>
+                        <option value="4">第四代 (父辈)</option>
+                        <option value="5">第五代 (主角/子辈)</option>
+                        <option value="6">第六代 (孙辈)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>状态</label>
+                    <select id="charStatus">
+                        <option value="alive">在世</option>
+                        <option value="dead">已故</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>年龄</label>
+                    <input type="number" id="charAge" placeholder="约数即可">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>简介/特征</label>
+                <textarea id="charDesc" rows="3" placeholder="性格、外貌、特殊能力等"></textarea>
+            </div>
+
+            <div class="relation-list">
+                <h3>人物关系</h3>
+                <div id="relationsContainer"></div>
+                <div class="form-row" style="margin-top: 10px; align-items: flex-end;">
+                    <div class="form-group" style="flex: 2;">
+                        <label>添加关系对象 (输入姓名)</label>
+                        <input type="text" id="newRelName" placeholder="输入已有或新人物姓名">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>关系类型</label>
+                        <select id="newRelType">
+                            <option value="father">父亲</option>
+                            <option value="mother">母亲</option>
+                            <option value="spouse">配偶</option>
+                            <option value="son">儿子</option>
+                            <option value="daughter">女儿</option>
+                            <option value="ally">盟友</option>
+                            <option value="enemy">死敌</option>
+                            <option value="master">师父</option>
+                            <option value="servant">仆从</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-primary" onclick="app.addRelationTemp()" style="height: 42px;">添加</button>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; text-align: right;">
+                <button type="button" class="btn-danger" id="deleteBtn" onclick="app.deleteCharacter()" style="float: left; display: none;">删除人物</button>
+                <button type="submit" class="btn-primary">保存修改</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    /**
+     * 家族史诗管理器 - 核心逻辑
+     */
+    const app = {
+        data: {
+            xiao: [],
+            wang: [],
+            li: []
+        },
+        currentFamily: 'xiao',
+        tempRelations: [], // 临时存储模态框中的关系
+
+        // 初始化
+        init() {
+            this.loadData();
+            if (this.data.xiao.length === 0) {
+                this.generateInitialData();
+            }
+            this.render();
+        },
+
+        // 加载数据
+        loadData() {
+            const saved = localStorage.getItem('novelFamilyData');
+            if (saved) {
+                this.data = JSON.parse(saved);
+            }
+        },
+
+        // 保存数据
+        saveData() {
+            localStorage.setItem('novelFamilyData', JSON.stringify(this.data));
+            this.render();
+        },
+
+        // 重置数据
+        resetData() {
+            if(confirm("确定要清空所有家族数据并重新生成吗？")) {
+                localStorage.removeItem('novelFamilyData');
+                this.data = { xiao: [], wang: [], li: [] };
+                this.generateInitialData();
+                this.render();
+            }
+        },
+
+        // 随机生成初始四代主脉
+        generateInitialData() {
+            const surnames = { xiao: '萧', wang: '王', li: '李' };
+            const maleNames = ['天', '地', '玄', '黄', '宇', '宙', '洪', '荒', '日', '月', '盈', '昃', '辰', '宿', '列', '张'];
+            const femaleNames = ['兰', '梅', '竹', '菊', '雪', '月', '霜', '露', '云', '霞', '凤', '鸾', '婉', '清', '秀', '丽'];
+
+            const families = ['xiao', 'wang', 'li'];
+
+            families.forEach(fam => {
+                const surname = surnames[fam];
+                const familyArr = this.data[fam];
+
+                // 第一代 (高祖)
+                const gen1 = this.createPerson(familyArr.length, surname, maleNames, 1, true);
+                familyArr.push(gen1);
+
+                // 第二代 (曾祖) - 假设第一代有2个儿子
+                const gen2_1 = this.createPerson(familyArr.length, surname, maleNames, 2, true, gen1.id);
+                const gen2_2 = this.createPerson(familyArr.length, surname, maleNames, 2, false, gen1.id);
+                familyArr.push(gen2_1, gen2_2);
+
+                // 为第二代添加配偶 (外姓)
+                this.addSpouse(familyArr, gen2_1, surname, femaleNames);
+                this.addSpouse(familyArr, gen2_2, surname, femaleNames);
+
+                // 第三代 (祖父) - 每个第二代有2个孩子
+                [gen2_1, gen2_2].forEach(parent => {
+                    const child1 = this.createPerson(familyArr.length, surname, maleNames, 3, true, parent.id);
+                    const child2 = this.createPerson(familyArr.length, surname, Math.random() > 0.5 ? maleNames : femaleNames, 3, Math.random() > 0.5, parent.id);
+                    familyArr.push(child1, child2);
+                    if(child1.gender === 'male') this.addSpouse(familyArr, child1, surname, femaleNames);
+                    if(child2.gender === 'male') this.addSpouse(familyArr, child2, surname, femaleNames);
+                });
+
+                // 第四代 (父辈) - 随机选取几个第三代生孩子
+                const gen3Males = familyArr.filter(p => p.generation === 3 && p.gender === 'male');
+                gen3Males.slice(0, 3).forEach(parent => {
+                    // 主角父辈
+                    const child = this.createPerson(familyArr.length, surname, maleNames, 4, true, parent.id);
+                    familyArr.push(child);
+                    this.addSpouse(familyArr, child, surname, femaleNames);
+                });
+
+                // 第五代 (主角辈) - 特别生成主角 "萧骏" 如果是萧家
+                if (fam === 'xiao') {
+                    const xiaoGen4Male = familyArr.find(p => p.family === 'xiao' && p.generation === 4 && p.gender === 'male');
+                    if (xiaoGen4Male) {
+                        const protagonist = {
+                            id: Date.now().toString(),
+                            name: '萧骏',
+                            family: 'xiao',
+                            generation: 5,
+                            gender: 'male',
+                            status: 'alive',
+                            age: 20,
+                            desc: '本书主角，萧家第五代嫡系，天赋异禀。',
+                            relations: [{ type: 'father', targetId: xiaoGen4Male.id }]
+                        };
+                        familyArr.push(protagonist);
+                        // 更新父亲的关系
+                        const father = familyArr.find(p => p.id === xiaoGen4Male.id);
+                        if(father) father.relations.push({ type: 'son', targetId: protagonist.id });
+                    }
+                } else {
+                    // 其他家族也生成一些第五代
+                    const gen4Males = familyArr.filter(p => p.generation === 4 && p.gender === 'male');
+                    gen4Males.forEach(parent => {
+                        const child = this.createPerson(familyArr.length, surname, Math.random()>0.6?maleNames:femaleNames, 5, Math.random()>0.4, parent.id);
+                        familyArr.push(child);
+                    });
+                }
+            });
+            this.saveData();
+        },
+
+        createPerson(index, surname, namePool, generation, isMale, parentId = null) {
+            const nameChar = namePool[Math.floor(Math.random() * namePool.length)];
+            const secondChar = namePool[Math.floor(Math.random() * namePool.length)];
+            const name = surname + (Math.random() > 0.3 ? nameChar + secondChar : nameChar); // 双名或单名
+
+            const person = {
+                id: Date.now().toString() + index,
+                name: name,
+                family: surname === '萧' ? 'xiao' : (surname === '王' ? 'wang' : 'li'),
+                generation: generation,
+                gender: isMale ? 'male' : 'female',
+                status: generation === 1 || generation === 2 ? 'dead' : 'alive', // 老辈默认去世
+                age: generation === 1 ? 90 : (generation === 2 ? 70 : (generation === 3 ? 50 : (generation === 4 ? 30 : 20))),
+                desc: `${surname}家第${generation}代成员。`,
+                relations: []
+            };
+
+            if (parentId) {
+                const type = isMale ? 'son' : 'daughter';
+                person.relations.push({ type: type === 'son' ? 'father' : 'mother', targetId: parentId }); // 简化：默认指向父亲，实际逻辑应在保存时双向处理
+
+                // 修正：这里只是单向，双向逻辑在 addRelation 处理，这里先不加，避免循环引用复杂化，由后续逻辑统一处理
+                // 为了初始化简单，我们只记录父亲ID，稍后在渲染或保存时完善
+                person.relations.push({ type: 'father', targetId: parentId });
+            }
+
+            return person;
+        },
+
+        addSpouse(familyArr, husband, surname, femaleNames) {
+            const spouseSurname = surname === '萧' ? (Math.random()>0.5?'王':'李') : (Math.random()>0.5?'萧':'王');
+            const spouseName = (spouseSurname === '萧' ? '萧' : (spouseSurname === '王' ? '王' : '李')) + femaleNames[Math.floor(Math.random() * femaleNames.length)];
+
+            const spouse = {
+                id: Date.now().toString() + 'sp' + Math.random(),
+                name: spouseName,
+                family: spouseSurname === '萧' ? 'xiao' : (spouseSurname === '王' ? 'wang' : 'li'),
+                generation: husband.generation,
+                gender: 'female',
+                status: 'alive',
+                age: husband.age,
+                desc: `${husband.name}的配偶。`,
+                relations: [{ type: 'spouse', targetId: husband.id }]
+            };
+
+            husband.relations.push({ type: 'spouse', targetId: spouse.id });
+            familyArr.push(spouse);
+        },
+
+        // 切换家族
+        switchFamily(family) {
+            this.currentFamily = family;
+            document.querySelectorAll('.tab').forEach(t => {
+                t.classList.toggle('active', t.dataset.family === family);
+            });
+            this.render();
+        },
+
+        // 渲染列表
+        render() {
+            const container = document.getElementById('characterList');
+            const list = this.data[this.currentFamily] || [];
+
+            // 排序：按世代从小到大，同世代按年龄
+            list.sort((a, b) => a.generation - b.generation || b.age - a.age);
+
+            if (list.length === 0) {
+                container.innerHTML = `<div class="empty-state"><h3>暂无人物</h3><p>点击“新增人物”或“重置数据”来开始。</p></div>`;
+                return;
+            }
+
+            container.innerHTML = list.map(person => {
+                const relSummary = this.getRelationSummary(person);
+                return `
+                <div class="character-card ${person.family}" onclick="app.openEditModal('${person.id}')">
+                    <div class="status-badge ${person.status === 'alive' ? 'status-alive' : 'status-dead'}"></div>
+                    <div class="card-header">
+                        <span class="char-name">${person.name}</span>
+                        <span class="char-gen">第${this.toChineseNum(person.generation)}代</span>
+                    </div>
+                    <div class="char-info">
+                        ${person.gender === 'male' ? '男' : '女'} | ${person.age}岁 | ${person.status === 'alive' ? '在世' : '已故'}
+                    </div>
+                    <div class="char-info" style="font-style: italic; font-size: 0.85rem;">
+                        "${person.desc.substring(0, 30)}${person.desc.length>30?'...':''}"
+                    </div>
+                    <div class="char-relations">
+                        ${relSummary}
+                    </div>
+                </div>
+            `;
+            }).join('');
+        },
+
+        getRelationSummary(person) {
+            if (!person.relations || person.relations.length === 0) return '<span style="color:#ccc">无记录关系</span>';
+
+            const allPeople = [...this.data.xiao, ...this.data.wang, ...this.data.li];
+            const tags = person.relations.slice(0, 4).map(rel => {
+                const target = allPeople.find(p => p.id === rel.targetId);
+                const name = target ? target.name : '未知人物';
+                const typeMap = { father:'父', mother:'母', spouse:'配偶', son:'子', daughter:'女', ally:'盟友', enemy:'死敌' };
+                const typeLabel = typeMap[rel.type] || rel.type;
+                return `<span class="relation-tag">${typeLabel}: ${name}</span>`;
+            }).join('');
+
+            if (person.relations.length > 4) {
+                return tags + `<span class="relation-tag">+${person.relations.length - 4}更多</span>`;
+            }
+            return tags || '<span style="color:#ccc">无记录关系</span>';
+        },
+
+        toChineseNum(num) {
+            const chars = ['零','一','二','三','四','五','六','七','八','九'];
+            if (num <= 10) return chars[num];
+            return num.toString();
+        },
+
+        // 模态框逻辑
+        openAddModal() {
+            this.tempRelations = [];
+            document.getElementById('charForm').reset();
+            document.getElementById('charId').value = '';
+            document.getElementById('charFamily').value = this.currentFamily;
+            document.getElementById('modalTitle').textContent = '新增人物';
+            document.getElementById('deleteBtn').style.display = 'none';
+            this.renderRelationsInModal();
+            document.getElementById('charModal').classList.add('open');
+        },
+
+        openEditModal(id) {
+            const allPeople = [...this.data.xiao, ...this.data.wang, ...this.data.li];
+            const person = allPeople.find(p => p.id === id);
+            if (!person) return;
+
+            this.tempRelations = person.relations ? JSON.parse(JSON.stringify(person.relations)) : [];
+
+            document.getElementById('charId').value = person.id;
+            document.getElementById('charFamily').value = person.family;
+            document.getElementById('charName').value = person.name;
+            document.getElementById('charGen').value = person.generation;
+            document.getElementById('charStatus').value = person.status;
+            document.getElementById('charAge').value = person.age;
+            document.getElementById('charDesc').value = person.desc;
+
+            document.getElementById('modalTitle').textContent = `编辑：${person.name}`;
+            document.getElementById('deleteBtn').style.display = 'block';
+
+            this.renderRelationsInModal();
+            document.getElementById('charModal').classList.add('open');
+        },
+
+        closeModal() {
+            document.getElementById('charModal').classList.remove('open');
+        },
+
+        renderRelationsInModal() {
+            const container = document.getElementById('relationsContainer');
+            const allPeople = [...this.data.xiao, ...this.data.wang, ...this.data.li];
+
+            if (this.tempRelations.length === 0) {
+                container.innerHTML = '<div style="color:#999; font-size:0.9rem; padding:10px;">暂无关联人物</div>';
+                return;
+            }
+
+            container.innerHTML = this.tempRelations.map((rel, index) => {
+                const target = allPeople.find(p => p.id === rel.targetId);
+                const targetName = target ? target.name : (rel.targetName || '未知 (可能未保存)');
+                const typeMap = { father:'父亲', mother:'母亲', spouse:'配偶', son:'儿子', daughter:'女儿', ally:'盟友', enemy:'死敌', master:'师父', servant:'仆从' };
+
+                return `
+                <div class="relation-item">
+                    <div>
+                        <span class="relation-type">${typeMap[rel.type] || rel.type}</span>
+                        <strong>${targetName}</strong>
+                    </div>
+                    <button type="button" class="btn-danger" style="padding:2px 8px; font-size:0.7rem;" onclick="app.removeRelationTemp(${index})">删除</button>
+                </div>
+            `;
+            }).join('');
+        },
+
+        addRelationTemp() {
+            const nameInput = document.getElementById('newRelName');
+            const typeInput = document.getElementById('newRelType');
+            const name = nameInput.value.trim();
+            const type = typeInput.value;
+
+            if (!name) return alert('请输入人物姓名');
+
+            // 查找是否已存在
+            const allPeople = [...this.data.xiao, ...this.data.wang, ...this.data.li];
+            let target = allPeople.find(p => p.name === name);
+
+            if (!target) {
+                // 如果不存在，询问是否创建新人（简化处理：暂时只记录名字ID，保存主人物时若发现新人不存在则提示或自动创建占位符）
+                // 为了体验流畅，这里我们创建一个临时的占位符ID，并在保存逻辑中处理
+                const tempId = 'temp_' + Date.now();
+                target = { id: tempId, name: name, isNew: true };
+                // 注意：实际保存时需要更复杂的逻辑来处理这个新人，这里简化为：如果新人不存在，先不保存关系，或者提示用户先去添加那个人。
+                // 改进策略：直接提示用户先去添加那个人，或者在这个模态框里只能选已有的人。
+                // 为了本工具的易用性，我们采用策略：如果人不存在，提示用户。
+                if(confirm(`人物"${name}"尚未在族谱中。是否先保存当前人物，然后再去添加"${name}"并建立关系？\n\n(点击取消则不添加此关系)`)) {
+                    nameInput.value = '';
+                    return;
+                } else {
+                    return;
+                }
+            }
+
+            // 检查是否已存在该关系
+            if (this.tempRelations.some(r => r.targetId === target.id && r.type === type)) {
+                return alert('该关系已存在');
+            }
+
+            this.tempRelations.push({ type, targetId: target.id, targetName: target.name });
+            nameInput.value = '';
+            this.renderRelationsInModal();
+        },
+
+        removeRelationTemp(index) {
+            this.tempRelations.splice(index, 1);
+            this.renderRelationsInModal();
+        },
+
+        saveCharacter(e) {
+            e.preventDefault();
+            const id = document.getElementById('charId').value;
+            const family = document.getElementById('charFamily').value;
+            const name = document.getElementById('charName').value;
+            const generation = parseInt(document.getElementById('charGen').value);
+            const status = document.getElementById('charStatus').value;
+            const age = document.getElementById('charAge').value;
+            const desc = document.getElementById('charDesc').value;
+
+            const familyList = this.data[family];
+
+            if (id) {
+                // 编辑
+                const index = familyList.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    this.data[family][index] = {
+                        ...this.data[family][index],
+                        name, generation, status, age, desc, relations: this.tempRelations
+                    };
+                }
+            } else {
+                // 新增
+                const newPerson = {
+                    id: Date.now().toString(),
+                    name, family, generation,
+                    gender: 'male', // 默认男性，可后续优化
+                    status, age, desc,
+                    relations: this.tempRelations
+                };
+                // 简单判断性别：名字含女性化字眼？这里暂略，默认手动改或后续扩展
+                if (['兰','梅','竹','菊','雪','月','霜','露','云','霞','凤','鸾','婉','清','秀','丽'].some(c => name.includes(c))) {
+                    newPerson.gender = 'female';
+                }
+                familyList.push(newPerson);
+            }
+
+            this.saveData();
+            this.closeModal();
+        },
+
+        deleteCharacter() {
+            const id = document.getElementById('charId').value;
+            const family = document.getElementById('charFamily').value;
+
+            if(confirm('确定要删除该人物吗？这将同时清除其他人对该人物的引用。')) {
+                this.data[family] = this.data[family].filter(p => p.id !== id);
+                // 清理其他家族中对该人物的引用
+                ['xiao', 'wang', 'li'].forEach(f => {
+                    this.data[f].forEach(p => {
+                        if (p.relations) {
+                            p.relations = p.relations.filter(r => r.targetId !== id);
+                        }
+                    });
+                });
+                this.saveData();
+                this.closeModal();
+            }
+        }
+    };
+
+    // 启动应用
+    app.init();
+
+</script>
+</body>
+</html>

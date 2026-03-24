@@ -369,9 +369,13 @@
                                 let content = '';
                                 group.forEach(item => {
                                     content += `${item.title}\n`;
+                                    content += `剧情内容：${item.plotContent}\n`;
                                     content += `画面要求：${item.sceneSetting}\n`;
                                     content += `出场人物：${item.Character}\n`;
-                                    if (this.formData.commonRequirement) {
+                                    if(item.common){
+                                        content += `通用要求：${item.common}\n`;
+                                    }
+                                    else if (this.formData.commonRequirement) {
                                         content += `通用要求：${this.formData.commonRequirement}\n`;
                                     }
                                     content += `\n`;
@@ -388,8 +392,7 @@
                             // 提取剧情内容生成新的JSON
                             const extractedObj = {};
                             jsonData.forEach((item, index) => {
-                                const num = item.num || String(index + 1);
-                                const key = String(parseInt(num) * 10).padStart(4, '0') + '.png';
+                                const key = String((index + 1) * 10).padStart(4, '0') + '.png';
                                 extractedObj[key] = item.plotContent;
                             });
 
