@@ -59,7 +59,7 @@
         }
 
         .el-input-group {
-            display: flex;
+            display: flex; 
             align-items: center;
         }
 
@@ -136,6 +136,66 @@
 
         .action-buttons {
             margin-top: 10px;
+        }
+
+         .action-buttons {
+            margin-top: 10px;
+        }
+
+        /* 返回顶部按钮样式 */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background-color: #409EFF;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+            z-index: 1000;
+        }
+
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            background-color: #66b1ff;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .back-to-top i {
+            font-size: 20px;
+        }
+
+        .loading-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .loading-text {
+            margin-top: 10px;
+            color: #409EFF;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -267,6 +327,16 @@
         <el-loading-spinner type="circle"></el-loading-spinner>
         <div class="loading-text">{{ loadingText }}</div>
     </div>
+      <!-- 返回顶部按钮 -->
+    <div 
+        class="back-to-top" 
+        :class="{ show: showBackToTop }"
+        @click="scrollToTop"
+        title="返回顶部"
+    >
+        <i class="el-icon-caret-top"></i>
+    </div>
+
 </div>
 
 <script>
@@ -328,10 +398,33 @@
                 isProcessing: false,
                 showLoading: false,
                 loadingText: '处理中，请稍候...',
-                activeTab: 'group'
+                activeTab: 'group',
+                showBackToTop: false
             };
         },
+         mounted() {
+        
+            // 监听滚动事件，控制返回顶部按钮的显示/隐藏
+            window.addEventListener('scroll', this.handleScroll);
+        },
+        beforeDestroy() {
+            // 组件销毁前移除事件监听
+            window.removeEventListener('scroll', this.handleScroll);
+        },
         methods: {
+             handleScroll() {
+                // 当滚动超过300px时显示返回顶部按钮
+                this.showBackToTop = window.scrollY > 300;
+            },
+            
+            scrollToTop() {
+                // 平滑滚动到页面顶部
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            },
+
             async processJson() {
                 this.$refs.formData.validate(async (valid) => {
                     if (valid) {
