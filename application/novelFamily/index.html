@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>小说家族管理系统</title>
+    <!-- 引入Vue -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- 引入Element UI -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fa;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+
+        .tab-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .toolbar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+        }
+
+        .el-table {
+            margin-top: 10px;
+        }
+
+        .pagination-container {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .dialog-footer {
+            text-align: right;
+        }
+
+        .relationship-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f5f7fa;
+            border-radius: 4px;
+            border: 1px solid #dcdfe6;
+        }
+
+        .relationship-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #409EFF;
+            margin-bottom: 15px;
+        }
+
+        .relationship-item {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .relationship-label {
+            min-width: 80px;
+            color: #606266;
+            font-weight: bold;
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background-color: #409EFF;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+            z-index: 1000;
+        }
+
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            background-color: #66b1ff;
+            transform: translateY(-3px);
+        }
+
+        .loading-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .loading-text {
+            margin-top: 10px;
+            color: #409EFF;
+            font-size: 14px;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .stats-item {
+            display: inline-block;
+            margin-right: 40px;
+        }
+
+        .stats-value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .stats-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .tree-node {
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 3px solid #409EFF;
+            padding-left: 15px;
+        }
+
+        .generation-label {
+            display: inline-block;
+            padding: 2px 8px;
+            background-color: #ecf5ff;
+            color: #409EFF;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="container">
+    <!-- 头部 -->
+    <div class="header">
+        <h1>📚 小说家族管理系统</h1>
+        <p>管理小说中的家族关系、成员信息和家谱结构</p>
+    </div>
+
+    <!-- Tab切换 -->
+    <div class="tab-content">
+        <el-tabs v-model="activeTab" type="border-card">
+            <!-- 家族管理 -->
+            <el-tab-pane label="家族管理" name="family">
+                <div class="toolbar">
+                    <div class="search-box">
+                        <el-input
+                            v-model="familySearch.name"
+                            placeholder="搜索家族名称"
+                            prefix-icon="el-icon-search"
+                            clearable
+                            style="width: 300px;"
+                            @clear="loadFamilyList"
+                            @keyup.enter.native="loadFamilyList"
+                        ></el-input>
+                        <el-button type="primary" @click="loadFamilyList">搜索</el-button>
+                    </div>
+                    <el-button type="primary" icon="el-icon-plus" @click="showCreateFamilyDialog">创建家族</el-button>
+                </div>
+
+                <el-table
+                    :data="familyList"
+                    border
+                    stripe
+                    style="width: 100%"
+                    v-loading="familyLoading"
+                >
+                    <el-table-column prop="id" label="ID" width="80"></el-table-column>
+                    <el-table-column prop="name" label="家族名称" width="150"></el-table-column>
+                    <el-table-column prop="description" label="简介" min-width="200" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="level" label="等级" width="80" align="center">
+                        <template slot-scope="scope">
+                            <el-tag size="small">Lv.{{ scope.row.level }}</el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="memberCount" label="成员数" width="100" align="center"></el-table-column>
+                    <el-table-column prop="status" label="状态" width="100" align="center">
+                        <template slot-scope="scope">
+                            <el-tag :type="getStatusType(scope.row.status)" size="small">
+                                {{ getStatusText(scope.row.status) }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="280" fixed="right">
+                        <template slot-scope="scope">
+                            <el-button size="mini" @click="viewFamilyDetail(scope.row)">详情</el-button>
+                            <el-button size="mini" type="primary" @click="showEditFamilyDialog(scope.row)">编辑</el-button>
+                            <el-button size="mini" type="warning" @click="showFamilyMembers(scope.row)">成员</el-button>
+                            <el-dropdown @command="(command) => handleFamilyAction(command, scope.row)">
+                                <el-button size="mini">
+                                    更多<i class="el-icon-arrow-down el-icon--right"></i>
+                                </el-button>
+                                <el-dropdown-menu slot="dropdown">
+                                    <el-dropdown-item command="freeze" :disabled="scope.row.status !== 1">冻结</el-dropdown-item>
+                                    <el-dropdown-item command="dissolve" :disabled="scope.row.status !== 1">解散</el-dropdown-item>
+                                    <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+                                </el-dropdown-menu>
+                            </el-dropdown>
+                        </template>
+                    </el-table-column>
+                </el-table>
+
+                <div class="pagination-container">
+                    <el-pagination
+                        @size-change="handleFamilySizeChange"
+                        @current-change="handleFamilyCurrentChange"
+                        :current-page="familyPagination.pageNumber"
+                        :page-sizes="[10, 20, 50, 100]"
+                        :page-size="familyPagination.pageSize"
+                        layout="total, sizes, prev, pager, next, jumper"
+                        :total="familyPagination.total"
+                    ></el-pagination>
+                </div>
+            </el-tab-pane>
+
+            <!-- 成员管理 -->
+            <el-tab-pane label="成员管理" name="member">
+                <div class="toolbar">
+                    <div class="search-box">
+                        <el-input
+                            v-model="memberSearch.nickname"
+                            placeholder="搜索成员昵称"
+                            prefix-icon="el-icon-search"
+                            clearable
+                            style="width: 300px;"
+                            @clear="loadMemberList"
+                            @keyup.enter.native="loadMemberList"
+                        ></el-input>
+                        <el-button type="primary" @click="loadMemberList">搜索</el-button>
+                    </div>
+                    <el-button type="primary" icon="el-icon-plus" @click="showCreateMemberDialog">注册成员</el-button>
+                </div>
+
+                <el-table
+                    :data="memberList"
+                    border
+                    stripe
+                    style="width: 100%"
+                    v-loading="memberLoading"
+                >
+                    <el-table-column prop="id" label="ID" width="80"></el-table-column>
+                    <el-table-column prop="nickname" label="昵称" width="120"></el-table-column>
+                    <el-table-column prop="gender" label="性别" width="80" align="center">
+                        <template slot-scope="scope">
+                            {{ getGenderText(scope.row.gender) }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="birthDate" label="出生日期" width="120"></el-table-column>
+                    <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="bio" label="简介" min-width="200" show-overflow-tooltip></el-table-column>
+                    <el-table-column label="操作" width="250" fixed="right">
+                        <template slot-scope="scope">
+                            <el-button size="mini" @click="viewMemberDetail(scope.row)">详情</el-button>
+                            <el-button size="mini" type="primary" @click="showEditMemberDialog(scope.row)">编辑</el-button>
+                            <el-button size="mini" type="success" @click="showRelationshipDialog(scope.row)">关系</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+
+                <div class="pagination-container">
+                    <el-pagination
+                        @size-change="handleMemberSizeChange"
+                        @current-change="handleMemberCurrentChange"
+                        :current-page="memberPagination.pageNumber"
+                        :page-sizes="[10, 20, 50, 100]"
+                        :page-size="memberPagination.pageSize"
+                        layout="total, sizes, prev, pager, next, jumper"
+                        :total="memberPagination.total"
+                    ></el-pagination>
+                </div>
+            </el-tab-pane>
+
+            <!-- 家族树 -->
+            <el-tab-pane label="家族树" name="tree">
+                <div class="toolbar">
+                    <el-select v-model="selectedFamilyId" placeholder="选择家族" @change="loadFamilyTree" style="width: 300px;">
+                        <el-option
+                            v-for="family in familyList"
+                            :key="family.id"
+                            :label="family.name"
+                            :value="family.id"
+                        ></el-option>
+                    </el-select>
+                    <el-button type="primary" @click="loadFamilyTree" :disabled="!selectedFamilyId">刷新</el-button>
+                </div>
+
+                <div v-if="familyTreeData.length > 0" class="family-tree">
+                    <div v-for="member in familyTreeData" :key="member.memberId" class="tree-node">
+                        <span class="generation-label">第{{ member.generation }}代</span>
+                        <strong>{{ member.nickname }}</strong>
+                        <el-tag size="mini" :type="getRoleType(member.role)" style="margin-left: 10px;">
+                            {{ getRoleText(member.role) }}
+                        </el-tag>
+                        <div style="margin-top: 8px; color: #606266; font-size: 14px;">
+                            <div v-if="member.fatherName">父亲：{{ member.fatherName }}</div>
+                            <div v-if="member.motherName">母亲：{{ member.motherName }}</div>
+                            <div v-if="member.spouseName">配偶：{{ member.spouseName }}</div>
+                            <div>加入时间：{{ member.joinTime }}</div>
+                        </div>
+                    </div>
+                </div>
+                <el-empty v-else description="请选择家族查看家族树"></el-empty>
+            </el-tab-pane>
+        </el-tabs>
+    </div>
+
+    <!-- 创建/编辑家族对话框 -->
+    <el-dialog
+        :title="familyDialog.isEdit ? '编辑家族' : '创建家族'"
+        :visible.sync="familyDialog.visible"
+        width="600px"
+    >
+        <el-form :model="familyForm" :rules="familyRules" ref="familyForm" label-width="100px">
+            <el-form-item label="家族名称" prop="name">
+                <el-input v-model="familyForm.name" placeholder="请输入家族名称"></el-input>
+            </el-form-item>
+            <el-form-item label="家族简介" prop="description">
+                <el-input
+                    v-model="familyForm.description"
+                    type="textarea"
+                    :rows="3"
+                    placeholder="请输入家族简介"
+                ></el-input>
+            </el-form-item>
+            <el-form-item label="家族公告" prop="announcement">
+                <el-input
+                    v-model="familyForm.announcement"
+                    type="textarea"
+                    :rows="3"
+                    placeholder="请输入家族公告"
+                ></el-input>
+            </el-form-item>
+            <el-form-item label="头像路径" prop="avatarUrl">
+                <el-input v-model="familyForm.avatarUrl" placeholder="/images/families/xxx.jpg"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="familyDialog.visible = false">取消</el-button>
+            <el-button type="primary" @click="submitFamilyForm" :loading="familyDialog.loading">确定</el-button>
+        </div>
+    </el-dialog>
+
+    <!-- 创建/编辑成员对话框 -->
+    <el-dialog
+        :title="memberDialog.isEdit ? '编辑成员' : '注册成员'"
+        :visible.sync="memberDialog.visible"
+        width="600px"
+    >
+        <el-form :model="memberForm" :rules="memberRules" ref="memberForm" label-width="100px">
+            <el-form-item label="昵称" prop="nickname">
+                <el-input v-model="memberForm.nickname" placeholder="请输入昵称"></el-input>
+            </el-form-item>
+            <el-form-item label="真实姓名" prop="realName">
+                <el-input v-model="memberForm.realName" placeholder="请输入真实姓名"></el-input>
+            </el-form-item>
+            <el-form-item label="性别" prop="gender">
+                <el-radio-group v-model="memberForm.gender">
+                    <el-radio :label="0">未知</el-radio>
+                    <el-radio :label="1">男</el-radio>
+                    <el-radio :label="2">女</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="出生日期" prop="birthDate">
+                <el-date-picker
+                    v-model="memberForm.birthDate"
+                    type="date"
+                    placeholder="选择日期"
+                    value-format="yyyy-MM-dd"
+                    style="width: 100%;"
+                ></el-date-picker>
+            </el-form-item>
+            <el-form-item label="邮箱" prop="email">
+                <el-input v-model="memberForm.email" placeholder="请输入邮箱"></el-input>
+            </el-form-item>
+            <el-form-item label="个人简介" prop="bio">
+                <el-input
+                    v-model="memberForm.bio"
+                    type="textarea"
+                    :rows="3"
+                    placeholder="请输入个人简介"
+                ></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="memberDialog.visible = false">取消</el-button>
+            <el-button type="primary" @click="submitMemberForm" :loading="memberDialog.loading">确定</el-button>
+        </div>
+    </el-dialog>
+
+    <!-- 人物关系设置对话框 -->
+    <el-dialog
+        title="设置人物关系"
+        :visible.sync="relationshipDialog.visible"
+        width="700px"
+    >
+        <div v-if="relationshipDialog.member">
+            <el-alert
+                title="提示：设置人物关系可以帮助构建完整的家族谱系"
+                type="info"
+                :closable="false"
+                style="margin-bottom: 20px;"
+            ></el-alert>
+
+            <el-descriptions :column="2" border style="margin-bottom: 20px;">
+                <el-descriptions-item label="成员ID">{{ relationshipDialog.member.id }}</el-descriptions-item>
+                <el-descriptions-item label="昵称">{{ relationshipDialog.member.nickname }}</el-descriptions-item>
+                <el-descriptions-item label="性别">{{ getGenderText(relationshipDialog.member.gender) }}</el-descriptions-item>
+                <el-descriptions-item label="出生日期">{{ relationshipDialog.member.birthDate || '-' }}</el-descriptions-item>
+            </el-descriptions>
+
+            <div class="relationship-section">
+                <div class="relationship-title">亲属关系设置</div>
+                
+                <div class="relationship-item">
+                    <span class="relationship-label">父亲：</span>
+                    <el-select 
+                        v-model="relationshipDialog.fatherId" 
+                        placeholder="选择父亲" 
+                        clearable
+                        filterable
+                        style="flex: 1;"
+                    >
+                        <el-option
+                            v-for="member in availableMembers"
+                            :key="member.id"
+                            :label="member.nickname + ' (ID:' + member.id + ')'"
+                            :value="member.id"
+                            :disabled="member.gender !== 1"
+                        ></el-option>
+                    </el-select>
+                </div>
+
+                <div class="relationship-item">
+                    <span class="relationship-label">母亲：</span>
+                    <el-select 
+                        v-model="relationshipDialog.motherId" 
+                        placeholder="选择母亲" 
+                        clearable
+                        filterable
+                        style="flex: 1;"
+                    >
+                        <el-option
+                            v-for="member in availableMembers"
+                            :key="member.id"
+                            :label="member.nickname + ' (ID:' + member.id + ')'"
+                            :value="member.id"
+                            :disabled="member.gender !== 2"
+                        ></el-option>
+                    </el-select>
+                </div>
+
+                <div class="relationship-item">
+                    <span class="relationship-label">配偶：</span>
+                    <el-select 
+                        v-model="relationshipDialog.spouseId" 
+                        placeholder="选择配偶" 
+                        clearable
+                        filterable
+                        style="flex: 1;"
+                    >
+                        <el-option
+                            v-for="member in availableMembers"
+                            :key="member.id"
+                            :label="member.nickname + ' (ID:' + member.id + ')'"
+                            :value="member.id"
+                            :disabled="member.id === relationshipDialog.member.id || member.gender === relationshipDialog.member.gender"
+                        ></el-option>
+                    </el-select>
+                </div>
+
+                <div class="relationship-item">
+                    <span class="relationship-label">代际：</span>
+                    <el-select v-model="relationshipDialog.generation" placeholder="选择代际" style="flex: 1;">
+                        <el-option label="第一代（创始人）" :value="1"></el-option>
+                        <el-option label="第二代" :value="2"></el-option>
+                        <el-option label="第三代" :value="3"></el-option>
+                        <el-option label="第四代" :value="4"></el-option>
+                        <el-option label="第五代" :value="5"></el-option>
+                    </el-select>
+                </div>
+            </div>
+        </div>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="relationshipDialog.visible = false">取消</el-button>
+            <el-button type="primary" @click="submitRelationship" :loading="relationshipDialog.loading">保存关系</el-button>
+        </div>
+    </el-dialog>
+
+    <!-- 家族详情对话框 -->
+    <el-dialog
+        title="家族详情"
+        :visible.sync="familyDetailDialog.visible"
+        width="700px"
+    >
+        <div v-if="familyDetailDialog.data">
+            <el-descriptions :column="2" border>
+                <el-descriptions-item label="家族ID">{{ familyDetailDialog.data.id }}</el-descriptions-item>
+                <el-descriptions-item label="家族名称">{{ familyDetailDialog.data.name }}</el-descriptions-item>
+                <el-descriptions-item label="等级">Lv.{{ familyDetailDialog.data.level }}</el-descriptions-item>
+                <el-descriptions-item label="经验值">{{ familyDetailDialog.data.experience }}</el-descriptions-item>
+                <el-descriptions-item label="成员数">{{ familyDetailDialog.data.memberCount }}</el-descriptions-item>
+                <el-descriptions-item label="成员上限">{{ familyDetailDialog.data.maxMembers }}</el-descriptions-item>
+                <el-descriptions-item label="状态">
+                    <el-tag :type="getStatusType(familyDetailDialog.data.status)">
+                        {{ getStatusText(familyDetailDialog.data.status) }}
+                    </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="创建时间">{{ familyDetailDialog.data.createdAt }}</el-descriptions-item>
+                <el-descriptions-item label="简介" :span="2">{{ familyDetailDialog.data.description }}</el-descriptions-item>
+                <el-descriptions-item label="公告" :span="2">{{ familyDetailDialog.data.announcement }}</el-descriptions-item>
+            </el-descriptions>
+        </div>
+    </el-dialog>
+
+    <!-- 成员详情对话框 -->
+    <el-dialog
+        title="成员详情"
+        :visible.sync="memberDetailDialog.visible"
+        width="700px"
+    >
+        <div v-if="memberDetailDialog.data">
+            <el-descriptions :column="2" border>
+                <el-descriptions-item label="成员ID">{{ memberDetailDialog.data.id }}</el-descriptions-item>
+                <el-descriptions-item label="昵称">{{ memberDetailDialog.data.nickname }}</el-descriptions-item>
+                <el-descriptions-item label="真实姓名">{{ memberDetailDialog.data.realName || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="性别">{{ getGenderText(memberDetailDialog.data.gender) }}</el-descriptions-item>
+                <el-descriptions-item label="出生日期">{{ memberDetailDialog.data.birthDate || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="邮箱">{{ memberDetailDialog.data.email || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="简介" :span="2">{{ memberDetailDialog.data.bio || '-' }}</el-descriptions-item>
+            </el-descriptions>
+        </div>
+    </el-dialog>
+
+    <!-- 家族成员列表对话框 -->
+    <el-dialog
+        title="家族成员"
+        :visible.sync="familyMembersDialog.visible"
+        width="900px"
+    >
+        <div v-if="familyMembersDialog.family">
+            <h3 style="margin-bottom: 15px;">{{ familyMembersDialog.family.name }} - 成员列表</h3>
+            <el-table
+                :data="familyMembersDialog.members"
+                border
+                stripe
+                v-loading="familyMembersDialog.loading"
+            >
+                <el-table-column prop="nickname" label="昵称" width="120"></el-table-column>
+                <el-table-column prop="role" label="角色" width="100" align="center">
+                    <template slot-scope="scope">
+                        <el-tag size="small" :type="getRoleType(scope.row.role)">
+                            {{ getRoleText(scope.row.role) }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="joinTime" label="加入时间" width="180"></el-table-column>
+                <el-table-column prop="status" label="状态" width="100" align="center">
+                    <template slot-scope="scope">
+                        <el-tag size="small" :type="getMemberStatusType(scope.row.status)">
+                            {{ getMemberStatusText(scope.row.status) }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="isMuted" label="禁言" width="80" align="center">
+                    <template slot-scope="scope">
+                        <el-tag size="small" :type="scope.row.isMuted === 1 ? 'warning' : 'info'">
+                            {{ scope.row.isMuted === 1 ? '已禁言' : '正常' }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" width="200">
+                    <template slot-scope="scope">
+                        <el-button size="mini" @click="assignRole(scope.row)">分配角色</el-button>
+                        <el-button size="mini" :type="scope.row.isMuted === 1 ? 'success' : 'warning'" 
+                                   @click="toggleMute(scope.row)">
+                            {{ scope.row.isMuted === 1 ? '解除禁言' : '禁言' }}
+                        </el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </div>
+    </el-dialog>
+
+    <!-- 分配角色对话框 -->
+    <el-dialog
+        title="分配角色"
+        :visible.sync="assignRoleDialog.visible"
+        width="400px"
+    >
+        <el-form label-width="80px">
+            <el-form-item label="成员">
+                <span>{{ assignRoleDialog.member?.nickname }}</span>
+            </el-form-item>
+            <el-form-item label="新角色">
+                <el-radio-group v-model="assignRoleDialog.newRole">
+                    <el-radio :label="1">族长</el-radio>
+                    <el-radio :label="2">长老</el-radio>
+                    <el-radio :label="3">普通成员</el-radio>
+                </el-radio-group>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="assignRoleDialog.visible = false">取消</el-button>
+            <el-button type="primary" @click="submitAssignRole">确定</el-button>
+        </div>
+    </el-dialog>
+
+    <!-- 全局加载状态 -->
+    <div v-if="showGlobalLoading" class="loading-mask">
+        <el-loading-spinner type="circle"></el-loading-spinner>
+        <div class="loading-text">{{ globalLoadingText }}</div>
+    </div>
+
+    <!-- 返回顶部按钮 -->
+    <div 
+        class="back-to-top" 
+        :class="{ show: showBackToTop }"
+        @click="scrollToTop"
+        title="返回顶部"
+    >
+        <i class="el-icon-caret-top"></i>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = 'http://localhost:28019/novel-family-api/v1';
+
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                activeTab: 'family',
+                showBackToTop: false,
+                showGlobalLoading: false,
+                globalLoadingText: '处理中...',
+
+                // 家族相关
+                familyList: [],
+                familyLoading: false,
+                familySearch: {
+                    name: ''
+                },
+                familyPagination: {
+                    pageNumber: 1,
+                    pageSize: 10,
+                    total: 0
+                },
+                familyDialog: {
+                    visible: false,
+                    isEdit: false,
+                    loading: false
+                },
+                familyForm: {
+                    id: null,
+                    name: '',
+                    description: '',
+                    announcement: '',
+                    avatarUrl: ''
+                },
+                familyRules: {
+                    name: [
+                        { required: true, message: '请输入家族名称', trigger: 'blur' }
+                    ]
+                },
+                familyDetailDialog: {
+                    visible: false,
+                    data: null
+                },
+                familyMembersDialog: {
+                    visible: false,
+                    family: null,
+                    members: [],
+                    loading: false
+                },
+
+                // 成员相关
+                memberList: [],
+                memberLoading: false,
+                memberSearch: {
+                    nickname: ''
+                },
+                memberPagination: {
+                    pageNumber: 1,
+                    pageSize: 10,
+                    total: 0
+                },
+                memberDialog: {
+                    visible: false,
+                    isEdit: false,
+                    loading: false
+                },
+                memberForm: {
+                    id: null,
+                    nickname: '',
+                    realName: '',
+                    gender: 0,
+                    birthDate: '',
+                    email: '',
+                    bio: ''
+                },
+                memberRules: {
+                    nickname: [
+                        { required: true, message: '请输入昵称', trigger: 'blur' }
+                    ]
+                },
+                memberDetailDialog: {
+                    visible: false,
+                    data: null
+                },
+
+                // 人物关系
+                relationshipDialog: {
+                    visible: false,
+                    member: null,
+                    fatherId: null,
+                    motherId: null,
+                    spouseId: null,
+                    generation: 1,
+                    loading: false
+                },
+                availableMembers: [],
+
+                // 家族树
+                selectedFamilyId: null,
+                familyTreeData: [],
+
+                // 分配角色
+                assignRoleDialog: {
+                    visible: false,
+                    member: null,
+                    newRole: 3
+                }
+            };
+        },
+        mounted() {
+            window.addEventListener('scroll', this.handleScroll);
+            this.loadFamilyList();
+            this.loadMemberList();
+        },
+        beforeDestroy() {
+            window.removeEventListener('scroll', this.handleScroll);
+        },
+        methods: {
+            // 滚动处理
+            handleScroll() {
+                this.showBackToTop = window.scrollY > 300;
+            },
+            scrollToTop() {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+
+            // ========== 家族管理 ==========
+            async loadFamilyList() {
+                this.familyLoading = true;
+                try {
+                    const params = {
+                        pageNumber: this.familyPagination.pageNumber,
+                        pageSize: this.familyPagination.pageSize
+                    };
+                    if (this.familySearch.name) {
+                        params.name = this.familySearch.name;
+                    }
+
+                    const response = await this.apiGet('/family/list', params);
+                    if (response.resultCode === 200) {
+                        this.familyList = response.data.list || [];
+                        this.familyPagination.total = response.data.totalCount || 0;
+                    } else {
+                        this.$message.error(response.message || '加载家族列表失败');
+                    }
+                } catch (error) {
+                    console.error('加载家族列表错误:', error);
+                    this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                } finally {
+                    this.familyLoading = false;
+                }
+            },
+
+            showCreateFamilyDialog() {
+                this.familyDialog.isEdit = false;
+                this.familyForm = {
+                    id: null,
+                    name: '',
+                    description: '',
+                    announcement: '',
+                    avatarUrl: ''
+                };
+                this.familyDialog.visible = true;
+                this.$nextTick(() => {
+                    this.$refs.familyForm && this.$refs.familyForm.clearValidate();
+                });
+            },
+
+            showEditFamilyDialog(row) {
+                this.familyDialog.isEdit = true;
+                this.familyForm = {
+                    id: row.id,
+                    name: row.name,
+                    description: row.description,
+                    announcement: row.announcement,
+                    avatarUrl: row.avatarUrl
+                };
+                this.familyDialog.visible = true;
+            },
+
+            async submitFamilyForm() {
+                this.$refs.familyForm.validate(async (valid) => {
+                    if (!valid) return;
+
+                    this.familyDialog.loading = true;
+                    try {
+                        if (this.familyDialog.isEdit) {
+                            const response = await this.apiPut('/family/update', this.familyForm, { operatorId: 1 });
+                            if (response.resultCode === 200) {
+                                this.$message.success('修改成功');
+                                this.familyDialog.visible = false;
+                                this.loadFamilyList();
+                            } else {
+                                this.$message.error(response.message || '修改失败');
+                            }
+                        } else {
+                            const response = await this.apiPost('/family/create', this.familyForm, { creatorId: 1 });
+                            if (response.resultCode === 200) {
+                                this.$message.success('创建成功');
+                                this.familyDialog.visible = false;
+                                this.loadFamilyList();
+                            } else {
+                                this.$message.error(response.message || '创建失败');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('提交家族表单错误:', error);
+                        this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                    } finally {
+                        this.familyDialog.loading = false;
+                    }
+                });
+            },
+
+            viewFamilyDetail(row) {
+                this.familyDetailDialog.data = row;
+                this.familyDetailDialog.visible = true;
+            },
+
+            async showFamilyMembers(row) {
+                this.familyMembersDialog.family = row;
+                this.familyMembersDialog.visible = true;
+                this.familyMembersDialog.loading = true;
+                try {
+                    const response = await this.apiGet('/family/members', {
+                        familyId: row.id,
+                        pageNumber: 1,
+                        pageSize: 100
+                    });
+                    if (response.resultCode === 200) {
+                        this.familyMembersDialog.members = response.data.list || [];
+                    } else {
+                        this.$message.error(response.message || '加载成员列表失败');
+                    }
+                } catch (error) {
+                    console.error('加载家族成员错误:', error);
+                    this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                } finally {
+                    this.familyMembersDialog.loading = false;
+                }
+            },
+
+            async handleFamilyAction(command, row) {
+                switch (command) {
+                    case 'freeze':
+                        await this.confirmAction('确定要冻结该家族吗？', () => this.freezeFamily(row));
+                        break;
+                    case 'dissolve':
+                        await this.confirmAction('确定要解散该家族吗？', () => this.dissolveFamily(row));
+                        break;
+                    case 'delete':
+                        await this.confirmAction('确定要删除该家族吗？此操作不可恢复！', () => this.deleteFamily(row));
+                        break;
+                }
+            },
+
+            async freezeFamily(row) {
+                try {
+                    const response = await this.apiPost(`/family/freeze/${row.id}`, {}, { operatorId: 1 });
+                    if (response.resultCode === 200) {
+                        this.$message.success('冻结成功');
+                        this.loadFamilyList();
+                    } else {
+                        this.$message.error(response.message || '冻结失败');
+                    }
+                } catch (error) {
+                    console.error('冻结家族错误:', error);
+                    this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                }
+            },
+
+            async dissolveFamily(row) {
+                try {
+                    const response = await this.apiPost(`/family/dissolve/${row.id}`, {}, { operatorId: 1 });
+                    if (response.resultCode === 200) {
+                        this.$message.success('解散成功');
+                        this.loadFamilyList();
+                    } else {
+                        this.$message.error(response.message || '解散失败');
+                    }
+                } catch (error) {
+                    console.error('解散家族错误:', error);
+                    this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                }
+            },
+
+            async deleteFamily(row) {
+                try {
+                    const response = await this.apiDelete(`/family/delete/${row.id}`, { operatorId: 1 });
+                    if (response.resultCode === 200) {
+                        this.$message.success('删除成功');
+                        this.loadFamilyList();
+                    } else {
+                        this.$message.error(response.message || '删除失败');
+                    }
+                } catch (error) {
+                    console.error('删除家族错误:', error);
+                    this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                }
+            },
+
+            handleFamilySizeChange(val) {
+                this.familyPagination.pageSize = val;
+                this.loadFamilyList();
+            },
+
+            handleFamilyCurrentChange(val) {
+                this.familyPagination.pageNumber = val;
+                this.loadFamilyList();
+            },
+
+            // ========== 成员管理 ==========
+            async loadMemberList() {
+                this.memberLoading = true;
+                try {
+                    const params = {
+                        pageNumber: this.memberPagination.pageNumber,
+                        pageSize: this.memberPagination.pageSize
+                    };
+                    if (this.memberSearch.nickname) {
+                        params.nickname = this.memberSearch.nickname;
+                    }
+
+                    const response = await this.apiGet('/member/list', params);
+                    if (response.resultCode === 200) {
+                        this.memberList = response.data.list || [];
+                        this.memberPagination.total = response.data.totalCount || 0;
+                    } else {
+                        this.$message.error(response.message || '加载成员列表失败');
+                    }
+                } catch (error) {
+                    console.error('加载成员列表错误:', error);
+                    this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                } finally {
+                    this.memberLoading = false;
+                }
+            },
+
+            showCreateMemberDialog() {
+                this.memberDialog.isEdit = false;
+                this.memberForm = {
+                    id: null,
+                    nickname: '',
+                    realName: '',
+                    gender: 0,
+                    birthDate: '',
+                    email: '',
+                    bio: ''
+                };
+                this.memberDialog.visible = true;
+                this.$nextTick(() => {
+                    this.$refs.memberForm && this.$refs.memberForm.clearValidate();
+                });
+            },
+
+            showEditMemberDialog(row) {
+                this.memberDialog.isEdit = true;
+                this.memberForm = {
+                    id: row.id,
+                    nickname: row.nickname,
+                    realName: row.realName,
+                    gender: row.gender,
+                    birthDate: row.birthDate,
+                    email: row.email,
+                    bio: row.bio
+                };
+                this.memberDialog.visible = true;
+            },
+
+            async submitMemberForm() {
+                this.$refs.memberForm.validate(async (valid) => {
+                    if (!valid) return;
+
+                    this.memberDialog.loading = true;
+                    try {
+                        if (this.memberDialog.isEdit) {
+                            const response = await this.apiPut('/member/update', this.memberForm, { operatorId: 1 });
+                            if (response.resultCode === 200) {
+                                this.$message.success('修改成功');
+                                this.memberDialog.visible = false;
+                                this.loadMemberList();
+                            } else {
+                                this.$message.error(response.message || '修改失败');
+                            }
+                        } else {
+                            const response = await this.apiPost('/member/register', this.memberForm);
+                            if (response.resultCode === 200) {
+                                this.$message.success('注册成功');
+                                this.memberDialog.visible = false;
+                                this.loadMemberList();
+                            } else {
+                                this.$message.error(response.message || '注册失败');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('提交成员表单错误:', error);
+                        this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                    } finally {
+                        this.memberDialog.loading = false;
+                    }
+                });
+            },
+
+            viewMemberDetail(row) {
+                this.memberDetailDialog.data = row;
+                this.memberDetailDialog.visible = true;
+            },
+
+            // ========== 人物关系管理 ==========
+            async showRelationshipDialog(member) {
+                this.relationshipDialog.member = member;
+                this.relationshipDialog.fatherId = member.fatherId || null;
+                this.relationshipDialog.motherId = member.motherId || null;
+                this.relationshipDialog.spouseId = member.spouseId || null;
+                this.relationshipDialog.generation = member.generation || 1;
+                this.relationshipDialog.visible = true;
+
+                // 加载所有可用成员
+                try {
+                    const response = await this.apiGet('/member/list', { pageNumber: 1, pageSize: 1000 });
+                    if (response.resultCode === 200) {
+                        this.availableMembers = response.data.list || [];
+                    } else {
+                        this.$message.error(response.message || '加载成员列表失败');
+                    }
+                } catch (error) {
+                    console.error('加载成员列表错误:', error);
+                    this.$message.error('网络请求失败，无法加载可选成员');
+                }
+            },
+
+            async submitRelationship() {
+                this.relationshipDialog.loading = true;
+                try {
+                    // 1. 更新代际
+                    const updateResponse = await this.apiPut('/member/update', {
+                        id: this.relationshipDialog.member.id,
+                        generation: this.relationshipDialog.generation
+                    }, { operatorId: 1 });
+
+                    if (updateResponse.resultCode !== 200) {
+                        this.$message.error(updateResponse.message || '更新代际失败');
+                        return;
+                    }
+
+                    // 2. 设置父母关系
+                    if (this.relationshipDialog.fatherId || this.relationshipDialog.motherId) {
+                        const parentResponse = await this.apiPost('/member/set-parent', {}, {
+                            memberId: this.relationshipDialog.member.id,
+                            fatherId: this.relationshipDialog.fatherId,
+                            motherId: this.relationshipDialog.motherId,
+                            operatorId: 1
+                        });
+
+                        if (parentResponse.resultCode !== 200) {
+                            this.$message.error(parentResponse.message || '设置父母关系失败');
+                            return;
+                        }
+                    }
+
+                    // 3. 设置配偶关系
+                    if (this.relationshipDialog.spouseId) {
+                        const spouseResponse = await this.apiPost('/member/set-spouse', {}, {
+                            memberId: this.relationshipDialog.member.id,
+                            spouseId: this.relationshipDialog.spouseId,
+                            operatorId: 1
+                        });
+
+                        if (spouseResponse.resultCode !== 200) {
+                            this.$message.error(spouseResponse.message || '设置配偶关系失败');
+                            return;
+                        }
+                    }
+
+                    this.$message.success('人物关系设置成功');
+                    this.relationshipDialog.visible = false;
+                    this.loadMemberList();
+                    
+                    // 如果当前在家族树页面，刷新家族树
+                    if (this.selectedFamilyId) {
+                        this.loadFamilyTree();
+                    }
+                } catch (error) {
+                    console.error('设置人物关系错误:', error);
+                    this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                } finally {
+                    this.relationshipDialog.loading = false;
+                }
+            },
+
+            // ========== 家族树 ==========
+            async loadFamilyTree() {
+                if (!this.selectedFamilyId) return;
+                
+                this.showGlobalLoading = true;
+                this.globalLoadingText = '加载家族树...';
+                try {
+                    const response = await this.apiGet('/family/tree', { familyId: this.selectedFamilyId });
+                    if (response.resultCode === 200) {
+                        this.familyTreeData = response.data || [];
+                    } else {
+                        this.$message.error(response.message || '加载家族树失败');
+                    }
+                } catch (error) {
+                    console.error('加载家族树错误:', error);
+                    this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                } finally {
+                    this.showGlobalLoading = false;
+                }
+            },
+
+            // ========== 成员管理操作 ==========
+            async assignRole(member) {
+                this.assignRoleDialog.member = member;
+                this.assignRoleDialog.newRole = member.role;
+                this.assignRoleDialog.visible = true;
+            },
+
+            async submitAssignRole() {
+                try {
+                    const response = await this.apiPost('/family/member/assign-role', {}, {
+                        familyId: this.familyMembersDialog.family.id,
+                        memberId: this.assignRoleDialog.member.memberId,
+                        role: this.assignRoleDialog.newRole,
+                        operatorId: 1
+                    });
+                    if (response.resultCode === 200) {
+                        this.$message.success('分配角色成功');
+                        this.assignRoleDialog.visible = false;
+                        this.showFamilyMembers(this.familyMembersDialog.family);
+                    } else {
+                        this.$message.error(response.message || '分配角色失败');
+                    }
+                } catch (error) {
+                    console.error('分配角色错误:', error);
+                    this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                }
+            },
+
+            async toggleMute(member) {
+                try {
+                    const newMuted = member.isMuted === 1 ? 0 : 1;
+                    const response = await this.apiPost('/family/member/mute', {}, {
+                        familyId: this.familyMembersDialog.family.id,
+                        memberId: member.memberId,
+                        muted: newMuted === 1,
+                        operatorId: 1
+                    });
+                    if (response.resultCode === 200) {
+                        this.$message.success(newMuted === 1 ? '禁言成功' : '解除禁言成功');
+                        this.showFamilyMembers(this.familyMembersDialog.family);
+                    } else {
+                        this.$message.error(response.message || '操作失败');
+                    }
+                } catch (error) {
+                    console.error('禁言操作错误:', error);
+                    this.$message.error('网络请求失败，请检查网络连接或服务器是否启动');
+                }
+            },
+
+            // ========== 工具方法 ==========
+            async confirmAction(message, action) {
+                try {
+                    await this.$confirm(message, '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    });
+                    await action();
+                } catch (error) {
+                    // 用户取消
+                }
+            },
+
+            getStatusType(status) {
+                const types = { 1: 'success', 2: 'warning', 3: 'danger' };
+                return types[status] || 'info';
+            },
+
+            getStatusText(status) {
+                const texts = { 1: '正常', 2: '冻结', 3: '已解散' };
+                return texts[status] || '未知';
+            },
+
+            getGenderText(gender) {
+                const texts = { 0: '未知', 1: '男', 2: '女' };
+                return texts[gender] || '未知';
+            },
+
+            getRoleType(role) {
+                const types = { 1: 'danger', 2: 'warning', 3: 'info' };
+                return types[role] || 'info';
+            },
+
+            getRoleText(role) {
+                const texts = { 1: '族长', 2: '长老', 3: '普通成员' };
+                return texts[role] || '未知';
+            },
+
+            getMemberStatusType(status) {
+                const types = { 1: 'success', 2: 'info', 3: 'danger', 4: 'warning' };
+                return types[status] || 'info';
+            },
+
+            getMemberStatusText(status) {
+                const texts = { 1: '在族', 2: '已退出', 3: '被踢出', 4: '禁言' };
+                return texts[status] || '未知';
+            },
+
+            // API请求封装
+            async apiGet(url, params = {}) {
+                const queryString = new URLSearchParams(params).toString();
+                const fullUrl = `${API_BASE_URL}${url}?${queryString}`;
+                const response = await fetch(fullUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            },
+
+            async apiPost(url, data = {}, params = {}) {
+                const queryString = new URLSearchParams(params).toString();
+                const fullUrl = `${API_BASE_URL}${url}?${queryString}`;
+                const response = await fetch(fullUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            },
+
+            async apiPut(url, data = {}, params = {}) {
+                const queryString = new URLSearchParams(params).toString();
+                const fullUrl = `${API_BASE_URL}${url}?${queryString}`;
+                const response = await fetch(fullUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            },
+
+            async apiDelete(url, params = {}) {
+                const queryString = new URLSearchParams(params).toString();
+                const fullUrl = `${API_BASE_URL}${url}?${queryString}`;
+                const response = await fetch(fullUrl, { method: 'DELETE' });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            }
+        }
+    });
+</script>
+</body>
+</html>
