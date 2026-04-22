@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <title>JSON数据分组及剧情提取处理工具</title>
@@ -59,7 +60,7 @@
         }
 
         .el-input-group {
-            display: flex; 
+            display: flex;
             align-items: center;
         }
 
@@ -138,7 +139,7 @@
             margin-top: 10px;
         }
 
-         .action-buttons {
+        .action-buttons {
             margin-top: 10px;
         }
 
@@ -199,365 +200,323 @@
         }
     </style>
 </head>
+
 <body>
-<div id="app" class="form-container">
-    <div class="input-section">
-        <h2>JSON数据分组及剧情提取处理工具</h2>
-        <el-form :model="formData" :rules="rules" ref="formData" label-width="120px">
-            <el-form-item label="通用要求" prop="commonRequirement">
-                <el-input
-                        v-model="formData.commonRequirement"
-                        type="textarea"
-                        :rows="3"
+    <div id="app" class="form-container">
+        <div class="input-section">
+            <h2>JSON数据分组及剧情提取处理工具</h2>
+            <el-form :model="formData" :rules="rules" ref="formData" label-width="120px">
+                <el-form-item label="通用要求" prop="commonRequirement">
+                    <el-input v-model="formData.commonRequirement" type="textarea" :rows="3"
                         placeholder="请输入通用要求，将应用到每个分组">
-                </el-input>
-            </el-form-item>
+                    </el-input>
+                </el-form-item>
 
-            <el-form-item label="分组个数" prop="groupCount">
-                <el-input
-                        v-model.number="formData.groupCount"
-                        placeholder="请输入分组个数，默认为4">
-                    <template slot="append">个</template>
-                </el-input>
-            </el-form-item>
+                <el-form-item label="分组个数" prop="groupCount">
+                    <el-input v-model.number="formData.groupCount" placeholder="请输入分组个数，默认为4">
+                        <template slot="append">个</template>
+                    </el-input>
+                </el-form-item>
+                <el-form-item label="显示剧情内容">
+                    <el-switch v-model="formData.showPlotContent" active-text="开启" inactive-text="关闭">
+                    </el-switch>
+                </el-form-item>
 
-            <el-form-item label="JSON数据" prop="jsonData">
-                <el-input
-                        v-model="formData.jsonData"
-                        type="textarea"
-                        class="json-input"
-                        :rows="10"
+                <el-form-item label="JSON数据" prop="jsonData">
+                    <el-input v-model="formData.jsonData" type="textarea" class="json-input" :rows="10"
                         placeholder='请输入JSON数据，格式如：[{"num": "1", "title": "第001页", "plotContent": "...", "sceneSetting": "...", "Character": "..."}]'>
-                </el-input>
-            </el-form-item>
+                    </el-input>
+                </el-form-item>
 
-            <el-form-item>
-                <el-button
-                        type="primary"
-                        @click="processJson"
-                        :loading="isProcessing"
-                >
-                    开始处理
-                </el-button>
-                <el-button
-                        @click="clearAll"
-                >
-                    清空全部
-                </el-button>
-            </el-form-item>
-        </el-form>
-    </div>
-
-    <div class="tab-content" v-if="processedResults.length > 0 || extractedJson">
-        <div class="tab-header">
-            <div
-                    class="tab-item"
-                    :class="{ active: activeTab === 'group' }"
-                    @click="activeTab = 'group'"
-            >
-                分组结果
-            </div>
-            <div
-                    class="tab-item"
-                    :class="{ active: activeTab === 'extract' }"
-                    @click="activeTab = 'extract'"
-            >
-                剧情提取
-            </div>
+                <el-form-item>
+                    <el-button type="primary" @click="processJson" :loading="isProcessing">
+                        开始处理
+                    </el-button>
+                    <el-button @click="clearAll">
+                        清空全部
+                    </el-button>
+                </el-form-item>
+            </el-form>
         </div>
 
-        <div class="tab-panel" :class="{ active: activeTab === 'group' }">
-            <h3>分组处理结果</h3>
-            <div class="result-item" v-for="(group, index) in processedResults" :key="'group-' + index">
-                <div class="result-title">{{ group.title }}</div>
-                <el-input
-                        type="textarea"
-                        class="result-textarea"
-                        :value="group.content"
-                        :readonly="true"
-                        :autosize="{ minRows: 6, maxRows: 20 }"
-                ></el-input>
-                <div class="action-buttons">
-                    <el-button
-                            type="primary"
-                            size="small"
-                            @click="copyToClipboard(group.content)"
-                            class="copy-btn"
-                    >
-                        一键复制
-                    </el-button>
-                    <el-button
-                            type="info"
-                            size="small"
-                            @click="copyToClipboardWithPrefix(group.content, group.title)"
-                            class="copy-btn"
-                    >
-                        复制带标题
-                    </el-button>
+        <div class="tab-content" v-if="processedResults.length > 0 || extractedJson">
+            <div class="tab-header">
+                <div class="tab-item" :class="{ active: activeTab === 'group' }" @click="activeTab = 'group'">
+                    分组结果
+                </div>
+                <div class="tab-item" :class="{ active: activeTab === 'extract' }" @click="activeTab = 'extract'">
+                    剧情提取
+                </div>
+            </div>
+
+            <div class="tab-panel" :class="{ active: activeTab === 'group' }">
+                <h3>分组处理结果</h3>
+                <div class="result-item" v-for="(group, index) in processedResults" :key="'group-' + index">
+                    <div class="result-title">{{ group.title }}</div>
+                    <el-input type="textarea" class="result-textarea" :value="group.content" :readonly="true"
+                        :autosize="{ minRows: 6, maxRows: 20 }"></el-input>
+                    <div class="action-buttons">
+                        <el-button type="primary" size="small" @click="copyToClipboard(group.content)" class="copy-btn">
+                            一键复制
+                        </el-button>
+                        <el-button type="info" size="small"
+                            @click="copyToClipboardWithPrefix(group.content, group.title)" class="copy-btn">
+                            复制带标题
+                        </el-button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-panel" :class="{ active: activeTab === 'extract' }">
+                <h3>剧情提取结果</h3>
+                <div class="result-item">
+                    <el-input type="textarea" class="result-textarea" :value="extractedJson" :readonly="true"
+                        :autosize="{ minRows: 10, maxRows: 30 }"></el-input>
+                    <div class="action-buttons">
+                        <el-button type="primary" size="small" @click="copyToClipboard(extractedJson)" class="copy-btn">
+                            一键复制剧情JSON
+                        </el-button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="tab-panel" :class="{ active: activeTab === 'extract' }">
-            <h3>剧情提取结果</h3>
-            <div class="result-item">
-                <el-input
-                        type="textarea"
-                        class="result-textarea"
-                        :value="extractedJson"
-                        :readonly="true"
-                        :autosize="{ minRows: 10, maxRows: 30 }"
-                ></el-input>
-                <div class="action-buttons">
-                    <el-button
-                            type="primary"
-                            size="small"
-                            @click="copyToClipboard(extractedJson)"
-                            class="copy-btn"
-                    >
-                        一键复制剧情JSON
-                    </el-button>
-                </div>
-            </div>
+        <!-- 全局加载状态 -->
+        <div v-if="showLoading" class="loading-mask">
+            <el-loading-spinner type="circle"></el-loading-spinner>
+            <div class="loading-text">{{ loadingText }}</div>
         </div>
+        <!-- 返回顶部按钮 -->
+        <div class="back-to-top" :class="{ show: showBackToTop }" @click="scrollToTop" title="返回顶部">
+            <i class="el-icon-caret-top"></i>
+        </div>
+
     </div>
 
-    <!-- 全局加载状态 -->
-    <div v-if="showLoading" class="loading-mask">
-        <el-loading-spinner type="circle"></el-loading-spinner>
-        <div class="loading-text">{{ loadingText }}</div>
-    </div>
-      <!-- 返回顶部按钮 -->
-    <div 
-        class="back-to-top" 
-        :class="{ show: showBackToTop }"
-        @click="scrollToTop"
-        title="返回顶部"
-    >
-        <i class="el-icon-caret-top"></i>
-    </div>
-
-</div>
-
-<script>
-    new Vue({
-        el: '#app',
-        data() {
-            return {
-                formData: {
-                    commonRequirement: '',
-                    groupCount: 4,
-                    jsonData: JSON.stringify([
-                        {
-                            "num": "1",
-                            "title": "第001页",
-                            "plotContent": "周三上午，阳光暖暖，小糖糖背着书包蹦跳着走进幼儿园，胸前佩戴一日园长徽章。",
-                            "sceneSetting": "幼儿园门口，金黄银杏叶铺地，川西林盘小院与现代建筑交融，小糖糖穿日常童装，胸前太阳花徽章闪烁全息屏，脚踩蓝色熊猫图案社交感应鞋，手腕星罗手环泛蓝光。",
-                            "Character": "小糖糖",
-                            "common": ""
-                        },
-                        {
-                            "num": "2",
-                            "title": "第002页",
-                            "plotContent": "老师温柔摸头欢迎，小糖糖挺起胸脯，骄傲承诺会做好一日园长。",
-                            "sceneSetting": "幼儿园门厅，木质前台温馨整洁，女老师蹲下微笑，小糖糖仰脸红扑扑，双手背在身后站得笔直，徽章显示今日活动流程。",
-                            "Character": "小糖糖、老师",
-                            "common": ""
-                        }
-                    ], null, 2)
-                },
-                rules: {
-                    commonRequirement: [
-                        { required: true, message: '请输入通用要求', trigger: 'blur' }
-                    ],
-                    groupCount: [
-                        { required: true, message: '请输入分组个数', trigger: 'blur' },
-                        { type: 'number', message: '分组个数必须为数字', trigger: 'blur' },
-                        { validator: (rule, value, callback) => {
-                                if (value < 1) {
-                                    callback(new Error('分组个数必须大于0'));
-                                } else {
-                                    callback();
-                                }
-                            }, trigger: 'blur' }
-                    ],
-                    jsonData: [
-                        { required: true, message: '请输入JSON数据', trigger: 'blur' },
-                        { validator: (rule, value, callback) => {
-                                try {
-                                    JSON.parse(value);
-                                    callback();
-                                } catch (e) {
-                                    callback(new Error('JSON格式不正确'));
-                                }
-                            }, trigger: 'blur' }
-                    ]
-                },
-                processedResults: [],
-                extractedJson: '',
-                isProcessing: false,
-                showLoading: false,
-                loadingText: '处理中，请稍候...',
-                activeTab: 'group',
-                showBackToTop: false
-            };
-        },
-         mounted() {
-        
-            // 监听滚动事件，控制返回顶部按钮的显示/隐藏
-            window.addEventListener('scroll', this.handleScroll);
-        },
-        beforeDestroy() {
-            // 组件销毁前移除事件监听
-            window.removeEventListener('scroll', this.handleScroll);
-        },
-        methods: {
-             handleScroll() {
-                // 当滚动超过300px时显示返回顶部按钮
-                this.showBackToTop = window.scrollY > 300;
-            },
-            
-            scrollToTop() {
-                // 平滑滚动到页面顶部
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
-            },
-
-            async processJson() {
-                this.$refs.formData.validate(async (valid) => {
-                    if (valid) {
-                        this.showLoading = true;
-                        this.isProcessing = true;
-                        this.loadingText = '正在处理JSON数据，请稍候...';
-
-                        try {
-                            // 解析JSON数据
-                            const jsonData = JSON.parse(this.formData.jsonData);
-
-                            if (!Array.isArray(jsonData)) {
-                                throw new Error('JSON数据必须是数组格式');
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    formData: {
+                        commonRequirement: '',
+                        groupCount: 4,
+                        showPlotContent: true,
+                        jsonData: JSON.stringify([
+                            {
+                                "num": "1",
+                                "title": "第001页",
+                                "plotContent": "周三上午，阳光暖暖，小糖糖背着书包蹦跳着走进幼儿园，胸前佩戴一日园长徽章。",
+                                "sceneSetting": "幼儿园门口，金黄银杏叶铺地，川西林盘小院与现代建筑交融，小糖糖穿日常童装，胸前太阳花徽章闪烁全息屏，脚踩蓝色熊猫图案社交感应鞋，手腕星罗手环泛蓝光。",
+                                "Character": "小糖糖",
+                                "common": ""
+                            },
+                            {
+                                "num": "2",
+                                "title": "第002页",
+                                "plotContent": "老师温柔摸头欢迎，小糖糖挺起胸脯，骄傲承诺会做好一日园长。",
+                                "sceneSetting": "幼儿园门厅，木质前台温馨整洁，女老师蹲下微笑，小糖糖仰脸红扑扑，双手背在身后站得笔直，徽章显示今日活动流程。",
+                                "Character": "小糖糖、老师",
+                                "common": ""
                             }
-
-                            // 按指定数量分组
-                            const groupSize = parseInt(this.formData.groupCount) || 4;
-                            const groups = [];
-
-                            for (let i = 0; i < jsonData.length; i += groupSize) {
-                                groups.push(jsonData.slice(i, i + groupSize));
-                            }
-
-                            // 处理每个分组
-                            const results = [];
-                            for (let i = 0; i < groups.length; i++) {
-                                const group = groups[i];
-
-                                // 生成分组标题
-                                const startIndex = i * groupSize + 1;
-                                const endIndex = Math.min((i + 1) * groupSize, jsonData.length);
-                                const groupTitle = `第${String(startIndex).padStart(3, '0')}页-${String(endIndex).padStart(3, '0')}页`;
-
-                                // 生成分组内容
-                                let content = '';
-                                group.forEach(item => {
-                                    content += `${item.title}\n`;
-                                    content += `剧情内容：${item.plotContent}\n`;
-                                    content += `画面要求：${item.sceneSetting}\n`;
-                                    content += `出场人物：${item.Character}\n`;
-                                    if(item.common){
-                                        content += `通用要求：${item.common}\n`;
+                        ], null, 2)
+                    },
+                    rules: {
+                        commonRequirement: [
+                            { required: true, message: '请输入通用要求', trigger: 'blur' }
+                        ],
+                        groupCount: [
+                            { required: true, message: '请输入分组个数', trigger: 'blur' },
+                            { type: 'number', message: '分组个数必须为数字', trigger: 'blur' },
+                            {
+                                validator: (rule, value, callback) => {
+                                    if (value < 1) {
+                                        callback(new Error('分组个数必须大于0'));
+                                    } else {
+                                        callback();
                                     }
-                                    else if (this.formData.commonRequirement) {
-                                        content += `通用要求：${this.formData.commonRequirement}\n`;
-                                    }
-                                    content += `\n`;
-                                });
-
-                                results.push({
-                                    title: groupTitle,
-                                    content: content.trim()
-                                });
+                                }, trigger: 'blur'
                             }
-
-                            this.processedResults = results;
-
-                            // 提取剧情内容生成新的JSON
-                            const extractedObj = {};
-                            jsonData.forEach((item, index) => {
-                                const key = String((index + 1) * 10).padStart(4, '0') + '.png';
-                                extractedObj[key] = item.plotContent;
-                            });
-
-                            this.extractedJson = JSON.stringify(extractedObj, null, 2);
-
-                            this.$message({
-                                message: '处理完成！',
-                                type: 'success',
-                                duration: 2000
-                            });
-                        } catch (error) {
-                            this.$alert(error.message || '处理过程中出现错误', '错误提示', {
-                                confirmButtonText: '确定',
-                                type: 'error'
-                            });
-                        } finally {
-                            this.showLoading = false;
-                            this.isProcessing = false;
-                        }
-                    }
-                });
+                        ],
+                        jsonData: [
+                            { required: true, message: '请输入JSON数据', trigger: 'blur' },
+                            {
+                                validator: (rule, value, callback) => {
+                                    try {
+                                        JSON.parse(value);
+                                        callback();
+                                    } catch (e) {
+                                        callback(new Error('JSON格式不正确'));
+                                    }
+                                }, trigger: 'blur'
+                            }
+                        ]
+                    },
+                    processedResults: [],
+                    extractedJson: '',
+                    isProcessing: false,
+                    showLoading: false,
+                    loadingText: '处理中，请稍候...',
+                    activeTab: 'group',
+                    showBackToTop: false
+                };
             },
+            mounted() {
 
-            copyToClipboard(text) {
-                if (!text) {
-                    this.$message.warning('没有内容可复制');
-                    return;
-                }
-
-                navigator.clipboard.writeText(text).then(() => {
-                    this.$message.success('复制成功！');
-                }).catch(err => {
-                    // 降级方案
-                    const textarea = document.createElement('textarea');
-                    textarea.value = text;
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    this.$message.success('复制成功！');
-                });
+                // 监听滚动事件，控制返回顶部按钮的显示/隐藏
+                window.addEventListener('scroll', this.handleScroll);
             },
-
-            copyToClipboardWithPrefix(content, prefix) {
-                const text = `${prefix}\n${content}`;
-                this.copyToClipboard(text);
+            beforeDestroy() {
+                // 组件销毁前移除事件监听
+                window.removeEventListener('scroll', this.handleScroll);
             },
+            methods: {
+                handleScroll() {
+                    // 当滚动超过300px时显示返回顶部按钮
+                    this.showBackToTop = window.scrollY > 300;
+                },
 
-            clearAll() {
-                this.$confirm('确定要清空所有内容吗？', '提示', {
-                    confirmButtonText: '确定',
-                    cancelButtonText: '取消',
-                    type: 'warning'
-                }).then(() => {
-                    this.formData.commonRequirement = '';
-                    this.formData.groupCount = 4;
-                    this.formData.jsonData = '';
-                    this.processedResults = [];
-                    this.extractedJson = '';
-                    this.activeTab = 'group';
-
-                    this.$message({
-                        type: 'success',
-                        message: '已清空!'
+                scrollToTop() {
+                    // 平滑滚动到页面顶部
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
                     });
-                });
+                },
+
+                async processJson() {
+                    this.$refs.formData.validate(async (valid) => {
+                        if (valid) {
+                            this.showLoading = true;
+                            this.isProcessing = true;
+                            this.loadingText = '正在处理JSON数据，请稍候...';
+
+                            try {
+                                // 解析JSON数据
+                                const jsonData = JSON.parse(this.formData.jsonData);
+
+                                if (!Array.isArray(jsonData)) {
+                                    throw new Error('JSON数据必须是数组格式');
+                                }
+
+                                // 按指定数量分组
+                                const groupSize = parseInt(this.formData.groupCount) || 4;
+                                const groups = [];
+
+                                for (let i = 0; i < jsonData.length; i += groupSize) {
+                                    groups.push(jsonData.slice(i, i + groupSize));
+                                }
+
+                                // 处理每个分组
+                                const results = [];
+                                for (let i = 0; i < groups.length; i++) {
+                                    const group = groups[i];
+
+                                    // 生成分组标题
+                                    const startIndex = i * groupSize + 1;
+                                    const endIndex = Math.min((i + 1) * groupSize, jsonData.length);
+                                    const groupTitle = `第${String(startIndex).padStart(3, '0')}页-${String(endIndex).padStart(3, '0')}页`;
+
+                                    // 生成分组内容
+                                    let content = '';
+                                    group.forEach(item => {
+                                        content += `${item.title}\n`;
+                                        if (this.formData.showPlotContent) {
+                                            content += `剧情内容：${item.plotContent}\n`;
+                                        }
+                                        content += `画面要求：${item.sceneSetting}\n`;
+                                        content += `出场人物：${item.Character}\n`;
+                                        if (item.common) {
+                                            content += `通用要求：${item.common}\n`;
+                                        }
+                                        else if (this.formData.commonRequirement) {
+                                            content += `通用要求：${this.formData.commonRequirement}\n`;
+                                        }
+                                        content += `\n`;
+                                    });
+
+                                    results.push({
+                                        title: groupTitle,
+                                        content: content.trim()
+                                    });
+                                }
+
+                                this.processedResults = results;
+
+                                // 提取剧情内容生成新的JSON
+                                const extractedObj = {};
+                                jsonData.forEach((item, index) => {
+                                    const key = String((index + 1) * 10).padStart(4, '0') + '.png';
+                                    extractedObj[key] = item.plotContent;
+                                });
+
+                                this.extractedJson = JSON.stringify(extractedObj, null, 2);
+
+                                this.$message({
+                                    message: '处理完成！',
+                                    type: 'success',
+                                    duration: 2000
+                                });
+                            } catch (error) {
+                                this.$alert(error.message || '处理过程中出现错误', '错误提示', {
+                                    confirmButtonText: '确定',
+                                    type: 'error'
+                                });
+                            } finally {
+                                this.showLoading = false;
+                                this.isProcessing = false;
+                            }
+                        }
+                    });
+                },
+
+                copyToClipboard(text) {
+                    if (!text) {
+                        this.$message.warning('没有内容可复制');
+                        return;
+                    }
+
+                    navigator.clipboard.writeText(text).then(() => {
+                        this.$message.success('复制成功！');
+                    }).catch(err => {
+                        // 降级方案
+                        const textarea = document.createElement('textarea');
+                        textarea.value = text;
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        this.$message.success('复制成功！');
+                    });
+                },
+
+                copyToClipboardWithPrefix(content, prefix) {
+                    const text = `${prefix}\n${content}`;
+                    this.copyToClipboard(text);
+                },
+
+                clearAll() {
+                    this.$confirm('确定要清空所有内容吗？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        this.formData.commonRequirement = '';
+                        this.formData.groupCount = 4;
+                        this.formData.jsonData = '';
+                        this.processedResults = [];
+                        this.extractedJson = '';
+                        this.activeTab = 'group';
+
+                        this.$message({
+                            type: 'success',
+                            message: '已清空!'
+                        });
+                    });
+                }
             }
-        }
-    });
-</script>
+        });
+    </script>
 </body>
+
 </html>
-
-
-
