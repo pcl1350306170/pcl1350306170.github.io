@@ -98,11 +98,18 @@
         </el-form-item>
 
         <el-form-item label="密码" prop="password">
-            <el-select v-model="formData.password" placeholder="请选择密码版本">
+            <el-select v-model="formData.password" placeholder="请选择密码版本" filterable allow-create default-first-option @change="handlePasswordChange">
                 <el-option value="Yahua@3585668" label="4.0"></el-option>
                 <el-option value="Yahua3585668yh" label="3.0"></el-option>
                 <el-option value="123456" label="123456"></el-option>
             </el-select>
+            <div style="margin-top: 6px; font-size: 13px; color: #909399;">
+                <span>当前密码：</span>
+                <el-tag :type="currentPasswordTagType" size="small" effect="plain">
+                    {{ currentPasswordLabel }}
+                </el-tag>
+                <span style="margin-left: 10px; font-family: monospace; letter-spacing: 1px;">{{ formData.password }}</span>
+            </div>
         </el-form-item>
 
         <el-form-item label="操作类型" prop="sqlType">
@@ -144,6 +151,12 @@
             </el-form-item>
         </template>
 
+        <el-form-item label="执行方式">
+            <el-checkbox v-model="formData.directExecution">直接执行SQL</el-checkbox>
+            <span style="margin-left: 12px; font-size: 13px; color: #909399;">
+                {{ formData.directExecution ? '生成并执行SQL' : '仅生成SQL（不执行）' }}
+            </span>
+        </el-form-item>
 
         <el-form-item>
             <el-button
@@ -203,7 +216,7 @@
         data() {
             return {
                 formData: {
-                    dbHost: '192.168.31.82',
+                    dbHost: '127.0.0.1',
                     dbPort: '3306',
                     dbName: 'YHDB',
                     username: 'root',
@@ -215,7 +228,8 @@
                     data_bak_remark: '',
                     mysqldump_dir: 'D:\\tools\\xampp\\mysql\\bin\\mysqldump.exe',
                     addlabelclassnum: '5',
-                    addlabelnum: '15'
+                    addlabelnum: '15',
+                    directExecution: false
                 },
                 rules: {
                     dbHost: [
@@ -263,6 +277,26 @@
                 isSubmitting: false
             };
         },
+        computed: {
+            // 当前密码对应的标签名称
+            currentPasswordLabel() {
+                const map = {
+                    'Yahua@3585668': '4.0',
+                    'Yahua3585668yh': '3.0',
+                    '123456': '123456'
+                };
+                return map[this.formData.password] || '自定义';
+            },
+            // 当前密码标签的类型（预设用不同颜色，自定义用warning）
+            currentPasswordTagType() {
+                const map = {
+                    'Yahua@3585668': 'success',
+                    'Yahua3585668yh': 'primary',
+                    '123456': 'info'
+                };
+                return map[this.formData.password] || 'warning';
+            }
+        },
         methods: {
             // 判断是否显示特定的表单项
             showItem(type) {
@@ -272,6 +306,11 @@
             // 处理操作类型变化
             handleSqlTypeChange() {
                 // 可以在这里添加额外的逻辑
+            },
+
+            // 处理密码变化
+            handlePasswordChange() {
+                // 触发computed更新
             },
 
             // 关闭弹窗时恢复原始的sqlType
@@ -324,7 +363,8 @@
                             dbName: this.formData.dbName,
                             username: this.formData.username,
                             password: this.formData.password,
-                            sqlType: this.formData.sqlType
+                            sqlType: this.formData.sqlType,
+                            directExecution: this.formData.directExecution
                         };
 
                         // 根据操作类型添加相应参数
