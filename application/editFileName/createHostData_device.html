@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <title>批量创建设备测试数据</title>
     <!-- 引入Vue -->
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="../../lib/vue/vue.min.js"></script>
     <!-- 引入Element UI -->
-    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
-    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <link rel="stylesheet" href="../../lib/vue/element-ui/index.css">
+    <script src="../../lib/vue/element-ui/index.js"></script>
     <!-- 引入axios -->
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../../lib/vue/axios.min.js"></script>
     <!-- 引入全局变量配置 -->
     <script src="../../js/_variable.js" type="text/javascript"></script>
     <style>
@@ -125,7 +125,7 @@
         </el-form-item>
 
         <el-form-item label="设备类型" prop="deviceType">
-            <el-select v-model="formData.deviceType" placeholder="请选择设备类型">
+            <el-select v-model="formData.deviceType" placeholder="请选择设备类型" @change="onDeviceTypeChange">
                 <el-option value="wnBedHeadExtension" label="床头分机 (wnBedHeadExtension)">
                     <span class="device-type-tag">🛏️</span>
                     <span>床头分机</span>
@@ -133,6 +133,50 @@
                 <el-option value="wnBedSideExtension" label="床旁分机 (wnBedSideExtension)">
                     <span class="device-type-tag">🖥️</span>
                     <span>床旁分机</span>
+                </el-option>
+                <el-option value="wnToiletExtension" label="卫生间分机 (wnToiletExtension)">
+                    <span class="device-type-tag">🚻</span>
+                    <span>卫生间分机</span>
+                </el-option>
+                <el-option value="wnDutyMainframe" label="值班室主机 (wnDutyMainframe)">
+                    <span class="device-type-tag">🖥️</span>
+                    <span>值班室主机</span>
+                </el-option>
+                <el-option value="wnDoorWayExtension" label="门口分机 (wnDoorWayExtension)">
+                    <span class="device-type-tag">🚪</span>
+                    <span>门口分机</span>
+                </el-option>
+                <el-option value="wnEntranceGuard" label="门禁分机 (wnEntranceGuard)">
+                    <span class="device-type-tag">🔐</span>
+                    <span>门禁分机</span>
+                </el-option>
+                <el-option value="wnMedicalMainframe" label="医护主机 (wnMedicalMainframe)">
+                    <span class="device-type-tag">🏥</span>
+                    <span>医护主机</span>
+                </el-option>
+                <el-option value="rvKinVisitExtension" label="探视分机 (rvKinVisitExtension)">
+                    <span class="device-type-tag">👋</span>
+                    <span>探视分机</span>
+                </el-option>
+                <el-option value="wnMedicalAudioAssistant" label="手持设备 (wnMedicalAudioAssistant)">
+                    <span class="device-type-tag">📱</span>
+                    <span>手持设备</span>
+                </el-option>
+                <el-option value="wnDoorLampExtension" label="门灯 (wnDoorLampExtension)">
+                    <span class="device-type-tag">💡</span>
+                    <span>门灯</span>
+                </el-option>
+                <el-option value="wnCorridorScreen" label="走廊显示屏 (wnCorridorScreen)">
+                    <span class="device-type-tag">📺</span>
+                    <span>走廊显示屏</span>
+                </el-option>
+                <el-option value="wnCorridorLatticeScreen" label="走廊点阵屏 (wnCorridorLatticeScreen)">
+                    <span class="device-type-tag">📟</span>
+                    <span>走廊点阵屏</span>
+                </el-option>
+                <el-option value="bnNursingTV" label="智能护理看板 (bnNursingTV)">
+                    <span class="device-type-tag">📟</span>
+                    <span>智能护理看板</span>
                 </el-option>
             </el-select>
         </el-form-item>
@@ -272,6 +316,21 @@
         el: '#app',
         data() {
             return {
+                deviceTypeNameMap: {
+                    'wnBedHeadExtension': '床头分机',
+                    'wnBedSideExtension': '床旁分机',
+                    'wnToiletExtension': '卫生间分机',
+                    'wnDutyMainframe': '值班室主机',
+                    'wnDoorWayExtension': '门口分机',
+                    'wnEntranceGuard': '门禁分机',
+                    'wnMedicalMainframe': '医护主机',
+                    'rvKinVisitExtension': '探视分机',
+                    'wnMedicalAudioAssistant': '手持设备',
+                    'wnDoorLampExtension': '门灯',
+                    'wnCorridorScreen': '走廊显示屏',
+                    'wnCorridorLatticeScreen': '走廊点阵屏',
+                    'bnNursingTV': '智能护理看板'
+                },
                 formData: {
                     serverIp: '192.168.31.97',
                     port: '80',
@@ -352,7 +411,19 @@
                 progressStatus: ''
             };
         },
+        watch: {
+            'formData.deviceType'(newVal) {
+                if (this.deviceTypeNameMap[newVal]) {
+                    this.formData.deviceNamePrefix = this.deviceTypeNameMap[newVal];
+                }
+            }
+        },
         methods: {
+            onDeviceTypeChange(val) {
+                if (this.deviceTypeNameMap[val]) {
+                    this.formData.deviceNamePrefix = this.deviceTypeNameMap[val];
+                }
+            },
             // 生成UUID
             generateUUID() {
                 return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

@@ -3,164 +3,111 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Iframe 页面选择器</title>
+    <title>工具集合</title>
 
     <style>
-        html, body {
+        * {
             margin: 0;
             padding: 0;
-            background-color: #ffffff;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            font-size: 16px; /* 基准字体大小 */
-            font-family: sans-serif;
+            box-sizing: border-box;
         }
 
-        #main-iframe {
-            width: 100vw;
-            height: 100vh;
-            border: none;
-            position: absolute;
-            top: 0;
-            left: 0;
+        body {
+            background-color: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            padding: 20px;
+            min-height: 100vh;
         }
 
-        #select-btn, #refresh-btn {
-            position: fixed;
-            bottom: 40px;
-            width: 70px; /* 响应式宽度 */
-            height: 70px; /* ≥44px */
-            background-color: #00aaff;
-            border-radius: 50%;
-            border: none;
-            box-shadow: 0 0 15px #00aaff;
-            font-size: 0.9rem; /* 适配小屏幕 */
-            color: white;
-            z-index: 1000;
-            cursor: pointer;
-            transition: transform 0.2s;
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
-        #select-btn {
-            left: 30%;
-            transform: translateX(-50%);
-        }
-
-        #refresh-btn {
-            left: 70%;
-            transform: translateX(-50%);
-        }
-
-        #select-btn:active, #refresh-btn:active {
-            transform: translateX(-50%) scale(0.95);
-        }
-
-        #select-btn.dragging, #refresh-btn.dragging {
-            opacity: 0.8;
-            box-shadow: 0 0 20px #00aaff;
-        }
-
-        #popup {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #222;
-            padding: 20px; /* 响应式内边距 */
-            border-radius: 10px;
-            z-index: 2000;
-            display: none;
-            color: white;
-            width: min(90%, 800px); /* 响应式宽度 */
-            max-width: 800px;
+        h1 {
             text-align: center;
-            max-height: 70vh; /* 响应式高度 */
-            overflow-y: auto;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
         }
 
-        #popup h3 {
-            margin-top: 0;
-            font-size: 1.2rem; /* 响应式字体 */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            padding: 20px 0;
         }
 
-        .url-option {
-            margin: 10px 0; /* 响应式间距 */
-            padding: 16px; /* ≥44px 高度 */
-            background: #444;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.95rem; /* ≥16px */
-            text-align: left; /* 左对齐，便于阅读 */
-            transition: background 0.2s;
-        }
-
-        .url-option:hover {
-            background: #666;
-        }
-
-        #popup-close {
-            margin-top: 15px;
-            padding: 12px 20px; /* ≥44px 高度 */
-            background-color: #555;
-            border: none;
+        .tool-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border-radius: 6px;
+            border: none;
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 15px;
             cursor: pointer;
-            font-size: 0.95rem;
-            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.5;
+            word-wrap: break-word;
         }
 
-        /* 平板适配 */
-        @media (min-width: 768px) {
-            #select-btn, #refresh-btn {
-                width: 90px;
-                height: 90px;
-                font-size: 1.1rem;
+        .tool-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .tool-button:active {
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 768px) {
+            .tools-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 12px;
             }
 
-            #popup {
-                padding: 30px;
-                max-height: 50vh;
+            .tool-button {
+                padding: 16px;
+                font-size: 14px;
+                min-height: 70px;
             }
 
-            #popup h3 {
-                font-size: 1.4rem;
-            }
-
-            .url-option {
-                padding: 20px;
-                font-size: 1.1rem;
-            }
-
-            #popup-close {
-                padding: 14px 24px;
-                font-size: 1.1rem;
+            h1 {
+                font-size: 24px;
+                margin-bottom: 20px;
             }
         }
 
-        /* 大屏优化 */
-        @media (min-width: 1024px) {
-            #popup {
-                width: 900px;
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .tools-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .tool-button {
+                font-size: 13px;
+                padding: 14px;
+                min-height: 60px;
             }
         }
     </style>
 </head>
 <body>
-<iframe id="main-iframe" src="../application/editFileName/edit2.html"></iframe>
-
-<!-- 底部按钮 -->
-<button id="select-btn">选择</button>
-<button id="refresh-btn">刷新</button>
-
-<!-- 弹窗选择页面 -->
-<div id="popup">
-    <h3>选择页面</h3>
-    <div id="options-container">
-        <!-- 选项将通过 JavaScript 动态生成 -->
+<div class="container">
+    <h1>工具集合</h1>
+    <div class="tools-grid" id="tools-container">
+        <!-- 工具按钮将通过 JavaScript 动态生成 -->
     </div>
-    <button id="popup-close">关闭</button>
 </div>
 
 <script>
@@ -185,134 +132,32 @@
         { name: "AI绘本处理脚本", url: "../application/tools/dealJson.html" },
         { name: "本地小工具", url: "../application/editFileName/edit2.html" },
         { name: "快速创建数据[调用接口]", url: "../application/editFileName/createData.html" },
-        { name: "快速创建Mock数据", url: "../application/editFileName/createMock.html" },
-        { name: "创建服务器数据", url: "../application/editFileName/createHostData_v.html" },
-        { name: "创建服务器设备数据", url: "../application/editFileName/createHostData_device.html" },
+        { name: "Yarward快速创建Mock数据", url: "../application/editFileName/createMock.html" },
+        { name: "Yarward创建服务器数据", url: "../application/editFileName/createHostData_v.html" },
+        { name: "Yarward创建服务器设备数据", url: "../application/editFileName/createHostData_device.html" },
         { name: "图片爬取任务开启", url: "../application/editFileName/web-crawl-processor.html" },
        // { name: "txt下载任务开启", url: "../application/editFileName/web_crawler.html" },
-        { name: "在svn上面创建目录", url: "../application/editFileName/svnCreateDir.html" },
-        { name: "门诊项目生成zip", url: "../application/editFileName/menZhenSavezip.html" }
+        { name: "Yarward在svn上面创建目录", url: "../application/editFileName/svnCreateDir.html" },
+        { name: "Yarward门诊项目生成zip", url: "../application/editFileName/menZhenSavezip.html" }
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
-        // 渲染页面选项
-        renderPageOptions();
-
-        // 初始化按钮拖拽功能
-        initDraggableButtons();
-
-        // 绑定事件
-        bindEvents();
+        renderToolButtons();
     });
 
-    // 渲染页面选项
-    function renderPageOptions() {
-        const container = document.getElementById('options-container');
-        container.innerHTML = ''; // 清空
+    // 渲染工具按钮
+    function renderToolButtons() {
+        const container = document.getElementById('tools-container');
+        container.innerHTML = '';
 
         pageConfig.forEach(item => {
-            const option = document.createElement('div');
-            option.className = 'url-option';
-            option.textContent = item.name;
-            option.setAttribute('data-url', item.url);
-            container.appendChild(option);
-        });
-    }
-
-    // 初始化可拖拽按钮
-    function initDraggableButtons() {
-        const buttons = [
-            document.getElementById('select-btn'),
-            document.getElementById('refresh-btn')
-        ];
-
-        buttons.forEach(button => {
-            if (button) {
-                makeDraggable(button);
-            }
-        });
-    }
-
-    // 使元素可拖拽
-    function makeDraggable(element) {
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-
-        element.onmousedown = dragMouseDown;
-
-        function dragMouseDown(e) {
-            e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmousemove = elementDrag;
-            document.onmouseup = closeDragElement;
-            element.classList.add('dragging');
-        }
-
-        function elementDrag(e) {
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-
-            const newTop = element.offsetTop - pos2;
-            const newLeft = element.offsetLeft - pos1;
-
-            if (newTop > 0 && newTop < window.innerHeight - element.offsetHeight) {
-                element.style.top = newTop + "px";
-            }
-            if (newLeft > 0 && newLeft < window.innerWidth - element.offsetWidth) {
-                element.style.left = newLeft + "px";
-            }
-
-            element.style.transform = "none";
-        }
-
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-            element.classList.remove('dragging');
-        }
-    }
-
-    // 绑定事件
-    function bindEvents() {
-        const btnSelect = document.getElementById('select-btn');
-        const btnRefresh = document.getElementById('refresh-btn');
-        const popup = document.getElementById('popup');
-        const closeBtn = document.getElementById('popup-close');
-        const iframe = document.getElementById('main-iframe');
-
-        // 选择按钮
-        btnSelect.addEventListener('click', () => {
-            popup.style.display = 'block';
-        });
-
-        // 关闭弹窗
-        closeBtn.addEventListener('click', () => {
-            popup.style.display = 'none';
-        });
-
-        // 点击弹窗外部关闭
-        popup.addEventListener('click', (e) => {
-            if (e.target === popup) {
-                popup.style.display = 'none';
-            }
-        });
-
-        // 选项点击事件（事件委托）
-        document.getElementById('options-container').addEventListener('click', (e) => {
-            if (e.target.classList.contains('url-option')) {
-                const url = e.target.getAttribute('data-url');
-                iframe.src = url;
-                 window.open(url); // 如果需要新开窗口，取消注释
-                popup.style.display = 'none';
-            }
-        });
-
-        // 刷新按钮
-        btnRefresh.addEventListener('click', () => {
-            location.reload();
+            const button = document.createElement('button');
+            button.className = 'tool-button';
+            button.textContent = item.name;
+            button.addEventListener('click', () => {
+                window.open(item.url, '_blank');
+            });
+            container.appendChild(button);
         });
     }
 </script>
