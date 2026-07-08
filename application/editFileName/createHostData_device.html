@@ -12,6 +12,8 @@
     <script src="../../lib/vue/axios.min.js"></script>
     <!-- 引入全局变量配置 -->
     <script src="../../js/_variable.js" type="text/javascript"></script>
+    <!-- 引入本地存储工具 -->
+    <script src="../../js/StorageHelper.js" type="text/javascript"></script>
     <style>
         body {
             padding: 20px;
@@ -102,7 +104,22 @@
         <el-divider content-position="left">服务器配置</el-divider>
 
         <el-form-item label="服务器IP地址" prop="serverIp">
-            <el-input v-model="formData.serverIp" placeholder="例如: 192.168.31.97"></el-input>
+            <el-autocomplete
+                    v-model="formData.serverIp"
+                    :fetch-suggestions="queryServerIp"
+                    :trigger-on-focus="true"
+                    placeholder="输入或选择常用IP"
+                    @change="fetchOrgList"
+                    @select="onServerIpSelect"
+                    style="width: 100%"
+            >
+                <template slot-scope="{ item }">
+                    <span style="font-weight: bold;">{{ item.value }}</span>
+                    <span style="color: #999; font-size: 12px; margin-left: 10px;">{{ item.time }}</span>
+                    <el-button type="text" icon="el-icon-close" style="float: right; margin-top: 3px;"
+                               @click.stop="removeServerIp(item.value)"></el-button>
+                </template>
+            </el-autocomplete>
         </el-form-item>
 
         <el-form-item label="端口号" prop="port">
@@ -117,7 +134,12 @@
         <el-divider content-position="left">设备配置</el-divider>
 
         <el-form-item label="机构ID" prop="orgId">
-            <el-input v-model="formData.orgId" placeholder="请输入机构ID"></el-input>
+            <el-select v-if="orgList.length > 0" v-model="formData.orgId" placeholder="请选择机构" filterable style="width: 100%">
+                <el-option v-for="org in orgList" :key="org.orgId" :label="org.orgName + ' (' + org.orgId + ')'" :value="org.orgId"></el-option>
+            </el-select>
+            <el-input v-else v-model="formData.orgId" placeholder="请输入机构ID（自动获取失败时手动填写）">
+                <el-button slot="append" icon="el-icon-refresh" @click="fetchOrgList" :loading="orgLoading">获取</el-button>
+            </el-input>
         </el-form-item>
 
         <el-form-item label="科室ID" prop="deptId">
@@ -332,7 +354,7 @@
                     'bnNursingTV': '智能护理看板'
                 },
                 formData: {
-                    serverIp: '192.168.31.97',
+                    serverIp: '192.168.',
                     port: '80',
                     contextPath: '/tdms',
                     orgId: '430a7a3e29a6475e8f0cbad5cf5a81db',
@@ -408,7 +430,9 @@
                 results: [],
                 currentIndex: 0,
                 progressPercentage: 0,
-                progressStatus: ''
+                progressStatus: '',
+                orgList: [],
+                orgLoading: false
             };
         },
         watch: {
@@ -419,6 +443,65 @@
             }
         },
         methods: {
+            queryServerIp(queryString, cb) {
+                var list = StorageHelper.getList();
+                var results = queryString
+                    ? list.filter(function (item) {
+                        return item.value.indexOf(queryString) > -1;
+                    })
+                    : list;
+                cb(results);
+            },
+            onServerIpSelect(item) {
+                this.formData.serverIp = item.value;
+                this.fetchOrgList();
+            },
+            removeServerIp(value) {
+                StorageHelper.remove(null, value);
+                this.$message.success('已删除');
+            },
+            saveServerIpToStorage() {
+                var ip = this.formData.serverIp;
+                if (ip) {
+                    StorageHelper.save(null, ip);
+                }
+            },
+            async fetchOrgList() {
+                const ip = this.formData.serverIp;
+                if (!ip) return;
+
+                this.orgLoading = true;
+                this.orgList = [];
+                try {
+                    const response = await axios.post('http://localhost:28019/api/v1/orgs/getOrgs', {
+                        serverIp: ip
+                    }, {
+                        headers: { 'Content-Type': 'application/json' },
+                        timeout: 10000
+                    });
+
+                    const res = response.data;
+                    if (res.status === 200 && res.data && res.data.length > 0) {
+                        this.orgList = res.data;
+                        if (res.data.length === 1) {
+                            this.formData.orgId = res.data[0].orgId;
+                            this.$message.success('已自动获取机构ID');
+                        } else {
+                            this.formData.orgId = '';
+                            this.$message.info(`获取到 ${res.data.length} 个机构，请选择`);
+                        }
+                    } else {
+                        this.formData.orgId = '';
+                        this.$message.warning('未获取到机构信息，请手动输入机构ID');
+                    }
+                } catch (error) {
+                    console.error('获取机构列表失败:', error);
+                    this.formData.orgId = '';
+                    this.$message.error('获取机构信息失败，请手动输入机构ID');
+                } finally {
+                    this.orgLoading = false;
+                }
+            },
             onDeviceTypeChange(val) {
                 if (this.deviceTypeNameMap[val]) {
                     this.formData.deviceNamePrefix = this.deviceTypeNameMap[val];
@@ -666,6 +749,8 @@
                         this.progressPercentage = 100;
                         this.progressStatus = 'success';
                         this.isSubmitting = false;
+
+                        this.saveServerIpToStorage();
 
                         // 统计结果
                         const successCount = this.results.filter(r => r.success).length;

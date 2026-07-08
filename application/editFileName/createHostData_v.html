@@ -11,6 +11,7 @@
     <!-- 引入axios -->
     <script src="../../lib/vue/axios.min.js"></script>
     <script src="../../js/_variable.js" type="text/javascript"></script>
+    <script src="../../js/StorageHelper.js" type="text/javascript"></script>
     <style>
         body {
             padding: 20px;
@@ -82,7 +83,20 @@
 <div id="app" class="form-container">
     <el-form :model="formData" :rules="rules" ref="formData" label-width="220px">
         <el-form-item label="数据库地址" prop="dbHost">
-            <el-input v-model="formData.dbHost" placeholder="数据库地址"></el-input>
+            <el-autocomplete
+                    v-model="formData.dbHost"
+                    :fetch-suggestions="queryDbHost"
+                    :trigger-on-focus="true"
+                    placeholder="输入或选择常用数据库地址"
+                    style="width: 600px;"
+            >
+                <template slot-scope="{ item }">
+                    <span style="font-weight: bold;">{{ item.value }}</span>
+                    <span style="color: #999; font-size: 12px; margin-left: 10px;">{{ item.time }}</span>
+                    <el-button type="text" icon="el-icon-close" style="float: right; margin-top: 3px;"
+                               @click.stop="removeDbHost(item.value)"></el-button>
+                </template>
+            </el-autocomplete>
         </el-form-item>
 
         <el-form-item label="端口" prop="dbPort">
@@ -216,7 +230,7 @@
         data() {
             return {
                 formData: {
-                    dbHost: '127.0.0.1',
+                    dbHost: '192.168.',
                     dbPort: '3306',
                     dbName: 'YHDB',
                     username: 'root',
@@ -298,6 +312,26 @@
             }
         },
         methods: {
+            queryDbHost(queryString, cb) {
+                var list = StorageHelper.getList();
+                var results = queryString
+                    ? list.filter(function (item) {
+                        return item.value.indexOf(queryString) > -1;
+                    })
+                    : list;
+                cb(results);
+            },
+            removeDbHost(value) {
+                StorageHelper.remove(null, value);
+                this.$message.success('已删除');
+            },
+            saveDbHostToStorage() {
+                var host = this.formData.dbHost;
+                if (host) {
+                    StorageHelper.save(null, host);
+                }
+            },
+
             // 判断是否显示特定的表单项
             showItem(type) {
                 return this.formData.sqlType === type;
@@ -401,6 +435,8 @@
                                     type: "error"
                                 });
                             } else {
+                                    this.saveDbHostToStorage();
+
                                 if(requestData.sqlType === 'mysqldumpbak_list'){
                                     console.log(JSON.stringify(res));
                                     // 保存文件列表
