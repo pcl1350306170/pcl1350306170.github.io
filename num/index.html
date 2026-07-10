@@ -31,11 +31,23 @@
             font-size: 28px;
         }
 
+        .tool-group {
+            margin-bottom: 30px;
+        }
+
+        .group-title {
+            font-size: 2vw;
+            color: #444;
+            margin-bottom: 12px;
+            padding-left: 10px;
+            border-left: 4px solid #667eea;
+        }
+
         .tools-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 16px;
-            padding: 20px 0;
+            padding: 10px 0 20px;
         }
 
         .tool-button {
@@ -44,7 +56,7 @@
             border: none;
             border-radius: 12px;
             padding: 20px;
-            font-size: 15px;
+            font-size: 1.3vw;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -66,6 +78,54 @@
             transform: translateY(-1px);
         }
 
+        .group-yarward .tool-button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .group-yarward .tool-button:hover {
+            box-shadow: 0 6px 12px rgba(245, 87, 108, 0.4);
+        }
+
+        .group-yarward .group-title {
+            border-left-color: #f5576c;
+        }
+
+        .group-game .tool-button {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .group-game .tool-button:hover {
+            box-shadow: 0 6px 12px rgba(79, 172, 254, 0.4);
+        }
+
+        .group-game .group-title {
+            border-left-color: #4facfe;
+        }
+
+        .group-utility .tool-button {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .group-utility .tool-button:hover {
+            box-shadow: 0 6px 12px rgba(67, 233, 123, 0.4);
+        }
+
+        .group-utility .group-title {
+            border-left-color: #43e97b;
+        }
+
+        .group-tool .tool-button {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .group-tool .tool-button:hover {
+            box-shadow: 0 6px 12px rgba(250, 112, 154, 0.4);
+        }
+
+        .group-tool .group-title {
+            border-left-color: #fa709a;
+        }
+
         @media (max-width: 768px) {
             .tools-grid {
                 grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -81,6 +141,10 @@
             h1 {
                 font-size: 24px;
                 margin-bottom: 20px;
+            }
+
+            .group-title {
+                font-size: 18px;
             }
         }
 
@@ -105,59 +169,98 @@
 <body>
 <div class="container">
     <h1>工具集合</h1>
-    <div class="tools-grid" id="tools-container">
-        <!-- 工具按钮将通过 JavaScript 动态生成 -->
+    <div id="tools-container">
     </div>
 </div>
 
 <script>
-    // 页面配置（易于扩展）
-    const pageConfig = [
-        { name: "1、数字左右点击", url: "./num1.html" },
-        { name: "2、数字自增，可调速", url: "./num2.html" },
-        { name: "3、数字自增，可变色", url: "./num3.html" },
-        { name: "4、数字+1+1+1..+n..+1", url: "./num4.html" },
-        { name: "5、数字+1+2+3+n", url: "./num5.html" },
-        { name: "数字2048[固定难度128，可手滑]", url: "./Game/2048/index.html" },
-        { name: "数字2048[高难度最大65,536]", url: "./Game/2048/index2.html" },
-        { name: "数字2048[可调难度，高难度]", url: "./Game/2048/index3.html" },
-        { name: "数字2048[最大262,144，实际难度128]", url: "./Game/2048/index4.html" },
-        { name: "数字计算【选类型、选难度】", url: "./Game/numericalOperations/index.html" },
-        { name: "数字计算2【可调节倒计时】", url: "./Game/numericalOperations/index2.html" },
-        { name: "时间和数字显示概念", url: "./Game/TimeAndNum/index.html" },
-        { name: "2的次幂乐园", url: "./Game/powerNOf2/index.html" },
-        { name: "成功或者失败", url: "./Game/SuccessFail/index.html" },
-        { name: "总和小游戏", url: "./Game/edukiz/index.html" },
-        { name: "简易番茄钟", url: "./Game/Pomodoro/index.html" },
-        { name: "AI绘本处理脚本", url: "../application/tools/dealJson.html" },
-        { name: "本地小工具", url: "../application/editFileName/edit2.html" },
-        { name: "快速创建数据[调用接口]", url: "../application/editFileName/createData.html" },
-        { name: "Yarward快速创建Mock数据", url: "../application/editFileName/createMock.html" },
-        { name: "Yarward创建服务器数据", url: "../application/editFileName/createHostData_v.html" },
-        { name: "Yarward创建服务器设备数据", url: "../application/editFileName/createHostData_device.html" },
-        { name: "图片爬取任务开启", url: "../application/editFileName/web-crawl-processor.html" },
-       // { name: "txt下载任务开启", url: "../application/editFileName/web_crawler.html" },
-        { name: "Yarward在svn上面创建目录", url: "../application/editFileName/svnCreateDir.html" },
-        { name: "Yarward门诊项目生成zip", url: "../application/editFileName/menZhenSavezip.html" }
-    ];
+    const pageConfig = {
+
+        "Yarward": {
+            groupClass: "group-yarward",
+            tools: [
+                { name: "Yarward快速创建数据[调用接口]", url: "../application/editFileName/createData.html" },
+                { name: "Yarward创建Mock数据", url: "../application/editFileName/createMockRemote.html" },
+                { name: "Yarward创建Mock数据-old", url: "../application/editFileName/createMock.html" },
+                { name: "Yarward创建服务器数据", url: "../application/editFileName/createHostData_v.html" },
+                { name: "Yarward创建服务器设备数据", url: "../application/editFileName/createHostData_device.html" },
+                { name: "Yarward在svn上面创建目录", url: "../application/editFileName/svnCreateDir.html" },
+                { name: "Yarward门诊项目生成zip", url: "../application/editFileName/menZhenSavezip.html" }
+            ]
+        },
+        "实用工具": {
+            groupClass: "group-tool",
+            tools: [
+                { name: "简易番茄钟", url: "./Game/Pomodoro/index.html" },
+                { name: "AI绘本处理脚本", url: "../application/tools/dealJson.html" },
+                { name: "本地小工具", url: "../application/editFileName/edit2.html" },
+                { name: "图片爬取任务开启", url: "../application/editFileName/web-crawl-processor.html" },
+            ]
+        },
+        "数字游戏": {
+            groupClass: "group-game",
+            tools: [
+                { name: "1、数字左右点击", url: "./num1.html" },
+                { name: "2、数字自增，可调速", url: "./num2.html" },
+                { name: "3、数字自增，可变色", url: "./num3.html" },
+                { name: "4、数字+1+1+1..+n..+1", url: "./num4.html" },
+                { name: "5、数字+1+2+3+n", url: "./num5.html" }
+            ]
+        },
+        "2048系列": {
+            groupClass: "group-game",
+            tools: [
+                { name: "数字2048[固定难度128，可手滑]", url: "./Game/2048/index.html" },
+                { name: "数字2048[高难度最大65,536]", url: "./Game/2048/index2.html" },
+                { name: "数字2048[可调难度，高难度]", url: "./Game/2048/index3.html" },
+                { name: "数字2048[最大262,144，实际难度128]", url: "./Game/2048/index4.html" }
+            ]
+        },
+        "学习益智": {
+            groupClass: "group-utility",
+            tools: [
+                { name: "数字计算【选类型、选难度】", url: "./Game/numericalOperations/index.html" },
+                { name: "数字计算2【可调节倒计时】", url: "./Game/numericalOperations/index2.html" },
+                { name: "时间和数字显示概念", url: "./Game/TimeAndNum/index.html" },
+                { name: "2的次幂乐园", url: "./Game/powerNOf2/index.html" },
+                { name: "成功或者失败", url: "./Game/SuccessFail/index.html" },
+                { name: "总和小游戏", url: "./Game/edukiz/index.html" }
+            ]
+        },
+    };
 
     document.addEventListener('DOMContentLoaded', () => {
-        renderToolButtons();
+        renderToolGroups();
     });
 
-    // 渲染工具按钮
-    function renderToolButtons() {
+    function renderToolGroups() {
         const container = document.getElementById('tools-container');
         container.innerHTML = '';
 
-        pageConfig.forEach(item => {
-            const button = document.createElement('button');
-            button.className = 'tool-button';
-            button.textContent = item.name;
-            button.addEventListener('click', () => {
-                window.open(item.url, '_blank');
+        Object.entries(pageConfig).forEach(([groupName, groupData]) => {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'tool-group ' + groupData.groupClass;
+
+            const title = document.createElement('h2');
+            title.className = 'group-title';
+            title.textContent = groupName;
+            groupDiv.appendChild(title);
+
+            const grid = document.createElement('div');
+            grid.className = 'tools-grid';
+
+            groupData.tools.forEach(item => {
+                const button = document.createElement('button');
+                button.className = 'tool-button';
+                button.textContent = item.name;
+                button.addEventListener('click', () => {
+                    window.open(item.url, '_blank');
+                });
+                grid.appendChild(button);
             });
-            container.appendChild(button);
+
+            groupDiv.appendChild(grid);
+            container.appendChild(groupDiv);
         });
     }
 </script>

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>快速创建Mock数据（远程查询）</title>
+    <script src="../../lib/vue/vue.min.js"></script>
+    <link rel="stylesheet" href="../../lib/vue/element-ui/index.css">
+    <script src="../../lib/vue/element-ui/index.js"></script>
+    <script src="../../lib/vue/axios.min.js"></script>
+    <script src="../../js/_variable.js" type="text/javascript"></script>
+    <script src="../../js/StorageHelper.js" type="text/javascript"></script>
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .form-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+        }
+        .el-form-item {
+            margin-bottom: 15px;
+        }
+        .el-select {
+            width: 100%;
+        }
+        .page-description {
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: #ecf5ff;
+            border: 1px solid #b3d8ff;
+            border-radius: 4px;
+            color: #409EFF;
+            font-size: 14px;
+        }
+        .loading-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loading-text {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="form-container">
+    <h2 style="text-align: center; margin-bottom: 20px; color: #303133;">快速创建Mock数据（远程查询）</h2>
+
+    <div class="page-description">
+        页面说明：通过远程服务器查询患者信息和设备信息，自动生成床头床旁使用的Mock数据。
+    </div>
+
+    <el-form :model="formData" :rules="rules" ref="formData" label-width="160px">
+        <el-divider content-position="left">服务器配置</el-divider>
+
+        <el-form-item label="服务器IP地址" prop="serverIp">
+            <el-autocomplete
+                    v-model="formData.serverIp"
+                    :fetch-suggestions="queryServerIp"
+                    :trigger-on-focus="true"
+                    placeholder="输入或选择常用IP"
+                    style="width: 100%"
+            >
+                <template slot-scope="{ item }">
+                    <span style="font-weight: bold;">{{ item.value }}</span>
+                    <span style="color: #999; font-size: 12px; margin-left: 10px;">{{ item.time }}</span>
+                    <el-button type="text" icon="el-icon-close" style="float: right; margin-top: 3px;"
+                               @click.stop="removeServerIp(item.value)"></el-button>
+                </template>
+            </el-autocomplete>
+        </el-form-item>
+
+        <el-form-item label="代理接口地址" prop="proxyAddress">
+            <el-input v-model="formData.proxyAddress" placeholder="代理转发接口地址">
+                <template slot="prepend">{{ ajaxBase }}</template>
+            </el-input>
+        </el-form-item>
+
+        <el-form-item label="科室查询地址" prop="deptQueryAddress">
+            <el-input v-model="formData.deptQueryAddress" placeholder="科室查询接口地址">
+                <template slot="prepend">
+                    <el-select v-model="formData.deptApiType" style="width: 100px;">
+                        <el-option value="GET" label="GET"></el-option>
+                        <el-option value="POST" label="POST"></el-option>
+                    </el-select>
+                </template>
+            </el-input>
+        </el-form-item>
+
+        <el-form-item label="床位查询地址" prop="bedQueryAddress">
+            <el-input v-model="formData.bedQueryAddress" placeholder="床位查询接口地址">
+                <template slot="prepend">
+                    <el-select v-model="formData.bedApiType" style="width: 100px;">
+                        <el-option value="GET" label="GET"></el-option>
+                        <el-option value="POST" label="POST"></el-option>
+                    </el-select>
+                </template>
+            </el-input>
+        </el-form-item>
+
+        <el-form-item label="设备查询地址" prop="deviceQueryAddress">
+            <el-input v-model="formData.deviceQueryAddress" placeholder="设备查询接口地址">
+                <template slot="prepend">
+                    <el-select v-model="formData.deviceApiType" style="width: 100px;">
+                        <el-option value="GET" label="GET"></el-option>
+                        <el-option value="POST" label="POST"></el-option>
+                    </el-select>
+                </template>
+            </el-input>
+        </el-form-item>
+
+        <el-form-item label="设备类型" prop="deviceType">
+            <el-select v-model="formData.deviceType" placeholder="请选择设备类型" style="width: 200px;">
+                <el-option value="wnBedHeadExtension" label="床头分机"></el-option>
+                <el-option value="wnBedSideExtension" label="床旁分机"></el-option>
+            </el-select>
+        </el-form-item>
+
+        <el-form-item label="其他参数(params)" prop="params">
+            <el-input v-model="formData.params" type="textarea" :rows="3" placeholder='JSON格式的其他参数，如 {"key":"value"}'></el-input>
+        </el-form-item>
+
+        <el-form-item>
+            <el-button type="primary" @click="fetchDeptList" :loading="deptLoading" icon="el-icon-search">
+                查询科室列表
+            </el-button>
+        </el-form-item>
+
+        <el-divider content-position="left">科室选择</el-divider>
+
+        <el-form-item label="选择科室" prop="deptId">
+            <el-select v-model="formData.deptId" placeholder="请先查询科室列表" filterable :loading="deptLoading" @change="onDeptChange">
+                <el-option v-for="dept in deptList" :key="dept.deptId"
+                           :label="dept.deptName + ' (' + dept.deptKey + ')'"
+                           :value="dept.deptId">
+                    <span>{{ dept.deptName }}</span>
+                    <span style="color: #999; font-size: 12px; margin-left: 10px;">{{ dept.deptKey }}</span>
+                    <span style="color: #c0c4cc; font-size: 12px; margin-left: 10px;">{{ dept.deptId }}</span>
+                </el-option>
+            </el-select>
+        </el-form-item>
+
+        <el-divider></el-divider>
+
+        <el-form-item>
+            <el-button type="primary" @click="submitForm" :disabled="!formData.deptId">查询数据</el-button>
+        </el-form-item>
+    </el-form>
+
+    <el-row :gutter="20" v-if="bedList.length > 0 || deviceList.length > 0" style="margin-top: 20px;">
+        <el-col :span="12">
+            <el-card shadow="hover">
+                <div slot="header"><span>患者信息</span><el-tag size="mini" style="margin-left: 8px;">{{ bedList.length }}</el-tag></div>
+                <el-table :data="bedList" max-height="400" size="small" border>
+                    <el-table-column type="index" label="#" width="50"></el-table-column>
+                    <el-table-column label="床位" min-width="60">
+                        <template slot-scope="{ row }">{{ row.patientIn.bedName }}</template>
+                    </el-table-column>
+                    <el-table-column label="患者姓名" min-width="100">
+                        <template slot-scope="{ row }">{{ row.patientIn.patientName }}</template>
+                    </el-table-column>
+                    <el-table-column label="住院号" min-width="100">
+                        <template slot-scope="{ row }">{{ row.patientIn.inpNo }}</template>
+                    </el-table-column>
+                    <el-table-column label="性别" min-width="60">
+                        <template slot-scope="{ row }">{{ row.patientIn.sex }}</template>
+                    </el-table-column>
+                    <el-table-column label="诊断" min-width="120">
+                        <template slot-scope="{ row }">{{ row.patientIn.diagnose }}</template>
+                    </el-table-column>
+                    <el-table-column label="护理等级" min-width="100">
+                        <template slot-scope="{ row }">
+                            <el-tag v-if="row.nurseLevelConfig" size="mini"
+                                    :style="{ color: row.nurseLevelConfig.fontColor, backgroundColor: row.nurseLevelConfig.backgroundColor }">
+                                {{ row.nurseLevelConfig.nurseLevelShort || row.patientIn.nurseLevel }}
+                            </el-tag>
+                            <span v-else>{{ row.patientIn.nurseLevel }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="入院时间" min-width="150">
+                        <template slot-scope="{ row }">{{ row.patientIn.inTime }}</template>
+                    </el-table-column>
+                </el-table>
+            </el-card>
+        </el-col>
+        <el-col :span="12">
+            <el-card shadow="hover">
+                <div slot="header"><span>设备列表</span><el-tag size="mini" style="margin-left: 8px;">{{ deviceList.length }}</el-tag></div>
+                <el-table :data="deviceList" max-height="400" size="small" border>
+                    <el-table-column type="index" label="#" width="50"></el-table-column>
+                    <el-table-column prop="deviceName" label="设备名称" min-width="100"></el-table-column>
+                    <el-table-column prop="deviceNum" label="设备编号" min-width="80"></el-table-column>
+                    <el-table-column prop="roomName" label="房间" min-width="60"></el-table-column>
+                    <el-table-column prop="bedName" label="床位" min-width="60"></el-table-column>
+                    <el-table-column prop="ip" label="IP地址" min-width="130"></el-table-column>
+                    <el-table-column prop="deviceModel" label="设备型号" min-width="80"></el-table-column>
+                    <el-table-column label="在线状态" min-width="80">
+                        <template slot-scope="{ row }">
+                            <el-tag :type="row.onLineStatus ? 'success' : 'info'" size="mini">{{ row.onLineStatus ? '在线' : '离线' }}</el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="appVersion" label="App版本" min-width="140"></el-table-column>
+                </el-table>
+            </el-card>
+        </el-col>
+    </el-row>
+
+    <div v-if="showLoading" class="loading-mask">
+        <el-loading-spinner type="circle"></el-loading-spinner>
+        <div class="loading-text">{{ loadingText }}</div>
+    </div>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                ajaxBase: ajaxFileDealJavaIP,
+                formData: {
+                    serverIp: '192.168.',
+                    proxyAddress: '/api/v1/yh-proxy/forward',
+                    deptApiType: 'GET',
+                    deptQueryAddress: '/ifms/web-org/depts',
+                    bedApiType: 'POST',
+                    bedQueryAddress: '/api/v1/device-proxy/patient-list',
+                    deviceApiType: 'POST',
+                    deviceQueryAddress: '/api/v1/device-proxy/list',
+                    deviceType: 'wnBedSideExtension',
+                    params: '',
+                    deptId: ''
+                },
+                rules: {
+                    serverIp: [
+                        { required: true, message: '请输入服务器IP地址', trigger: 'blur' }
+                    ],
+                    proxyAddress: [
+                        { required: true, message: '请输入代理接口地址', trigger: 'blur' }
+                    ],
+                    deptQueryAddress: [
+                        { required: true, message: '请输入科室查询地址', trigger: 'blur' }
+                    ],
+                    deptId: [
+                        { required: true, message: '请选择科室', trigger: 'change' }
+                    ]
+                },
+                deptList: [],
+                deptLoading: false,
+                bedList: [],
+                deviceList: [],
+                showLoading: false,
+                loadingText: '处理中，请稍候...'
+            };
+        },
+        methods: {
+            queryServerIp(queryString, cb) {
+                var list = StorageHelper.getList();
+                var results = queryString
+                    ? list.filter(function (item) {
+                        return item.value.indexOf(queryString) > -1;
+                    })
+                    : list;
+                cb(results);
+            },
+            removeServerIp(value) {
+                StorageHelper.remove(null, value);
+                this.$message.success('已删除');
+            },
+            saveServerIpToStorage() {
+                var ip = this.formData.serverIp;
+                if (ip) {
+                    StorageHelper.save(null, ip);
+                }
+            },
+
+            buildProxyRequest(apiType, address, extraParams) {
+                return {
+                    apiType: apiType,
+                    address: address,
+                    serviceIp: this.formData.serverIp,
+                    params: extraParams || ''
+                };
+            },
+
+            fetchDeptList() {
+                if (!this.formData.serverIp) {
+                    this.$message.warning('请输入服务器IP地址');
+                    return;
+                }
+                if (!this.formData.proxyAddress) {
+                    this.$message.warning('请输入代理接口地址');
+                    return;
+                }
+                if (!this.formData.deptQueryAddress) {
+                    this.$message.warning('请输入科室查询地址');
+                    return;
+                }
+
+                this.deptLoading = true;
+                this.deptList = [];
+                this.formData.deptId = '';
+                this.bedList = [];
+                this.deviceList = [];
+
+                const requestUrl = this.ajaxBase + this.formData.proxyAddress;
+                const requestData = this.buildProxyRequest(this.formData.deptApiType, this.formData.deptQueryAddress);
+
+                    axios.post(requestUrl, requestData, {
+                        headers: { 'Content-Type': 'application/json' },
+                        timeout: 15000
+                    }).then(response => {
+                        const res = response.data;
+                        if (res.success && res.data && res.data.status === 200) {
+                            const list = res.data.data && res.data.data.list ? res.data.data.list : [];
+                            if (list.length > 0) {
+                                this.deptList = list;
+                                this.$message.success('查询到 ' + list.length + ' 个科室');
+                            } else {
+                                this.$message.warning('未查询到科室数据');
+                            }
+                        } else {
+                            this.$message.error('查询失败: ' + (res.data && res.data.desc || '未知错误'));
+                        }
+                        this.saveServerIpToStorage();
+                    }).catch(error => {
+                        let errorMsg = '请求失败';
+                        if (error.response) {
+                            errorMsg = '服务器错误: ' + error.response.status;
+                        } else if (error.request) {
+                            errorMsg = '请求无响应，请检查网络或服务地址';
+                        } else {
+                            errorMsg = error.message;
+                        }
+                        this.$message.error(errorMsg);
+                    }).finally(() => {
+                        this.deptLoading = false;
+                    });
+            },
+
+            onDeptChange(deptId) {
+                if (!deptId) return;
+                this.fetchBedList(deptId);
+                this.fetchDeviceList(deptId);
+            },
+
+            fetchBedList(deptId) {
+                this.showLoading = true;
+                this.loadingText = '正在查询床位列表...';
+                this.bedList = [];
+
+                const requestUrl = this.ajaxBase + this.formData.bedQueryAddress;
+                let paramsObj = {};
+                try {
+                    paramsObj = this.formData.params ? JSON.parse(this.formData.params) : {};
+                } catch (e) {
+                    this.$message.error('其他参数(params)格式错误，不是合法的JSON');
+                    this.showLoading = false;
+                    return;
+                }
+                paramsObj.deptId = deptId;
+
+                const requestData = {
+                    serviceIp: this.formData.serverIp,
+                    params: JSON.stringify(paramsObj)
+                };
+
+                axios.post(requestUrl, requestData, {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 15000
+                }).then(response => {
+                    const res = response.data;
+                    if (res.success && res.data && res.data.patientSelectDtos) {
+                        const list = res.data.patientSelectDtos;
+                        this.bedList = list;
+                        this.$message.success('查询到 ' + list.length + ' 条患者数据');
+                    } else {
+                        this.$message.error('患者查询失败: ' + (res.desc || '未知错误'));
+                    }
+                }).catch(error => {
+                    this.$message.error('患者请求失败: ' + (error.message || '请检查网络'));
+                }).finally(() => {
+                    this.showLoading = false;
+                });
+            },
+
+            fetchDeviceList(deptId) {
+                this.showLoading = true;
+                this.loadingText = '正在查询设备列表...';
+                this.deviceList = [];
+
+                const requestUrl = this.ajaxBase + this.formData.deviceQueryAddress;
+                let paramsObj = {};
+                try {
+                    paramsObj = this.formData.params ? JSON.parse(this.formData.params) : {};
+                } catch (e) {
+                    this.$message.error('其他参数(params)格式错误，不是合法的JSON');
+                    this.showLoading = false;
+                    return;
+                }
+                paramsObj.deptId = deptId;
+                paramsObj.deviceType = this.formData.deviceType;
+                paramsObj.contain = 1;
+                paramsObj.size = 100;
+                paramsObj.page = 1;
+
+                const requestData = {
+                    serviceIp: this.formData.serverIp,
+                    params: JSON.stringify(paramsObj)
+                };
+
+                axios.post(requestUrl, requestData, {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 15000
+                }).then(response => {
+                    const res = response.data;
+                    if (res.success && res.data && res.data.list) {
+                        const list = res.data.list;
+                        this.deviceList = list;
+                        this.$message.success('查询到 ' + list.length + ' 条设备数据');
+                    } else {
+                        this.$message.error('设备查询失败: ' + (res.desc || '未知错误'));
+                    }
+                }).catch(error => {
+                    this.$message.error('设备请求失败: ' + (error.message || '请检查网络'));
+                }).finally(() => {
+                    this.showLoading = false;
+                });
+            },
+
+            submitForm() {
+                if (!this.formData.deptId) {
+                    this.$message.warning('请先选择科室');
+                    return;
+                }
+                this.$message.info('床位数据: ' + this.bedList.length + ' 条, 设备数据: ' + this.deviceList.length + ' 条');
+            }
+        }
+    });
+    </script>
+</body>
+</html>
