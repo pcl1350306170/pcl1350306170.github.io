@@ -9,14 +9,32 @@
     <script src="../../lib/vue/axios.min.js"></script>
     <script src="../../js/_variable.js" type="text/javascript"></script>
     <script src="../../js/StorageHelper.js" type="text/javascript"></script>
+    <script src="./js/MockDataProcessor.js" type="text/javascript"></script>
     <style>
         body {
             padding: 20px;
             background-color: #f5f7fa;
         }
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        .left-panel {
+            width: 420px;
+            min-width: 420px;
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 20px;
+        }
+        .right-panel {
+            flex: 1;
+            min-width: 0;
+        }
         .form-container {
-            max-width: 1200px;
-            margin: 0 auto;
             background: white;
             padding: 30px;
             border-radius: 8px;
@@ -55,116 +73,143 @@
             font-size: 14px;
             color: #666;
         }
+        .mock-result {
+            margin-top: 20px;
+        }
+        .mock-result .el-table {
+            margin-top: 10px;
+        }
+        .download-all-btn {
+            margin-top: 15px;
+        }
+        .right-panel .el-card {
+            margin-bottom: 20px;
+        }
+        @media (max-width: 900px) {
+            .main-layout {
+                flex-direction: column;
+            }
+            .left-panel {
+                width: 100%;
+                min-width: auto;
+                position: static;
+            }
+        }
     </style>
 </head>
 <body>
-<div id="app" class="form-container">
+<div id="app">
     <h2 style="text-align: center; margin-bottom: 20px; color: #303133;">快速创建Mock数据（远程查询）</h2>
 
-    <div class="page-description">
-        页面说明：通过远程服务器查询患者信息和设备信息，自动生成床头床旁使用的Mock数据。
-    </div>
+    <div class="main-layout">
+        <div class="left-panel">
+            <div class="page-description">
+                页面说明：通过远程服务器查询患者信息和设备信息，自动生成床头床旁使用的Mock数据。
+            </div>
 
-    <el-form :model="formData" :rules="rules" ref="formData" label-width="160px">
-        <el-divider content-position="left">服务器配置</el-divider>
+            <el-form :model="formData" :rules="rules" ref="formData" label-width="120px">
+                <el-divider content-position="left">服务器配置</el-divider>
 
-        <el-form-item label="服务器IP地址" prop="serverIp">
-            <el-autocomplete
-                    v-model="formData.serverIp"
-                    :fetch-suggestions="queryServerIp"
-                    :trigger-on-focus="true"
-                    placeholder="输入或选择常用IP"
-                    style="width: 100%"
-            >
-                <template slot-scope="{ item }">
-                    <span style="font-weight: bold;">{{ item.value }}</span>
-                    <span style="color: #999; font-size: 12px; margin-left: 10px;">{{ item.time }}</span>
-                    <el-button type="text" icon="el-icon-close" style="float: right; margin-top: 3px;"
-                               @click.stop="removeServerIp(item.value)"></el-button>
-                </template>
-            </el-autocomplete>
-        </el-form-item>
+                <el-form-item label="服务器IP" prop="serverIp">
+                    <el-autocomplete
+                            v-model="formData.serverIp"
+                            :fetch-suggestions="queryServerIp"
+                            :trigger-on-focus="true"
+                            placeholder="输入或选择常用IP"
+                            style="width: 100%"
+                    >
+                        <template slot-scope="{ item }">
+                            <span style="font-weight: bold;">{{ item.value }}</span>
+                            <span style="color: #999; font-size: 12px; margin-left: 10px;">{{ item.time }}</span>
+                            <el-button type="text" icon="el-icon-close" style="float: right; margin-top: 3px;"
+                                       @click.stop="removeServerIp(item.value)"></el-button>
+                        </template>
+                    </el-autocomplete>
+                </el-form-item>
 
-        <el-form-item label="代理接口地址" prop="proxyAddress">
-            <el-input v-model="formData.proxyAddress" placeholder="代理转发接口地址">
-                <template slot="prepend">{{ ajaxBase }}</template>
-            </el-input>
-        </el-form-item>
+                <el-form-item label="代理接口" prop="proxyAddress">
+                    <el-input v-model="formData.proxyAddress" placeholder="代理转发接口地址" size="small">
+                        <template slot="prepend">{{ ajaxBase }}</template>
+                    </el-input>
+                </el-form-item>
 
-        <el-form-item label="科室查询地址" prop="deptQueryAddress">
-            <el-input v-model="formData.deptQueryAddress" placeholder="科室查询接口地址">
-                <template slot="prepend">
-                    <el-select v-model="formData.deptApiType" style="width: 100px;">
-                        <el-option value="GET" label="GET"></el-option>
-                        <el-option value="POST" label="POST"></el-option>
+                <el-form-item label="科室查询" prop="deptQueryAddress">
+                    <el-input v-model="formData.deptQueryAddress" placeholder="科室查询接口地址" size="small">
+                        <template slot="prepend">
+                            <el-select v-model="formData.deptApiType" style="width: 80px;">
+                                <el-option value="GET" label="GET"></el-option>
+                                <el-option value="POST" label="POST"></el-option>
+                            </el-select>
+                        </template>
+                    </el-input>
+                </el-form-item>
+
+                <el-form-item label="床位查询" prop="bedQueryAddress">
+                    <el-input v-model="formData.bedQueryAddress" placeholder="床位查询接口地址" size="small">
+                        <template slot="prepend">
+                            <el-select v-model="formData.bedApiType" style="width: 80px;">
+                                <el-option value="GET" label="GET"></el-option>
+                                <el-option value="POST" label="POST"></el-option>
+                            </el-select>
+                        </template>
+                    </el-input>
+                </el-form-item>
+
+                <el-form-item label="设备查询" prop="deviceQueryAddress">
+                    <el-input v-model="formData.deviceQueryAddress" placeholder="设备查询接口地址" size="small">
+                        <template slot="prepend">
+                            <el-select v-model="formData.deviceApiType" style="width: 80px;">
+                                <el-option value="GET" label="GET"></el-option>
+                                <el-option value="POST" label="POST"></el-option>
+                            </el-select>
+                        </template>
+                    </el-input>
+                </el-form-item>
+
+                <el-form-item label="设备类型" prop="deviceType">
+                    <el-select v-model="formData.deviceType" placeholder="请选择设备类型" style="width: 100%;">
+                        <el-option value="wnBedHeadExtension" label="床头分机"></el-option>
+                        <el-option value="wnBedSideExtension" label="床旁分机"></el-option>
                     </el-select>
-                </template>
-            </el-input>
-        </el-form-item>
+                </el-form-item>
 
-        <el-form-item label="床位查询地址" prop="bedQueryAddress">
-            <el-input v-model="formData.bedQueryAddress" placeholder="床位查询接口地址">
-                <template slot="prepend">
-                    <el-select v-model="formData.bedApiType" style="width: 100px;">
-                        <el-option value="GET" label="GET"></el-option>
-                        <el-option value="POST" label="POST"></el-option>
+                <el-form-item label="其他参数" prop="params">
+                    <el-input v-model="formData.params" type="textarea" :rows="2" placeholder='JSON格式，如 {"key":"value"}'></el-input>
+                </el-form-item>
+
+                <el-form-item>
+                    <el-button type="primary" @click="fetchDeptList" :loading="deptLoading" icon="el-icon-search" size="small">
+                        查询科室列表
+                    </el-button>
+                </el-form-item>
+
+                <el-divider content-position="left">科室选择</el-divider>
+
+                <el-form-item label="选择科室" prop="deptId">
+                    <el-select v-model="formData.deptId" placeholder="请先查询科室列表" filterable :loading="deptLoading" @change="onDeptChange" style="width: 100%;">
+                        <el-option v-for="dept in deptList" :key="dept.deptId"
+                                   :label="dept.deptName + ' (' + dept.deptKey + ')'"
+                                   :value="dept.deptId">
+                            <span>{{ dept.deptName }}</span>
+                            <span style="color: #999; font-size: 12px; margin-left: 10px;">{{ dept.deptKey }}</span>
+                            <span style="color: #c0c4cc; font-size: 12px; margin-left: 10px;">{{ dept.deptId }}</span>
+                        </el-option>
                     </el-select>
-                </template>
-            </el-input>
-        </el-form-item>
+                </el-form-item>
 
-        <el-form-item label="设备查询地址" prop="deviceQueryAddress">
-            <el-input v-model="formData.deviceQueryAddress" placeholder="设备查询接口地址">
-                <template slot="prepend">
-                    <el-select v-model="formData.deviceApiType" style="width: 100px;">
-                        <el-option value="GET" label="GET"></el-option>
-                        <el-option value="POST" label="POST"></el-option>
-                    </el-select>
-                </template>
-            </el-input>
-        </el-form-item>
+                <el-divider></el-divider>
 
-        <el-form-item label="设备类型" prop="deviceType">
-            <el-select v-model="formData.deviceType" placeholder="请选择设备类型" style="width: 200px;">
-                <el-option value="wnBedHeadExtension" label="床头分机"></el-option>
-                <el-option value="wnBedSideExtension" label="床旁分机"></el-option>
-            </el-select>
-        </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="submitForm" :disabled="!formData.deptId" size="small">查询数据</el-button>
+                    <el-button type="success" @click="generateAndDownload" :disabled="mockResults.length === 0" :loading="downloading" size="small">
+                        生成并下载Mock文件
+                    </el-button>
+                </el-form-item>
+            </el-form>
+        </div>
 
-        <el-form-item label="其他参数(params)" prop="params">
-            <el-input v-model="formData.params" type="textarea" :rows="3" placeholder='JSON格式的其他参数，如 {"key":"value"}'></el-input>
-        </el-form-item>
-
-        <el-form-item>
-            <el-button type="primary" @click="fetchDeptList" :loading="deptLoading" icon="el-icon-search">
-                查询科室列表
-            </el-button>
-        </el-form-item>
-
-        <el-divider content-position="left">科室选择</el-divider>
-
-        <el-form-item label="选择科室" prop="deptId">
-            <el-select v-model="formData.deptId" placeholder="请先查询科室列表" filterable :loading="deptLoading" @change="onDeptChange">
-                <el-option v-for="dept in deptList" :key="dept.deptId"
-                           :label="dept.deptName + ' (' + dept.deptKey + ')'"
-                           :value="dept.deptId">
-                    <span>{{ dept.deptName }}</span>
-                    <span style="color: #999; font-size: 12px; margin-left: 10px;">{{ dept.deptKey }}</span>
-                    <span style="color: #c0c4cc; font-size: 12px; margin-left: 10px;">{{ dept.deptId }}</span>
-                </el-option>
-            </el-select>
-        </el-form-item>
-
-        <el-divider></el-divider>
-
-        <el-form-item>
-            <el-button type="primary" @click="submitForm" :disabled="!formData.deptId">查询数据</el-button>
-        </el-form-item>
-    </el-form>
-
-    <el-row :gutter="20" v-if="bedList.length > 0 || deviceList.length > 0" style="margin-top: 20px;">
-        <el-col :span="12">
-            <el-card shadow="hover">
+        <div class="right-panel">
+            <el-card shadow="hover" v-if="bedList.length > 0 || deviceList.length > 0">
                 <div slot="header"><span>患者信息</span><el-tag size="mini" style="margin-left: 8px;">{{ bedList.length }}</el-tag></div>
                 <el-table :data="bedList" max-height="400" size="small" border>
                     <el-table-column type="index" label="#" width="50"></el-table-column>
@@ -197,9 +242,8 @@
                     </el-table-column>
                 </el-table>
             </el-card>
-        </el-col>
-        <el-col :span="12">
-            <el-card shadow="hover">
+
+            <el-card shadow="hover" v-if="deviceList.length > 0">
                 <div slot="header"><span>设备列表</span><el-tag size="mini" style="margin-left: 8px;">{{ deviceList.length }}</el-tag></div>
                 <el-table :data="deviceList" max-height="400" size="small" border>
                     <el-table-column type="index" label="#" width="50"></el-table-column>
@@ -217,13 +261,56 @@
                     <el-table-column prop="appVersion" label="App版本" min-width="140"></el-table-column>
                 </el-table>
             </el-card>
-        </el-col>
-    </el-row>
+
+            <div v-if="mockResults.length > 0" class="mock-result">
+                <el-card shadow="hover">
+                    <div slot="header">
+                        <span>Mock数据结果</span>
+                        <el-tag size="mini" style="margin-left: 8px;">{{ mockResults.length }}</el-tag>
+                        <el-button type="primary" size="mini" style="float: right;" @click="downloadAll" :loading="downloading">
+                            全部下载
+                        </el-button>
+                    </div>
+                    <el-table :data="mockResults" max-height="400" size="small" border>
+                        <el-table-column type="index" label="#" width="50"></el-table-column>
+                        <el-table-column prop="bedName" label="床位" width="80"></el-table-column>
+                        <el-table-column prop="patientName" label="患者" width="100"></el-table-column>
+                        <el-table-column prop="deviceType" label="设备类型" width="160"></el-table-column>
+                        <el-table-column label="操作" width="120">
+                            <template slot-scope="{ row }">
+                                <el-button type="primary" size="mini" @click="downloadSingle(row)" :loading="row._downloading">
+                                    下载
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </div>
+        </div>
+    </div>
 
     <div v-if="showLoading" class="loading-mask">
         <el-loading-spinner type="circle"></el-loading-spinner>
         <div class="loading-text">{{ loadingText }}</div>
     </div>
+
+    <el-dialog title="选择床位生成数据" :visible.sync="dialogVisible" width="70%" :modal="true">
+        <div style="margin-bottom: 10px;">
+            <el-checkbox v-model="dialogSelectAll" @change="onSelectAllChange">全选</el-checkbox>
+            <span style="color: #999; font-size: 12px; margin-left: 10px;">已选 {{ selectedBeds.length }} / {{ popupItems.length }}</span>
+        </div>
+        <div style="max-height: 50vh; overflow-y: auto;">
+            <div v-for="item in popupItems" :key="item.bedName" style="display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
+                <el-checkbox v-model="item.selected" @change="updateSelectAll"></el-checkbox>
+                <span style="margin-left: 12px;">床位：<b>{{ item.bedName }}</b></span>
+                <span style="margin-left: 12px;">姓名：{{ item.patientName }}</span>
+            </div>
+        </div>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="confirmDialogSelection">确认生成</el-button>
+        </div>
+    </el-dialog>
 </div>
 
 <script>
@@ -264,8 +351,29 @@
                 bedList: [],
                 deviceList: [],
                 showLoading: false,
-                loadingText: '处理中，请稍候...'
+                loadingText: '处理中，请稍候...',
+                mockResults: [],
+                downloading: false,
+                dialogVisible: false,
+                popupItems: [],
+                selectedBeds: [],
+                dialogSelectAll: true,
+                _processor: null,
+                _ipDebounceTimer: null
             };
+        },
+        watch: {
+            'formData.serverIp'(newVal) {
+                if (this._ipDebounceTimer) {
+                    clearTimeout(this._ipDebounceTimer);
+                }
+                if (!newVal || newVal === '192.168.') return;
+                this._ipDebounceTimer = setTimeout(() => {
+                    if (this.formData.proxyAddress && this.formData.deptQueryAddress) {
+                        this.fetchDeptList(true);
+                    }
+                }, 800);
+            }
         },
         methods: {
             queryServerIp(queryString, cb) {
@@ -297,17 +405,17 @@
                 };
             },
 
-            fetchDeptList() {
+            fetchDeptList(silent) {
                 if (!this.formData.serverIp) {
-                    this.$message.warning('请输入服务器IP地址');
+                    if (!silent) this.$message.warning('请输入服务器IP地址');
                     return;
                 }
                 if (!this.formData.proxyAddress) {
-                    this.$message.warning('请输入代理接口地址');
+                    if (!silent) this.$message.warning('请输入代理接口地址');
                     return;
                 }
                 if (!this.formData.deptQueryAddress) {
-                    this.$message.warning('请输入科室查询地址');
+                    if (!silent) this.$message.warning('请输入科室查询地址');
                     return;
                 }
 
@@ -354,6 +462,7 @@
 
             onDeptChange(deptId) {
                 if (!deptId) return;
+                this.mockResults = [];
                 this.fetchBedList(deptId);
                 this.fetchDeviceList(deptId);
             },
@@ -395,6 +504,7 @@
                     this.$message.error('患者请求失败: ' + (error.message || '请检查网络'));
                 }).finally(() => {
                     this.showLoading = false;
+                    this._tryAutoProcess();
                 });
             },
 
@@ -439,7 +549,154 @@
                     this.$message.error('设备请求失败: ' + (error.message || '请检查网络'));
                 }).finally(() => {
                     this.showLoading = false;
+                    this._tryAutoProcess();
                 });
+            },
+
+            _tryAutoProcess() {
+                if (this.bedList.length > 0 && this.deviceList.length > 0) {
+                    this._autoMatchAndGenerate();
+                }
+            },
+
+            _autoMatchAndGenerate() {
+                try {
+                    const patientResponse = { data: { patientSelectDtos: this.bedList } };
+                    const deviceResponse = { data: { list: this.deviceList } };
+                    const processor = new MockDataProcessor(patientResponse, deviceResponse);
+
+                    const validation = processor.validate();
+                    if (!validation.valid) {
+                        this.$message.warning(validation.message);
+                        return;
+                    }
+
+                    const matchedBeds = processor.getMatchedBeds();
+                    if (matchedBeds.length === 0) {
+                        this.$message.warning('没有匹配到床位数据，请检查患者床位与设备床位是否对应');
+                        return;
+                    }
+
+                    this._processor = processor;
+                    const allData = [];
+                    for (const item of matchedBeds) {
+                        try {
+                            const requestData = processor.buildRequestData(item.bedName, this.formData.deviceType);
+                            const device = this.deviceList.find(d => d.bedName === item.bedName && d.deviceType === this.formData.deviceType);
+                            allData.push({
+                                bedName: item.bedName,
+                                patientName: item.patientName,
+                                deviceType: device ? device.deviceType : this.formData.deviceType,
+                                requestData: requestData
+                            });
+                        } catch (e) {
+                            console.warn(`跳过 bedName=${item.bedName}: ${e.message}`);
+                        }
+                    }
+
+                    if (allData.length === 0) {
+                        this.$message.warning('没有匹配到床位数据，请检查患者床位与设备床位是否对应');
+                        return;
+                    }
+
+                    this.mockResults = allData.map(item => ({
+                        ...item,
+                        _downloading: false
+                    }));
+
+                    this.$message.success('已匹配 ' + allData.length + ' 条床位数据，可以下载Mock文件');
+                } catch (error) {
+                    this.$message.error('处理数据出错: ' + error.message);
+                }
+            },
+
+            showBedSelectionDialog() {
+                try {
+                    const patientResponse = { data: { patientSelectDtos: this.bedList } };
+                    const deviceResponse = { data: { list: this.deviceList } };
+                    const processor = new MockDataProcessor(patientResponse, deviceResponse);
+
+                    const validation = processor.validate();
+                    if (!validation.valid) {
+                        this.$message.warning(validation.message);
+                        return;
+                    }
+
+                    const matchedBeds = processor.getMatchedBeds();
+                    if (matchedBeds.length === 0) {
+                        this.$message.warning('没有匹配到床位数据，请检查患者床位与设备床位是否对应');
+                        return;
+                    }
+
+                    this._processor = processor;
+                    this.popupItems = matchedBeds.map(item => ({
+                        bedName: item.bedName,
+                        patientName: item.patientName,
+                        selected: true
+                    }));
+                    this.selectedBeds = this.popupItems.map(item => item.bedName);
+                    this.dialogSelectAll = true;
+                    this.dialogVisible = true;
+                } catch (error) {
+                    this.$message.error('处理数据出错: ' + error.message);
+                }
+            },
+
+            onSelectAllChange(val) {
+                this.popupItems.forEach(item => {
+                    item.selected = val;
+                });
+                this.updateSelectedBeds();
+            },
+
+            updateSelectAll() {
+                this.dialogSelectAll = this.popupItems.every(item => item.selected);
+                this.updateSelectedBeds();
+            },
+
+            updateSelectedBeds() {
+                this.selectedBeds = this.popupItems.filter(item => item.selected).map(item => item.bedName);
+            },
+
+            confirmDialogSelection() {
+                if (this.selectedBeds.length === 0) {
+                    this.$message.warning('请至少选择一个床位');
+                    return;
+                }
+
+                try {
+                    const allData = [];
+                    for (const bedName of this.selectedBeds) {
+                        try {
+                            const requestData = this._processor.buildRequestData(bedName, this.formData.deviceType);
+                            const device = this.deviceList.find(d => d.bedName === bedName && d.deviceType === this.formData.deviceType);
+                            const patient = this.bedList.find(p => p.patientIn.bedName === bedName);
+                            allData.push({
+                                bedName: bedName,
+                                patientName: patient ? patient.patientIn.patientName : '',
+                                deviceType: device ? device.deviceType : this.formData.deviceType,
+                                requestData: requestData
+                            });
+                        } catch (e) {
+                            console.warn(`跳过 bedName=${bedName}: ${e.message}`);
+                        }
+                    }
+
+                    if (allData.length === 0) {
+                        this.$message.warning('没有可生成的床位数据');
+                        return;
+                    }
+
+                    this.mockResults = allData.map(item => ({
+                        ...item,
+                        _downloading: false
+                    }));
+
+                    this.dialogVisible = false;
+                    this.$message.success('已匹配 ' + allData.length + ' 条床位数据，可以下载Mock文件');
+                } catch (error) {
+                    this.$message.error('处理数据出错: ' + error.message);
+                }
             },
 
             submitForm() {
@@ -447,7 +704,113 @@
                     this.$message.warning('请先选择科室');
                     return;
                 }
-                this.$message.info('床位数据: ' + this.bedList.length + ' 条, 设备数据: ' + this.deviceList.length + ' 条');
+                if (this.bedList.length === 0) {
+                    this.$message.warning('没有患者数据，无法生成Mock文件');
+                    return;
+                }
+
+                try {
+                    const patientResponse = { data: { patientSelectDtos: this.bedList } };
+                    const deviceResponse = { data: { list: this.deviceList } };
+
+                    const processor = new MockDataProcessor(patientResponse, deviceResponse);
+
+                    const validation = processor.validate();
+                    if (!validation.valid) {
+                        this.$message.warning(validation.message);
+                        return;
+                    }
+
+                    const allData = processor.buildAllRequestData(this.formData.deviceType);
+
+                    if (allData.length === 0) {
+                        this.$message.warning('没有匹配到床位数据，请检查患者床位与设备床位是否对应');
+                        return;
+                    }
+
+                    this.mockResults = allData.map(item => ({
+                        ...item,
+                        _downloading: false
+                    }));
+
+                    this.$message.success('已匹配 ' + allData.length + ' 条床位数据，可以下载Mock文件');
+                } catch (error) {
+                    this.$message.error('处理数据出错: ' + error.message);
+                }
+            },
+
+            async generateAndDownload() {
+                if (this.mockResults.length === 0) {
+                    this.$message.warning('没有可下载的数据');
+                    return;
+                }
+                this.downloading = true;
+                try {
+                    for (let i = 0; i < this.mockResults.length; i++) {
+                        const item = this.mockResults[i];
+                        item._downloading = true;
+                        this.$set(this.mockResults, i, item);
+                        await this._downloadMockFile(item.requestData);
+                        item._downloading = false;
+                        this.$set(this.mockResults, i, item);
+                        await this._delay(500);
+                    }
+                    this.$message.success('全部下载完成');
+                } catch (err) {
+                    this.$message.error('下载出错: ' + err.message);
+                } finally {
+                    this.downloading = false;
+                }
+            },
+
+            downloadSingle(row) {
+                row._downloading = true;
+                this._downloadMockFile(row.requestData)
+                    .catch(err => {
+                        this.$message.error('下载失败: ' + err.message);
+                    })
+                    .finally(() => {
+                        row._downloading = false;
+                    });
+            },
+
+            _downloadMockFile(requestData) {
+                return axios({
+                    url: ajaxFileDealJavaIP + '/yh-mock/create-files',
+                    method: 'post',
+                    headers: { 'Content-Type': 'application/json' },
+                    data: requestData,
+                    responseType: 'blob'
+                }).then(response => {
+                    const blob = response.data;
+                    const headers = response.headers;
+                    const contentDisposition = headers['content-disposition'];
+                    let filename = 'mock.zip';
+                    if (contentDisposition && contentDisposition.indexOf('filename=') !== -1) {
+                        filename = decodeURIComponent(contentDisposition.split('filename=')[1]);
+                    }
+                    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+                        window.navigator.msSaveOrOpenBlob(blob, filename);
+                    } else {
+                        const url = (window.URL || window.webkitURL).createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        (window.URL || window.webkitURL).revokeObjectURL(url);
+                    }
+                    this.$message.success('下载成功');
+                });
+            },
+
+            _delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            },
+
+            downloadAll() {
+                this.generateAndDownload();
             }
         }
     });

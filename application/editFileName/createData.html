@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>快速创建测试数据</title>
-    <!-- 引入Vue -->
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-    <!-- 引入Element UI -->
-    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
-    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
-    <!-- 引入axios -->
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../../lib/vue/vue.min.js"></script>
+    <link rel="stylesheet" href="../../lib/vue/element-ui/index.css">
+    <script src="../../lib/vue/element-ui/index.js"></script>
+    <script src="../../lib/vue/axios.min.js"></script>
     <!-- 引入变量文件 -->
     <script src="../../js/_variable.js" type="text/javascript"></script>
 
@@ -68,6 +65,18 @@
             ></el-input>
         </el-form-item>
 
+        <el-form-item label="Request Headers" prop="rawHeaders">
+            <el-input
+                    v-model="formData.rawHeaders"
+                    type="textarea"
+                    placeholder="粘贴原始 HTTP 请求头，例如：&#10;POST /passport/web-rbac/users HTTP/1.1&#10;Accept: application/json, text/plain, */*&#10;Content-Type: application/json&#10;Cookie: token=xxx"
+                    :rows="10"
+            ></el-input>
+            <div style="color: #909399; font-size: 12px; margin-top: 4px;">
+                支持粘贴完整的原始请求头文本，首行请求行会自动跳过，自动解析为 key-value 传给后端
+            </div>
+        </el-form-item>
+
         <el-form-item>
             <el-button type="primary" @click="submitForm">确认</el-button>
         </el-form-item>
@@ -85,7 +94,8 @@
                     cookie: '',
                     method: 'POST',
                     times: 1,
-                    body: ''
+                    body: '',
+                    rawHeaders: ''
                 },
                 rules: {
                     url: [
@@ -112,6 +122,25 @@
                 return result;
             },
 
+            parseRawHeaders(rawText) {
+                if (!rawText || !rawText.trim()) return null;
+                const lines = rawText.trim().split('\n');
+                const headers = {};
+                for (let line of lines) {
+                    line = line.trim();
+                    if (!line) continue;
+                    if (/^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+/i.test(line)) continue;
+                    const colonIndex = line.indexOf(':');
+                    if (colonIndex === -1) continue;
+                    const key = line.substring(0, colonIndex).trim();
+                    const value = line.substring(colonIndex + 1).trim();
+                    if (key) {
+                        headers[key] = value;
+                    }
+                }
+                return Object.keys(headers).length > 0 ? headers : null;
+            },
+
             // 提交表单
             submitForm() {
                 this.$refs.formData.validate(async (valid) => {
@@ -121,6 +150,9 @@
                         // 如需替换*i*为随机码可取消下面这行注释
                         // body = body.replace(/\*i\*/g, this.generateRandomCode());
 
+                        // 解析原始请求头
+                        const headers = this.parseRawHeaders(this.formData.rawHeaders);
+
                         // 构建请求数据
                         const requestData = {
                             url: this.formData.url,
@@ -128,7 +160,8 @@
                             cookie: this.formData.cookie || '',
                             method: this.formData.method || 'POST',
                             body: body,
-                            times: parseInt(this.formData.times)
+                            times: parseInt(this.formData.times),
+                            headers: headers
                         };
 
                         try {
