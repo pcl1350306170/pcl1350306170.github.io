@@ -44,6 +44,7 @@
     </style>
     <script src="../../lib/vue/axios.min.js"></script>
     <script src="../../js/_variable.js"></script>
+    <script src="../../js/GeneralDataApi.js"></script>
 </head>
 <body>
     <h1>General Data CRUD 演示</h1>
@@ -66,6 +67,7 @@
         <div class="row" style="margin-top:4px;">
             <button onclick="doSave()">保存 (save)</button>
             <button onclick="doBatchSave()">批量保存</button>
+            <button onclick="doSaveOrUpdate()">智能保存 (saveOrUpdate)</button>
             <button class="success" onclick="doQuery()">按类型查询</button>
             <button class="success" onclick="doQueryById()">按ID查询</button>
             <button class="danger" onclick="doDelete()">删除</button>
@@ -81,12 +83,11 @@
     <div id="log">等待操作...\n</div>
 
     <script>
-        const BASE = ajaxFileDealJavaIP + '/api/v1/general-data';
-        const logEl = document.getElementById('log');
+        var logEl = document.getElementById('log');
 
         function log(msg, cls) {
-            const t = new Date().toLocaleTimeString();
-            logEl.innerHTML += `<span class="${cls||''}">[${t}] ${msg}</span>\n`;
+            var t = new Date().toLocaleTimeString();
+            logEl.innerHTML += '<span class="' + (cls||'') + '">[' + t + '] ' + msg + '</span>\n';
             logEl.scrollTop = logEl.scrollHeight;
         }
 
@@ -94,117 +95,101 @@
 
         // ========== 1. 保存（save） ==========
         function doSave() {
-            const payload = {
+            var payload = {
                 dataType: getVal('fType'),
                 dataKey: getVal('fKey') || undefined,
                 dataContent: getVal('fContent')
             };
-            log(`>>> POST /save  ${JSON.stringify(payload)}`, 'info');
-            axios.post(BASE + '/save', payload, { headers: { 'Content-Type': 'application/json' } })
-                .then(res => {
-                    const d = res.data;
-                    if (d.resultCode === 200) {
-                        log(`<<< 保存成功: ${JSON.stringify(d)}`, 'ok');
-                        // 自动回填返回的ID
-                        if (d.data && d.data.id) document.getElementById('fId').value = d.data.id;
-                    } else {
-                        log(`<<< 保存失败: ${d.message || d.desc || JSON.stringify(d)}`, 'err');
-                    }
+            log('>>> GeneralDataApi.save  ' + JSON.stringify(payload), 'info');
+            GeneralDataApi.save(payload)
+                .then(function (d) {
+                    log('<<< 保存成功: ' + JSON.stringify(d), 'ok');
+                    if (d.data && d.data.id) document.getElementById('fId').value = d.data.id;
                 })
-                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+                .catch(function (e) { log('<<< 保存失败: ' + e.message, 'err'); });
         }
 
         // ========== 2. 批量保存（batch-save） ==========
         function doBatchSave() {
-            const list = [
+            var list = [
                 { dataType: getVal('fType'), dataContent: getVal('fContent') || 'batch-item-1' },
                 { dataType: getVal('fType'), dataContent: getVal('fContent') || 'batch-item-2' }
             ];
-            log(`>>> POST /batch-save  ${JSON.stringify(list)}`, 'info');
-            axios.post(BASE + '/batch-save', list, { headers: { 'Content-Type': 'application/json' } })
-                .then(res => {
-                    const d = res.data;
-                    if (d.resultCode === 200) log(`<<< 批量保存成功: ${JSON.stringify(d)}`, 'ok');
-                    else log(`<<< 批量保存失败: ${d.message || JSON.stringify(d)}`, 'err');
-                })
-                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+            log('>>> GeneralDataApi.batchSave  ' + JSON.stringify(list), 'info');
+            GeneralDataApi.batchSave(list)
+                .then(function (d) { log('<<< 批量保存成功: ' + JSON.stringify(d), 'ok'); })
+                .catch(function (e) { log('<<< 批量保存失败: ' + e.message, 'err'); });
         }
 
-        // ========== 3. 更新（update） ==========
+        // ========== 3. 智能保存（saveOrUpdate） ==========
+        function doSaveOrUpdate() {
+            var dataType = getVal('fType');
+            var dataKey = getVal('fKey');
+            var dataContent = getVal('fContent');
+            if (!dataKey) return log('智能保存需要填写 dataKey', 'err');
+            log('>>> GeneralDataApi.saveOrUpdate("' + dataType + '", "' + dataKey + '", ...)', 'info');
+            GeneralDataApi.saveOrUpdate(dataType, dataKey, dataContent)
+                .then(function (d) { log('<<< 智能保存成功: ' + JSON.stringify(d), 'ok'); })
+                .catch(function (e) { log('<<< 智能保存失败: ' + e.message, 'err'); });
+        }
+
+        // ========== 4. 更新（update） ==========
         function doUpdate() {
-            const id = getVal('fId');
+            var id = getVal('fId');
             if (!id) return log('请先填写 record ID', 'err');
-            const payload = { id: id, dataContent: getVal('fContent') };
-            log(`>>> POST /update  ${JSON.stringify(payload)}`, 'info');
-            axios.post(BASE + '/update', payload, { headers: { 'Content-Type': 'application/json' } })
-                .then(res => {
-                    const d = res.data;
-                    if (d.resultCode === 200) log(`<<< 更新成功: ${JSON.stringify(d)}`, 'ok');
-                    else log(`<<< 更新失败: ${d.message || JSON.stringify(d)}`, 'err');
-                })
-                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+            var payload = { dataContent: getVal('fContent') };
+            log('>>> GeneralDataApi.update(' + id + ', ' + JSON.stringify(payload) + ')', 'info');
+            GeneralDataApi.update(id, payload)
+                .then(function (d) { log('<<< 更新成功: ' + JSON.stringify(d), 'ok'); })
+                .catch(function (e) { log('<<< 更新失败: ' + e.message, 'err'); });
         }
 
-        // ========== 4. 删除（delete） ==========
+        // ========== 5. 删除（delete） ==========
         function doDelete() {
-            const id = getVal('fId');
+            var id = getVal('fId');
             if (!id) return log('请先填写 record ID', 'err');
-            log(`>>> GET /delete?id=${id}`, 'info');
-            axios.get(BASE + '/delete', { params: { id: id } })
-                .then(res => {
-                    const d = res.data;
-                    if (d.resultCode === 200) log(`<<< 删除成功: ${JSON.stringify(d)}`, 'ok');
-                    else log(`<<< 删除失败: ${d.message || JSON.stringify(d)}`, 'err');
-                })
-                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+            log('>>> GeneralDataApi.remove(' + id + ')', 'info');
+            GeneralDataApi.remove(id)
+                .then(function (d) { log('<<< 删除成功: ' + JSON.stringify(d), 'ok'); })
+                .catch(function (e) { log('<<< 删除失败: ' + e.message, 'err'); });
         }
 
-        // ========== 5. 按类型查询（get-by-type） ==========
+        // ========== 6. 按类型查询（get-by-type） ==========
         function doQuery() {
-            const dataType = getVal('fType');
-            log(`>>> GET /get-by-type?dataType=${dataType}`, 'info');
-            axios.get(BASE + '/get-by-type', { params: { dataType: dataType } })
-                .then(res => {
-                    const d = res.data;
-                    if (d.resultCode === 200) {
-                        log(`<<< 查询成功，共 ${d.data ? d.data.length : 0} 条:`, 'ok');
-                        if (d.data && d.data.length) {
-                            d.data.forEach(item => {
-                                log(`  [id=${item.id}] key=${item.dataKey || '-'} content=${typeof item.dataContent === 'string' ? item.dataContent.substring(0, 80) : JSON.stringify(item.dataContent).substring(0, 80)}`);
-                            });
-                            // 自动回填第一条的ID
-                            document.getElementById('fId').value = d.data[0].id;
-                        }
-                    } else {
-                        log(`<<< 查询失败: ${d.message || JSON.stringify(d)}`, 'err');
-                    }
+            var dataType = getVal('fType');
+            log('>>> GeneralDataApi.getByType("' + dataType + '")', 'info');
+            GeneralDataApi.getByType(dataType)
+                .then(function (list) {
+                    log('<<< 查询成功，共 ' + list.length + ' 条:', 'ok');
+                    list.forEach(function (item) {
+                        var content = typeof item.dataContent === 'string'
+                            ? item.dataContent.substring(0, 80)
+                            : JSON.stringify(item.dataContent).substring(0, 80);
+                        log('  [id=' + item.id + '] key=' + (item.dataKey || '-') + ' content=' + content);
+                    });
+                    if (list.length) document.getElementById('fId').value = list[0].id;
                 })
-                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+                .catch(function (e) { log('<<< 查询失败: ' + e.message, 'err'); });
         }
 
-        // ========== 6. 按ID查询（get-by-id） ==========
+        // ========== 7. 按ID查询（get-by-id） ==========
         function doQueryById() {
-            const id = getVal('fId');
+            var id = getVal('fId');
             if (!id) return log('请先填写 record ID', 'err');
-            log(`>>> GET /get-by-id?id=${id}`, 'info');
-            axios.get(BASE + '/get-by-id', { params: { id: id } })
-                .then(res => {
-                    const d = res.data;
-                    if (d.resultCode === 200 && d.data) {
-                        const item = d.data;
-                        log(`<<< 查询成功:`, 'ok');
-                        log(`  id=${item.id}, type=${item.dataType}, key=${item.dataKey || '-'}`);
-                        log(`  content=${typeof item.dataContent === 'string' ? item.dataContent : JSON.stringify(item.dataContent)}`);
-                        log(`  createTime=${item.createTime}, updateTime=${item.updateTime}`);
-                        // 回填表单
-                        document.getElementById('fType').value = item.dataType || '';
-                        document.getElementById('fKey').value = item.dataKey || '';
-                        document.getElementById('fContent').value = typeof item.dataContent === 'string' ? item.dataContent : JSON.stringify(item.dataContent);
-                    } else {
-                        log(`<<< 查询失败: ${d.message || JSON.stringify(d)}`, 'err');
-                    }
+            log('>>> GeneralDataApi.getById(' + id + ')', 'info');
+            GeneralDataApi.getById(id)
+                .then(function (d) {
+                    var item = d.data;
+                    log('<<< 查询成功:', 'ok');
+                    log('  id=' + item.id + ', type=' + item.dataType + ', key=' + (item.dataKey || '-'));
+                    log('  content=' + (typeof item.dataContent === 'string' ? item.dataContent : JSON.stringify(item.dataContent)));
+                    log('  createTime=' + item.createTime + ', updateTime=' + item.updateTime);
+                    // 回填表单
+                    document.getElementById('fType').value = item.dataType || '';
+                    document.getElementById('fKey').value = item.dataKey || '';
+                    document.getElementById('fContent').value = typeof item.dataContent === 'string' ? item.dataContent : JSON.stringify(item.dataContent);
                 })
-                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+                .catch(function (e) { log('<<< 查询失败: ' + e.message, 'err'); });
         }
     </script>
 </body>
