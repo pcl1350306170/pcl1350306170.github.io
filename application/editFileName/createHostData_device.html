@@ -473,7 +473,7 @@
                 this.orgLoading = true;
                 this.orgList = [];
                 try {
-                    const response = await axios.post('http://localhost:28019/api/v1/orgs/getOrgs', {
+                    const response = await axios.post(ajaxFileDealJavaIP + '/api/v1/orgs/getOrgs', {
                         serverIp: ip
                     }, {
                         headers: { 'Content-Type': 'application/json' },

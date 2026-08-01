@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Data CRUD 演示</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e; color: #e0e0e0; min-height: 100vh; padding: 20px;
+        }
+        h1 { text-align: center; color: #c084fc; margin-bottom: 24px; font-size: 26px; }
+        .panel {
+            max-width: 800px; margin: 0 auto 24px; background: #16213e;
+            border: 1px solid #1f3056; border-radius: 8px; padding: 20px;
+        }
+        .panel h2 { color: #a78bfa; font-size: 16px; margin-bottom: 14px; border-bottom: 1px solid #1f3056; padding-bottom: 8px; }
+        .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+        label { font-size: 13px; color: #94a3b8; min-width: 80px; }
+        input, textarea {
+            flex: 1; padding: 8px 12px; background: #0f1a30; border: 1px solid #1f3056;
+            border-radius: 6px; color: #e2e8f0; font-size: 14px; outline: none; font-family: inherit;
+        }
+        input:focus, textarea:focus { border-color: #7c3aed; }
+        textarea { resize: vertical; min-height: 60px; }
+        button {
+            padding: 8px 18px; background: #7c3aed; color: #fff; border: none;
+            border-radius: 6px; cursor: pointer; font-size: 13px; white-space: nowrap; transition: background .2s;
+        }
+        button:hover { background: #6d28d9; }
+        button.danger { background: #dc2626; }
+        button.danger:hover { background: #b91c1c; }
+        button.success { background: #16a34a; }
+        button.success:hover { background: #15803d; }
+        #log {
+            max-width: 800px; margin: 0 auto; background: #0f1a30; border: 1px solid #1f3056;
+            border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.8;
+            max-height: 360px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #94a3b8;
+        }
+        #log .ok { color: #4ade80; }
+        #log .err { color: #f87171; }
+        #log .info { color: #60a5fa; }
+    </style>
+    <script src="../../lib/vue/axios.min.js"></script>
+    <script src="../../js/_variable.js"></script>
+</head>
+<body>
+    <h1>General Data CRUD 演示</h1>
+
+    <!-- 表单 -->
+    <div class="panel">
+        <h2>数据表单</h2>
+        <div class="row">
+            <label>dataType</label>
+            <input id="fType" value="demo_test" placeholder="数据分类">
+        </div>
+        <div class="row">
+            <label>dataKey</label>
+            <input id="fKey" value="" placeholder="唯一标识（可选）">
+        </div>
+        <div class="row">
+            <label>dataContent</label>
+            <textarea id="fContent" placeholder='数据内容，如 {"note":"hello"}'></textarea>
+        </div>
+        <div class="row" style="margin-top:4px;">
+            <button onclick="doSave()">保存 (save)</button>
+            <button onclick="doBatchSave()">批量保存</button>
+            <button class="success" onclick="doQuery()">按类型查询</button>
+            <button class="success" onclick="doQueryById()">按ID查询</button>
+            <button class="danger" onclick="doDelete()">删除</button>
+        </div>
+        <div class="row" style="margin-top:4px;">
+            <label>record ID</label>
+            <input id="fId" placeholder="用于 update / delete / get-by-id">
+            <button onclick="doUpdate()">更新</button>
+        </div>
+    </div>
+
+    <!-- 日志 -->
+    <div id="log">等待操作...\n</div>
+
+    <script>
+        const BASE = ajaxFileDealJavaIP + '/api/v1/general-data';
+        const logEl = document.getElementById('log');
+
+        function log(msg, cls) {
+            const t = new Date().toLocaleTimeString();
+            logEl.innerHTML += `<span class="${cls||''}">[${t}] ${msg}</span>\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function getVal(id) { return document.getElementById(id).value.trim(); }
+
+        // ========== 1. 保存（save） ==========
+        function doSave() {
+            const payload = {
+                dataType: getVal('fType'),
+                dataKey: getVal('fKey') || undefined,
+                dataContent: getVal('fContent')
+            };
+            log(`>>> POST /save  ${JSON.stringify(payload)}`, 'info');
+            axios.post(BASE + '/save', payload, { headers: { 'Content-Type': 'application/json' } })
+                .then(res => {
+                    const d = res.data;
+                    if (d.resultCode === 200) {
+                        log(`<<< 保存成功: ${JSON.stringify(d)}`, 'ok');
+                        // 自动回填返回的ID
+                        if (d.data && d.data.id) document.getElementById('fId').value = d.data.id;
+                    } else {
+                        log(`<<< 保存失败: ${d.message || d.desc || JSON.stringify(d)}`, 'err');
+                    }
+                })
+                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+        }
+
+        // ========== 2. 批量保存（batch-save） ==========
+        function doBatchSave() {
+            const list = [
+                { dataType: getVal('fType'), dataContent: getVal('fContent') || 'batch-item-1' },
+                { dataType: getVal('fType'), dataContent: getVal('fContent') || 'batch-item-2' }
+            ];
+            log(`>>> POST /batch-save  ${JSON.stringify(list)}`, 'info');
+            axios.post(BASE + '/batch-save', list, { headers: { 'Content-Type': 'application/json' } })
+                .then(res => {
+                    const d = res.data;
+                    if (d.resultCode === 200) log(`<<< 批量保存成功: ${JSON.stringify(d)}`, 'ok');
+                    else log(`<<< 批量保存失败: ${d.message || JSON.stringify(d)}`, 'err');
+                })
+                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+        }
+
+        // ========== 3. 更新（update） ==========
+        function doUpdate() {
+            const id = getVal('fId');
+            if (!id) return log('请先填写 record ID', 'err');
+            const payload = { id: id, dataContent: getVal('fContent') };
+            log(`>>> POST /update  ${JSON.stringify(payload)}`, 'info');
+            axios.post(BASE + '/update', payload, { headers: { 'Content-Type': 'application/json' } })
+                .then(res => {
+                    const d = res.data;
+                    if (d.resultCode === 200) log(`<<< 更新成功: ${JSON.stringify(d)}`, 'ok');
+                    else log(`<<< 更新失败: ${d.message || JSON.stringify(d)}`, 'err');
+                })
+                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+        }
+
+        // ========== 4. 删除（delete） ==========
+        function doDelete() {
+            const id = getVal('fId');
+            if (!id) return log('请先填写 record ID', 'err');
+            log(`>>> GET /delete?id=${id}`, 'info');
+            axios.get(BASE + '/delete', { params: { id: id } })
+                .then(res => {
+                    const d = res.data;
+                    if (d.resultCode === 200) log(`<<< 删除成功: ${JSON.stringify(d)}`, 'ok');
+                    else log(`<<< 删除失败: ${d.message || JSON.stringify(d)}`, 'err');
+                })
+                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+        }
+
+        // ========== 5. 按类型查询（get-by-type） ==========
+        function doQuery() {
+            const dataType = getVal('fType');
+            log(`>>> GET /get-by-type?dataType=${dataType}`, 'info');
+            axios.get(BASE + '/get-by-type', { params: { dataType: dataType } })
+                .then(res => {
+                    const d = res.data;
+                    if (d.resultCode === 200) {
+                        log(`<<< 查询成功，共 ${d.data ? d.data.length : 0} 条:`, 'ok');
+                        if (d.data && d.data.length) {
+                            d.data.forEach(item => {
+                                log(`  [id=${item.id}] key=${item.dataKey || '-'} content=${typeof item.dataContent === 'string' ? item.dataContent.substring(0, 80) : JSON.stringify(item.dataContent).substring(0, 80)}`);
+                            });
+                            // 自动回填第一条的ID
+                            document.getElementById('fId').value = d.data[0].id;
+                        }
+                    } else {
+                        log(`<<< 查询失败: ${d.message || JSON.stringify(d)}`, 'err');
+                    }
+                })
+                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+        }
+
+        // ========== 6. 按ID查询（get-by-id） ==========
+        function doQueryById() {
+            const id = getVal('fId');
+            if (!id) return log('请先填写 record ID', 'err');
+            log(`>>> GET /get-by-id?id=${id}`, 'info');
+            axios.get(BASE + '/get-by-id', { params: { id: id } })
+                .then(res => {
+                    const d = res.data;
+                    if (d.resultCode === 200 && d.data) {
+                        const item = d.data;
+                        log(`<<< 查询成功:`, 'ok');
+                        log(`  id=${item.id}, type=${item.dataType}, key=${item.dataKey || '-'}`);
+                        log(`  content=${typeof item.dataContent === 'string' ? item.dataContent : JSON.stringify(item.dataContent)}`);
+                        log(`  createTime=${item.createTime}, updateTime=${item.updateTime}`);
+                        // 回填表单
+                        document.getElementById('fType').value = item.dataType || '';
+                        document.getElementById('fKey').value = item.dataKey || '';
+                        document.getElementById('fContent').value = typeof item.dataContent === 'string' ? item.dataContent : JSON.stringify(item.dataContent);
+                    } else {
+                        log(`<<< 查询失败: ${d.message || JSON.stringify(d)}`, 'err');
+                    }
+                })
+                .catch(e => log(`<<< 请求异常: ${e.message}`, 'err'));
+        }
+    </script>
+</body>
+</html>
