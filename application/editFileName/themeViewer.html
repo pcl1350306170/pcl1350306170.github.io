@@ -12,26 +12,31 @@
         }
         h1 { text-align: center; color: #c084fc; margin-bottom: 8px; font-size: 28px; }
         .subtitle { text-align: center; color: #888; margin-bottom: 30px; font-size: 14px; }
-        /* 前缀栏 */
-        .prefix-bar { display: flex; align-items: flex-start; gap: 10px; max-width: 90%; margin: 0 auto 24px; }
-        .prefix-bar label { font-size: 14px; color: #a78bfa; white-space: nowrap; padding-top: 8px; }
-        .prefix-textarea {
-            flex: 1; padding: 8px 12px; background: #16213e; border: 1px solid #1f3056;
-            border-radius: 6px; color: #e2e8f0; font-size: 14px; outline: none;
-            transition: border-color .2s; resize: vertical; min-height: 60px; font-family: inherit; line-height: 1.5;
+        /* 前缀区域 */
+        .prefix-section { max-width: 90%; margin: 0 auto 24px; }
+        .prefix-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .prefix-header-title { font-size: 16px; color: #a78bfa; font-weight: 600; }
+        .prefix-add-btn {
+            padding: 6px 14px; background: #7c3aed; color: #fff; border: none;
+            border-radius: 6px; cursor: pointer; font-size: 13px; transition: background .2s;
         }
-        .prefix-textarea:focus { border-color: #7c3aed; }
-        .prefix-textarea::placeholder { color: #4a5568; }
-        .save-btn {
-            flex-shrink: 0; padding: 8px 16px; background: #7c3aed; color: #fff; border: none;
-            border-radius: 6px; cursor: pointer; font-size: 13px; white-space: nowrap;
-            transition: background .2s; align-self: center;
+        .prefix-add-btn:hover { background: #6d28d9; }
+        .prefix-card {
+            background: #16213e; border: 1px solid #1f3056; border-radius: 8px;
+            padding: 12px 16px; margin-bottom: 8px; transition: border-color .2s;
         }
-        .save-btn:hover { background: #6d28d9; }
-        .save-btn.saved { background: #22c55e; }
-        .save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .save-status { font-size: 12px; color: #888; text-align: center; margin: -16px auto 20px; max-width: 90%; }
-        .save-status.error { color: #f87171; }
+        .prefix-card:hover { border-color: #334155; }
+        .prefix-card.active { border-color: #22c55e; background: rgba(34,197,94,.05); }
+        .prefix-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .prefix-card-name { font-size: 14px; font-weight: 600; color: #e2e8f0; flex: 1; }
+        .prefix-active-badge {
+            font-size: 11px; padding: 2px 8px; border-radius: 10px;
+            background: #22c55e; color: #fff; white-space: nowrap;
+        }
+        .prefix-card-content { font-size: 13px; color: #94a3b8; line-height: 1.5; word-break: break-all; margin-bottom: 8px; }
+        .prefix-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .prefix-card-actions .item-btn { font-size: 11px; padding: 4px 10px; }
+        .prefix-empty { text-align: center; color: #4a5568; padding: 20px; font-size: 13px; }
         /* 操作栏 */
         .action-bar { display: flex; justify-content: center; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
         .action-btn {
@@ -131,16 +136,18 @@
     </style>
     <script src="../../lib/vue/axios.min.js"></script>
     <script src="../../js/_variable.js" type="text/javascript"></script>
+    <script src="../../js/GeneralDataApi.js"></script>
 </head>
 <body>
     <h1>Theme 数据管理</h1>
     <p class="subtitle">点击右侧按钮复制描述内容，支持在线编辑管理</p>
-    <div class="prefix-bar">
-        <label for="prefixInput">内容前缀：</label>
-        <textarea class="prefix-textarea" rows="3" id="prefixInput" placeholder="输入前缀，复制时将自动拼接到描述前面"></textarea>
-        <button class="save-btn" id="saveBtn" onclick="savePrefix()">保存</button>
+    <div class="prefix-section">
+        <div class="prefix-header">
+            <span class="prefix-header-title">内容前缀管理</span>
+            <button class="prefix-add-btn" onclick="showAddPrefixModal()">+ 新增前缀</button>
+        </div>
+        <div id="prefixList"><div class="prefix-empty">暂无前缀，点击上方按钮添加</div></div>
     </div>
-    <div class="save-status" id="saveStatus"></div>
     <div class="action-bar">
         <button class="action-btn import" onclick="showImportModal()">导入 JSON 数据</button>
         <button class="action-btn add-theme" onclick="showAddThemeModal()">+ 新增大类</button>
@@ -156,60 +163,200 @@
         const PREFIX_TYPE = 'theme_viewer_prefix';
         const STRUCT_TYPE = 'theme_structure';
         let themeStructure = [];
-        let themeItems = {}; // { "themeName|catName": [{id, dataKey, dataContent}] }
-        let prefixRecordId = null;
+        let themeItems = {};
+        let prefixes = []; // { id, dataKey, content, active }
 
-        // ========== 通用 API ==========
-        function apiGet(url, params) {
-            return axios.get(ajaxFileDealJavaIP + url, { params }).then(r => r.data);
-        }
-        function apiPost(url, payload) {
-            return axios.post(ajaxFileDealJavaIP + url, payload, {
-                headers: { 'Content-Type': 'application/json' }
-            }).then(r => r.data);
-        }
-        async function smartSave(dataType, dataKey, dataContent) {
-            const res = await apiGet('/api/v1/general-data/get-by-type', { dataType });
-            if (res.resultCode === 200 && res.data && res.data.length > 0) {
-                const existing = res.data.find(d => d.dataKey === dataKey);
-                if (existing) {
-                    return apiPost('/api/v1/general-data/update', { id: existing.id, dataContent });
-                }
+        // GDA = GeneralDataApi 的简写别名
+        const GDA = GeneralDataApi;
+
+        // ========== 前缀管理 ==========
+        // 解析前缀 JSON：{ content: '实际内容', active: true/false }
+        function parsePrefixData(jsonStr) {
+            try {
+                const obj = JSON.parse(jsonStr);
+                return { content: obj.content || '', active: !!obj.active };
+            } catch(e) {
+                // 兼容旧数据（纯文本）
+                return { content: jsonStr || '', active: false };
             }
-            return apiPost('/api/v1/general-data/save', { dataType, dataKey, dataContent });
         }
-
-        // ========== 前缀功能 ==========
-        function loadPrefix() {
-            apiGet('/api/v1/general-data/get-by-type', { dataType: PREFIX_TYPE }).then(res => {
-                if (res.resultCode === 200 && res.data && res.data.length > 0) {
-                    document.getElementById('prefixInput').value = res.data[0].dataContent || '';
-                    prefixRecordId = res.data[0].id || null;
-                }
-            }).catch(() => {});
+        function buildPrefixJson(content, active) {
+            return JSON.stringify({ content: content, active: active });
         }
-        function savePrefix() {
-            const content = document.getElementById('prefixInput').value;
-            const btn = document.getElementById('saveBtn');
-            const status = document.getElementById('saveStatus');
-            btn.disabled = true; btn.textContent = '保存中...'; status.textContent = ''; status.className = 'save-status';
-            const isUpdate = prefixRecordId !== null;
-            const url = isUpdate ? '/api/v1/general-data/update' : '/api/v1/general-data/save';
-            const payload = isUpdate ? { id: prefixRecordId, dataContent: content } : { dataType: PREFIX_TYPE, dataKey: PREFIX_TYPE, dataContent: content };
-            apiPost(url, payload).then(res => {
-                if (res.resultCode === 200) {
-                    btn.textContent = '已保存 ✓'; btn.classList.add('saved');
-                    status.textContent = isUpdate ? '修改成功' : '保存成功';
-                    if (!isUpdate && res.data && res.data.id) prefixRecordId = res.data.id;
-                    setTimeout(() => { btn.textContent = '保存'; btn.classList.remove('saved'); btn.disabled = false; }, 1500);
-                } else {
-                    btn.disabled = false; btn.textContent = '保存';
-                    status.textContent = '保存失败: ' + (res.message || '未知错误'); status.className = 'save-status error';
+        async function loadPrefixes() {
+            try {
+                const list = await GDA.getByType(PREFIX_TYPE);
+                prefixes = list.map(d => {
+                    const parsed = parsePrefixData(d.dataContent);
+                    return { id: d.id, dataKey: d.dataKey, content: parsed.content, active: parsed.active };
+                });
+            } catch(e) { prefixes = []; }
+            renderPrefixList();
+        }
+        function renderPrefixList() {
+            const list = document.getElementById('prefixList');
+            list.innerHTML = '';
+            if (prefixes.length === 0) {
+                list.innerHTML = '<div class="prefix-empty">暂无前缀，点击上方按钮添加</div>';
+                return;
+            }
+            prefixes.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'prefix-card' + (p.active ? ' active' : '');
+                const header = document.createElement('div');
+                header.className = 'prefix-card-header';
+                const name = document.createElement('span');
+                name.className = 'prefix-card-name';
+                name.textContent = p.dataKey;
+                header.appendChild(name);
+                if (p.active) {
+                    const badge = document.createElement('span');
+                    badge.className = 'prefix-active-badge';
+                    badge.textContent = '使用中';
+                    header.appendChild(badge);
                 }
-            }).catch(e => {
-                btn.disabled = false; btn.textContent = '保存';
-                status.textContent = '保存失败: ' + (e.message || '网络错误'); status.className = 'save-status error';
+                card.appendChild(header);
+                const content = document.createElement('div');
+                content.className = 'prefix-card-content';
+                content.textContent = p.content;
+                card.appendChild(content);
+                const actions = document.createElement('div');
+                actions.className = 'prefix-card-actions';
+                if (!p.active) {
+                    const activateBtn = document.createElement('button');
+                    activateBtn.className = 'item-btn copy';
+                    activateBtn.textContent = '设为使用中';
+                    activateBtn.onclick = () => setActivePrefix(p.dataKey);
+                    actions.appendChild(activateBtn);
+                }
+                const editBtn = document.createElement('button');
+                editBtn.className = 'item-btn edit';
+                editBtn.textContent = '编辑';
+                editBtn.onclick = () => showEditPrefixModal(p.dataKey);
+                actions.appendChild(editBtn);
+                const delBtn = document.createElement('button');
+                delBtn.className = 'item-btn del';
+                delBtn.textContent = '删除';
+                delBtn.onclick = () => deletePrefix(p.dataKey);
+                actions.appendChild(delBtn);
+                card.appendChild(actions);
+                list.appendChild(card);
             });
+        }
+        function showAddPrefixModal() {
+            openModal(
+                '<h3>新增内容前缀</h3>' +
+                '<label>前缀名称：</label><input id="prefixName" placeholder="例如：通用前缀、16:9比例">' +
+                '<label>前缀内容：</label><textarea id="prefixContent" rows="5" placeholder="输入前缀内容，复制时将自动拼接到描述前面"></textarea>' +
+                '<label style="margin-top:12px;"><input type="checkbox" id="prefixActive" style="width:auto;margin-right:6px;">设为使用中</label>' +
+                '<div class="modal-actions">' +
+                '<button class="modal-btn cancel" onclick="closeModal()">取消</button>' +
+                '<button class="modal-btn confirm" id="prefixSaveBtn" onclick="doAddPrefix()">保存</button>' +
+                '</div>'
+            );
+        }
+        async function doAddPrefix() {
+            const name = document.getElementById('prefixName').value.trim();
+            const content = document.getElementById('prefixContent').value.trim();
+            const isActive = document.getElementById('prefixActive').checked;
+            if (!name) { alert('请输入前缀名称'); return; }
+            const btn = document.getElementById('prefixSaveBtn');
+            btn.disabled = true; btn.textContent = '保存中...';
+            try {
+                // 如果勾选了"使用中"，先把其他前缀的 active 设为 false
+                if (isActive) {
+                    for (const p of prefixes) {
+                        if (p.active) {
+                            await GDA.update(p.id, { dataContent: buildPrefixJson(p.content, false) });
+                            p.active = false;
+                        }
+                    }
+                }
+                const jsonContent = buildPrefixJson(content, isActive);
+                const res = await GDA.save({ dataType: PREFIX_TYPE, dataKey: name, dataContent: jsonContent });
+                // 兼容不同返回格式：尝试 res.data.id / res.id / 回查
+                let newId = (res && res.data && res.data.id) || (res && res.id) || null;
+                if (!newId) {
+                    const list = await GDA.getByType(PREFIX_TYPE);
+                    const found = list.find(d => d.dataKey === name);
+                    if (found) newId = found.id;
+                }
+                prefixes.push({ id: newId, dataKey: name, content: content, active: isActive });
+                closeModal(); renderPrefixList();
+            } catch(e) { alert('保存失败: ' + e.message); btn.disabled = false; btn.textContent = '保存'; }
+        }
+        function showEditPrefixModal(key) {
+            const p = prefixes.find(x => x.dataKey === key);
+            if (!p) return;
+            openModal(
+                '<h3>编辑前缀</h3>' +
+                '<label>前缀名称：</label><input id="editPrefixName" value="' + escapeHtml(p.dataKey) + '">' +
+                '<label>前缀内容：</label><textarea id="editPrefixContent" rows="5">' + escapeHtml(p.content) + '</textarea>' +
+                '<div class="modal-actions">' +
+                '<button class="modal-btn cancel" onclick="closeModal()">取消</button>' +
+                '<button class="modal-btn confirm" id="prefixEditBtn" onclick="doEditPrefix(\'' + key.replace(/'/g, "\\'") + '\')">保存</button>' +
+                '</div>'
+            );
+        }
+        async function doEditPrefix(oldKey) {
+            const newName = document.getElementById('editPrefixName').value.trim();
+            const newContent = document.getElementById('editPrefixContent').value.trim();
+            if (!newName) { alert('请输入前缀名称'); return; }
+            const btn = document.getElementById('prefixEditBtn');
+            btn.disabled = true; btn.textContent = '保存中...';
+            try {
+                const p = prefixes.find(x => x.dataKey === oldKey);
+                const jsonContent = buildPrefixJson(newContent, p ? p.active : false);
+                if (p && p.id) {
+                    await GDA.update(p.id, { dataKey: newName, dataContent: jsonContent });
+                } else {
+                    // id 不可用时，通过 dataKey 查找记录再更新
+                    const list = await GDA.getByType(PREFIX_TYPE);
+                    const target = list.find(d => d.dataKey === oldKey);
+                    if (target) {
+                        await GDA.update(target.id, { dataKey: newName, dataContent: jsonContent });
+                        p.id = target.id; // 补存 id
+                    } else {
+                        await GDA.save({ dataType: PREFIX_TYPE, dataKey: newName, dataContent: jsonContent });
+                    }
+                }
+                if (p) { p.dataKey = newName; p.content = newContent; }
+                closeModal(); renderPrefixList();
+            } catch(e) { alert('保存失败: ' + e.message); btn.disabled = false; btn.textContent = '保存'; }
+        }
+        async function setActivePrefix(name) {
+            try {
+                // 确保所有前都有 id（兼容旧数据）
+                for (const p of prefixes) {
+                    if (!p.id) {
+                        const list = await GDA.getByType(PREFIX_TYPE);
+                        const found = list.find(d => d.dataKey === p.dataKey);
+                        if (found) p.id = found.id;
+                    }
+                }
+                // 先把所有前缀的 active 设为 false，再把目标设为 true
+                const promises = [];
+                for (const p of prefixes) {
+                    const newActive = (p.dataKey === name);
+                    if (p.active !== newActive) {
+                        promises.push(GDA.update(p.id, { dataContent: buildPrefixJson(p.content, newActive) }));
+                        p.active = newActive;
+                    }
+                }
+                await Promise.all(promises);
+                renderPrefixList();
+            } catch(e) { alert('设置失败'); }
+        }
+        async function deletePrefix(key) {
+            if (!confirm('确定删除前缀「' + key + '」？')) return;
+            const p = prefixes.find(x => x.dataKey === key);
+            if (p && p.id) {
+                await GDA.remove(p.id);
+            } else {
+                await GDA.removeByKey(PREFIX_TYPE, key);
+            }
+            prefixes = prefixes.filter(x => x.dataKey !== key);
+            renderPrefixList();
         }
 
         // ========== 加载主题数据 ==========
@@ -217,12 +364,8 @@
             const container = document.getElementById('container');
             container.innerHTML = '<div id="loading">正在加载数据...</div>';
             try {
-                const res = await apiGet('/api/v1/general-data/get-by-type', { dataType: STRUCT_TYPE });
-                if (res.resultCode === 200 && res.data && res.data.length > 0) {
-                    themeStructure = JSON.parse(res.data[0].dataContent || '[]');
-                } else {
-                    themeStructure = [];
-                }
+                const list = await GDA.getByType(STRUCT_TYPE);
+                themeStructure = list.length > 0 ? JSON.parse(list[0].dataContent || '[]') : [];
             } catch (e) { themeStructure = []; }
 
             if (themeStructure.length === 0) {
@@ -238,13 +381,11 @@
                     themeItems[key] = [];
                     const dt = 'theme_' + theme.大类 + '_' + catName;
                     promises.push(
-                        apiGet('/api/v1/general-data/get-by-type', { dataType: dt })
-                            .then(res => {
-                                if (res.resultCode === 200 && res.data) {
-                                    themeItems[key] = res.data.map(d => ({
-                                        id: d.id, dataKey: d.dataKey, dataContent: d.dataContent
-                                    }));
-                                }
+                        GDA.getByType(dt)
+                            .then(list => {
+                                themeItems[key] = list.map(d => ({
+                                    id: d.id, dataKey: d.dataKey, dataContent: d.dataContent
+                                }));
                             }).catch(() => {})
                     );
                 });
@@ -341,12 +482,32 @@
         function escapeHtml(str) {
             const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
         }
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch(e) {}
+            document.body.removeChild(ta);
+            return ok;
+        }
         function copyDesc(desc, btn) {
-            const prefix = document.getElementById('prefixInput').value;
-            navigator.clipboard.writeText(prefix + desc).then(() => {
+            const activePrefix = prefixes.find(p => p.active);
+            const prefix = activePrefix ? activePrefix.content : '';
+            const text = prefix + desc;
+            const onSuccess = () => {
                 btn.textContent = '已复制 ✓'; btn.classList.add('copied');
                 setTimeout(() => { btn.textContent = '复制描述'; btn.classList.remove('copied'); }, 1500);
-            });
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+                    if (fallbackCopy(text)) onSuccess(); else alert('复制失败，请手动复制');
+                });
+            } else {
+                if (fallbackCopy(text)) onSuccess(); else alert('复制失败，请手动复制');
+            }
         }
 
         // ========== 模态框 ==========
@@ -387,7 +548,7 @@
                     大类: t['大类'] || '未命名',
                     类别: (t['分类数据'] || []).map(c => c['类别'] || '未命名')
                 }));
-                await smartSave(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(newStruct));
+                await GDA.saveOrUpdate(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(newStruct));
                 // 2. 保存每条数据
                 let total = 0, done = 0;
                 newStruct.forEach(t => t.类别.forEach(c => { total++; }));
@@ -400,7 +561,7 @@
                         const items = cat['内容'] || [];
                         for (let ii = 0; ii < items.length; ii++) {
                             const item = items[ii];
-                            await smartSave(dt, item['名称'] || ('item_' + ii), item['描述'] || '');
+                            await GDA.saveOrUpdate(dt, item['名称'] || ('item_' + ii), item['描述'] || '');
                         }
                         done++;
                         progress.textContent = '导入进度: ' + done + ' / ' + total + ' 个类别';
@@ -437,7 +598,7 @@
             const newTheme = { 大类: name, 类别: firstCat ? [firstCat] : [] };
             themeStructure.push(newTheme);
             if (firstCat) themeItems[name + '|' + firstCat] = [];
-            await smartSave(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(themeStructure));
+            await GDA.saveOrUpdate(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(themeStructure));
             closeModal(); renderAll();
         }
 
@@ -460,7 +621,7 @@
             if (theme.类别.includes(name)) { alert('该类别已存在'); return; }
             theme.类别.push(name);
             themeItems[theme.大类 + '|' + name] = [];
-            await smartSave(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(themeStructure));
+            await GDA.saveOrUpdate(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(themeStructure));
             closeModal(); renderAll();
         }
 
@@ -485,12 +646,10 @@
             const theme = themeStructure[themeIdx];
             const catName = theme.类别[catIdx];
             const dt = 'theme_' + theme.大类 + '_' + catName;
-            const res = await apiPost('/api/v1/general-data/save', { dataType: dt, dataKey: name, dataContent: desc });
-            if (res.resultCode === 200) {
-                const key = theme.大类 + '|' + catName;
-                themeItems[key].push({ id: res.data ? res.data.id : null, dataKey: name, dataContent: desc });
-                closeModal(); renderAll();
-            } else { alert('添加失败: ' + (res.message || '未知错误')); }
+            const res = await GDA.save({ dataType: dt, dataKey: name, dataContent: desc });
+            const key = theme.大类 + '|' + catName;
+            themeItems[key].push({ id: res.data ? res.data.id : null, dataKey: name, dataContent: desc });
+            closeModal(); renderAll();
         }
 
         // ========== 编辑条目 ==========
@@ -523,16 +682,14 @@
             try {
                 // 如果名称变了，需要检查新名称是否冲突
                 if (newName !== item.dataKey) {
-                    const check = await apiGet('/api/v1/general-data/get-by-type', { dataType: dt });
-                    if (check.resultCode === 200 && check.data) {
-                        const dup = check.data.find(d => d.dataKey === newName);
-                        if (dup) { alert('该名称已存在'); btn.disabled = false; btn.textContent = '保存'; return; }
-                    }
+                    const checkList = await GDA.getByType(dt);
+                    const dup = checkList.find(d => d.dataKey === newName);
+                    if (dup) { alert('该名称已存在'); btn.disabled = false; btn.textContent = '保存'; return; }
                 }
                 if (item.id) {
-                    await apiPost('/api/v1/general-data/update', { id: item.id, dataContent: newDesc, dataKey: newName });
+                    await GDA.update(item.id, { dataContent: newDesc, dataKey: newName });
                 } else {
-                    await smartSave(dt, newName, newDesc);
+                    await GDA.saveOrUpdate(dt, newName, newDesc);
                 }
                 item.dataKey = newName;
                 item.dataContent = newDesc;
@@ -547,7 +704,7 @@
             const key = theme.大类 + '|' + catName;
             const item = themeItems[key][itemIdx];
             if (!confirm('确定删除「' + item.dataKey + '」？')) return;
-            if (item.id) await apiGet('/api/v1/general-data/delete', { id: item.id });
+            if (item.id) await GDA.remove(item.id);
             themeItems[key].splice(itemIdx, 1);
             renderAll();
         }
@@ -559,11 +716,11 @@
             const key = theme.大类 + '|' + catName;
             const items = themeItems[key] || [];
             for (const item of items) {
-                if (item.id) await apiGet('/api/v1/general-data/delete', { id: item.id }).catch(() => {});
+                if (item.id) await GDA.remove(item.id).catch(() => {});
             }
             theme.类别.splice(catIdx, 1);
             delete themeItems[key];
-            await smartSave(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(themeStructure));
+            await GDA.saveOrUpdate(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(themeStructure));
             renderAll();
         }
         async function deleteTheme(themeIdx) {
@@ -574,17 +731,17 @@
                 const key = theme.大类 + '|' + catName;
                 const items = themeItems[key] || [];
                 for (const item of items) {
-                    if (item.id) await apiGet('/api/v1/general-data/delete', { id: item.id }).catch(() => {});
+                    if (item.id) await GDA.remove(item.id).catch(() => {});
                 }
                 delete themeItems[key];
             }
             themeStructure.splice(themeIdx, 1);
-            await smartSave(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(themeStructure));
+            await GDA.saveOrUpdate(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(themeStructure));
             renderAll();
         }
 
         // ========== 初始化 ==========
-        loadPrefix();
+        loadPrefixes();
         loadAllData();
     </script>
 </body>
