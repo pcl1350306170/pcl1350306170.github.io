@@ -66,8 +66,21 @@ var GeneralDataApi = (function () {
          * @returns {Promise}
          */
         batchSave: function (list) {
-            return axios.post(BASE + '/batch-save', list, { headers: HEADERS })
-                .then(_handle).catch(_catch);
+            console.log('共筛选出' + list.length + '条有效数据，准备提交接口');
+            return axios.post(BASE + '/batch-save', JSON.stringify(list), { headers: HEADERS })
+                .then(function (res) {
+                    console.log('批量保存成功', res.data);
+                    return _handle(res);
+                })
+                .catch(function (err) {
+                    if (err.response) {
+                        console.error('GeneralDataApi: 批量保存失败', err.response.data);
+                        console.error('错误状态码：', err.response.status);
+                    } else {
+                        console.error('GeneralDataApi: 批量保存失败', err.message || err);
+                    }
+                    return Promise.reject(err);
+                });
         },
 
         /**

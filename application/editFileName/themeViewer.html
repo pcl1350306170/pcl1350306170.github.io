@@ -8,12 +8,12 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #1a1a2e; color: #e0e0e0; min-height: 100vh; padding: 20px;
+            background: #1a1a2e; color: #e0e0e0; min-height: 100vh;
         }
         h1 { text-align: center; color: #c084fc; margin-bottom: 8px; font-size: 28px; }
         .subtitle { text-align: center; color: #888; margin-bottom: 30px; font-size: 14px; }
         /* 前缀区域 */
-        .prefix-section { max-width: 90%; margin: 0 auto 24px; }
+        .prefix-section { margin-bottom: 24px; }
         .prefix-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         .prefix-header-title { font-size: 16px; color: #a78bfa; font-weight: 600; }
         .prefix-add-btn {
@@ -124,7 +124,7 @@
         .modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         /* 导入进度 */
         .import-progress {
-            max-width: 90%; margin: 0 auto 20px; text-align: center;
+            margin: 0 auto 20px; text-align: center;
             font-size: 13px; color: #0ea5e9; display: none;
         }
         .import-progress.active { display: block; }
@@ -132,13 +132,61 @@
         .empty-state { text-align: center; color: #64748b; padding: 60px 20px; }
         .empty-state p { margin-bottom: 16px; font-size: 16px; }
         #loading { text-align: center; color: #888; padding: 60px 0; font-size: 16px; }
-        @media (max-width: 768px) { .category { column-count: 1; } }
+        /* 页面布局 */
+        .page-wrapper { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 240px; min-width: 240px; background: #0f172a; border-right: 1px solid #1f3056;
+            position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 100;
+            padding: 16px 0; transition: transform .3s;
+        }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+        .sidebar-title {
+            font-size: 14px; color: #a78bfa; font-weight: 600;
+            padding: 0 16px 12px; border-bottom: 1px solid #1f3056; margin-bottom: 8px;
+        }
+        .tree-theme { margin-bottom: 4px; }
+        .tree-theme-name {
+            display: block; padding: 8px 16px; color: #c084fc; font-size: 14px;
+            font-weight: 600; cursor: pointer; transition: background .2s;
+            border-left: 3px solid transparent;
+        }
+        .tree-theme-name:hover { background: rgba(124,58,237,.1); }
+        .tree-cat-list { list-style: none; padding: 0 0 4px; }
+        .tree-cat-item {
+            padding: 6px 16px 6px 28px; color: #94a3b8; font-size: 13px;
+            cursor: pointer; transition: all .2s; border-left: 3px solid transparent;
+        }
+        .tree-cat-item:hover { background: rgba(124,58,237,.08); color: #e2e8f0; }
+        .tree-cat-item.active { background: rgba(124,58,237,.15); color: #a78bfa; border-left-color: #7c3aed; }
+        .main-content {
+            flex: 1; margin-left: 240px; padding: 20px;  min-height: 100vh;
+        }
+        .sidebar-toggle {
+            display: none; position: fixed; top: 10px; left: 10px; z-index: 200;
+            background: #7c3aed; color: #fff; border: none; border-radius: 6px;
+            padding: 8px 12px; cursor: pointer; font-size: 14px;
+        }
+        @media (max-width: 768px) {
+            .category { column-count: 1; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .sidebar-toggle { display: block; }
+        }
     </style>
     <script src="../../lib/vue/axios.min.js"></script>
     <script src="../../js/_variable.js" type="text/javascript"></script>
     <script src="../../js/GeneralDataApi.js"></script>
 </head>
 <body>
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰ 导航</button>
+    <div class="page-wrapper">
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-title">分类导航</div>
+        <div id="treeNav"><div style="padding:16px;color:#4a5568;font-size:13px;">暂无数据</div></div>
+    </div>
+    <div class="main-content">
     <h1>Theme 数据管理</h1>
     <p class="subtitle">点击右侧按钮复制描述内容，支持在线编辑管理</p>
     <div class="prefix-section">
@@ -150,10 +198,14 @@
     </div>
     <div class="action-bar">
         <button class="action-btn import" onclick="showImportModal()">导入 JSON 数据</button>
+        <button class="action-btn import" style="background:#8b5cf6;" onclick="showSubImportModal()">导入子类数据</button>
         <button class="action-btn add-theme" onclick="showAddThemeModal()">+ 新增大类</button>
     </div>
     <div class="import-progress" id="importProgress"></div>
-    <div id="container"><div id="loading">正在加载数据...</div></div>
+    <div id="container"></div>
+    </div>
+    </div><!-- /main-content -->
+    </div><!-- /page-wrapper -->
     <!-- 通用模态框 -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal" id="modalContent"></div>
@@ -401,6 +453,7 @@
             themeStructure.forEach((theme, ti) => {
                 const group = document.createElement('div');
                 group.className = 'theme-group';
+                group.id = 'theme_' + ti;
                 // 主题标题
                 const header = document.createElement('div');
                 header.className = 'theme-header';
@@ -417,6 +470,7 @@
                 (theme.类别 || []).forEach((catName, ci) => {
                     const section = document.createElement('div');
                     section.className = 'category';
+                    section.id = 'cat_' + ti + '_' + ci;
                     const catTitle = document.createElement('div');
                     catTitle.className = 'category-title';
                     const catText = document.createElement('span');
@@ -481,6 +535,80 @@
         }
         function escapeHtml(str) {
             const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+        }
+        // 包装 renderAll：数据变化后自动刷新树 + 滚动高亮
+        var _origRenderAll = renderAll;
+        renderAll = function() {
+            _origRenderAll();
+            renderTree();
+            setTimeout(initScrollSpy, 100);
+        };
+        // ========== 左侧分类树 ==========
+        function renderTree() {
+            var nav = document.getElementById('treeNav');
+            nav.innerHTML = '';
+            if (themeStructure.length === 0) {
+                nav.innerHTML = '<div style="padding:16px;color:#4a5568;font-size:13px;">暂无数据</div>';
+                return;
+            }
+            themeStructure.forEach(function(theme, ti) {
+                var div = document.createElement('div');
+                div.className = 'tree-theme';
+                var nameEl = document.createElement('div');
+                nameEl.className = 'tree-theme-name';
+                nameEl.textContent = theme.大类;
+                nameEl.onclick = function() { scrollToSection('theme_' + ti); };
+                div.appendChild(nameEl);
+                var ul = document.createElement('ul');
+                ul.className = 'tree-cat-list';
+                (theme.类别 || []).forEach(function(catName, ci) {
+                    var li = document.createElement('li');
+                    li.className = 'tree-cat-item';
+                    var itemCount = (themeItems[theme.大类 + '|' + catName] || []).length;
+                    li.textContent = catName + ' (' + itemCount + '条)';
+                    li.id = 'tree_cat_' + ti + '_' + ci;
+                    li.onclick = function() { scrollToSection('cat_' + ti + '_' + ci); };
+                    ul.appendChild(li);
+                });
+                div.appendChild(ul);
+                nav.appendChild(div);
+            });
+        }
+        var _activeTreeId = null;
+        function updateScrollSpy() {
+            var activeId = null;
+            themeStructure.forEach(function(theme, ti) {
+                var themeEl = document.getElementById('theme_' + ti);
+                if (themeEl && themeEl.getBoundingClientRect().top - 80 <= 0) activeId = 'theme_' + ti;
+                (theme.类别 || []).forEach(function(catName, ci) {
+                    var catEl = document.getElementById('cat_' + ti + '_' + ci);
+                    if (catEl && catEl.getBoundingClientRect().top - 80 <= 0) activeId = 'cat_' + ti + '_' + ci;
+                });
+            });
+            if (activeId !== _activeTreeId) {
+                _activeTreeId = activeId;
+                document.querySelectorAll('.tree-cat-item.active').forEach(function(el) { el.classList.remove('active'); });
+                if (activeId) {
+                    var node = document.getElementById('tree_' + activeId);
+                    if (node) {
+                        node.classList.add('active');
+                        node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                }
+            }
+        }
+        function initScrollSpy() {
+            if (window._spyBound) return;
+            window._spyBound = true;
+            window.addEventListener('scroll', updateScrollSpy);
+            updateScrollSpy();
+        }
+        function scrollToSection(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var targetTop = el.getBoundingClientRect().top + window.pageYOffset - 50;
+            window.scrollTo({ top: targetTop, behavior: 'smooth' });
+            if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
         }
         function fallbackCopy(text) {
             const ta = document.createElement('textarea');
@@ -571,6 +699,66 @@
                 setTimeout(() => { progress.classList.remove('active'); progress.textContent = ''; }, 2000);
                 closeModal();
                 loadAllData();
+            } catch (e) {
+                alert('导入失败: ' + e.message);
+                btn.disabled = false; btn.textContent = '开始导入';
+            }
+        }
+
+        // ========== 导入子类数据 ==========
+        function showSubImportModal() {
+            openModal(
+                '<h3>导入子类数据</h3>' +
+                '<label>dataType（数据分类）：</label>' +
+                '<input id="subImportType" placeholder="例如：theme_仙侠_枯禅灯海">' +
+                '<label>JSON 数据：</label>' +
+                '<textarea id="subImportJson" rows="12" placeholder=\'[{"dataType":"名称","dataContent":"内容"},...]\'></textarea>' +
+                '<div style="margin-top:8px;font-size:12px;color:#64748b;">JSON中 dataType 字段将作为 dataKey，dataContent 作为描述内容</div>' +
+                '<div class="modal-actions">' +
+                '<button class="modal-btn cancel" onclick="closeModal()">取消</button>' +
+                '<button class="modal-btn confirm" id="subImportBtn" onclick="doSubImport()">开始导入</button>' +
+                '</div>'
+            );
+        }
+        async function doSubImport() {
+            const dataType = document.getElementById('subImportType').value.trim();
+            const jsonStr = document.getElementById('subImportJson').value.trim();
+            if (!dataType) { alert('请输入 dataType'); return; }
+            if (!jsonStr) { alert('请粘贴 JSON 数据'); return; }
+            let jsonList;
+            try { jsonList = JSON.parse(jsonStr); } catch (e) { alert('JSON 格式错误: ' + e.message); return; }
+            if (!Array.isArray(jsonList)) { alert('JSON 必须是数组'); return; }
+            const btn = document.getElementById('subImportBtn');
+            btn.disabled = true; btn.textContent = '导入中...';
+            const progress = document.getElementById('importProgress');
+            progress.classList.add('active');
+            try {
+                // 构建 batch-save 所需的列表
+                const batchList = jsonList.map(item => ({
+                    dataType: dataType,
+                    dataKey: item.dataType || '',
+                    dataContent: item.dataContent || ''
+                }));
+                progress.textContent = '正在批量保存 ' + batchList.length + ' 条数据...';
+                await GDA.batchSave(batchList);
+                // 同步更新本地结构（如果该 dataType 对应的类别已存在于结构中）
+                const match = dataType.match(/^theme_(.+)_(.+)$/);
+                if (match) {
+                    const themeName = match[1];
+                    const catName = match[2];
+                    const themeObj = themeStructure.find(t => t.大类 === themeName);
+                    if (themeObj && themeObj.类别.includes(catName)) {
+                        const key = themeName + '|' + catName;
+                        if (!themeItems[key]) themeItems[key] = [];
+                        // 重新加载该类别的数据
+                        const list = await GDA.getByType(dataType);
+                        themeItems[key] = list.map(d => ({ id: d.id, dataKey: d.dataKey, dataContent: d.dataContent }));
+                    }
+                }
+                progress.textContent = '导入完成！共 ' + batchList.length + ' 条';
+                setTimeout(() => { progress.classList.remove('active'); progress.textContent = ''; }, 2000);
+                closeModal();
+                renderAll();
             } catch (e) {
                 alert('导入失败: ' + e.message);
                 btn.disabled = false; btn.textContent = '开始导入';
@@ -743,6 +931,9 @@
         // ========== 初始化 ==========
         loadPrefixes();
         loadAllData();
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) document.getElementById('sidebar').classList.remove('open');
+        });
     </script>
 </body>
 </html>
