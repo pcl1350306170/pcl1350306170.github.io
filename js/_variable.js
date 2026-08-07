@@ -1,3 +1,13 @@
+// ========== Favicon 统一配置 ==========
+const FAVICON_URL = 'https://raw.githubusercontent.com/pcl1350306170/test-data-backup/refs/heads/main/img/T/头像-头像-q3arc2.jpg';
+(function() {
+    var link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/jpeg';
+    link.href = FAVICON_URL;
+    document.head.appendChild(link);
+})();
+
 var URLL = window.location.href;
 let R = '';
 if (URLL.indexOf('pangchunlei') > -1) {
