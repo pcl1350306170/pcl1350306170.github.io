@@ -56,8 +56,34 @@
             width: 100%; aspect-ratio: 16/10; overflow: hidden; position: relative;
             background: #0f172a; cursor: pointer;
         }
+        .card-img-wrap.portrait {
+            aspect-ratio: 9/14;
+        }
         .card-img-wrap img {
             width: 100%; height: 100%; object-fit: cover; transition: transform .3s;
+        }
+        .card-img-wrap.portrait img {
+            object-fit: contain;
+        }
+        .card-img-wrap .orient-badge {
+            position: absolute; top: 6px; right: 6px; z-index: 2;
+            font-size: 11px; padding: 2px 8px; border-radius: 4px;
+            color: #fff; pointer-events: none;
+        }
+        .orient-badge.landscape { background: rgba(14,165,233,.8); }
+        .orient-badge.portrait { background: rgba(245,158,11,.8); }
+        /* 分组标题 */
+        .section-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 20px; margin-bottom: 4px;
+        }
+        .section-header .section-title {
+            font-size: 18px; font-weight: 600;
+        }
+        .section-header .section-title.landscape { color: #0ea5e9; }
+        .section-header .section-title.portrait { color: #f59e0b; }
+        .section-header .section-count {
+            font-size: 13px; color: #64748b;
         }
         .gallery-card:hover .card-img-wrap img { transform: scale(1.05); }
         .card-img-wrap .img-loading {
@@ -300,11 +326,52 @@
             );
         }
 
+        /**
+         * 带重试的单条保存
+         */
+        async function saveWithRetry(item, maxRetries = 2) {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    await GDA.save(item);
+                    return true;
+                } catch (e) {
+                    console.warn('保存失败(第' + attempt + '次):', item.dataKey, e.message);
+                    if (attempt < maxRetries) {
+                        await new Promise(r => setTimeout(r, 1000 * attempt)); // 递增等待
+                    }
+                }
+            }
+            return false;
+        }
+
         async function doImport() {
             const urlsText = document.getElementById('importUrls').value.trim();
             if (!urlsText) { alert('请粘贴图片地址'); return; }
-            const urls = urlsText.split('\n').map(u => u.trim()).filter(u => u && u.startsWith('http'));
+            let urls = urlsText.split('\n').map(u => u.trim()).filter(u => u && u.startsWith('http'));
             if (urls.length === 0) { alert('未找到有效的图片地址'); return; }
+
+            // 1. 输入列表内部去重
+            const beforeDedup = urls.length;
+            urls = [...new Set(urls)];
+            const inputDupCount = beforeDedup - urls.length;
+
+            // 2. 与已保存数据去重（对比 dataKey）
+            let existingDupCount = 0;
+            if (imageList.length > 0) {
+                const existingKeys = new Set(imageList.map(d => d.dataKey));
+                const filtered = urls.filter(u => !existingKeys.has(u));
+                existingDupCount = urls.length - filtered.length;
+                urls = filtered;
+            }
+
+            if (urls.length === 0) {
+                let msg = '所有地址均已跳过';
+                if (inputDupCount > 0) msg += '（重复 ' + inputDupCount + ' 条）';
+                if (existingDupCount > 0) msg += '（已存在 ' + existingDupCount + ' 条）';
+                alert(msg);
+                btn.disabled = false; btn.textContent = '开始导入';
+                return;
+            }
 
             let dataType = document.getElementById('importDataType').value.trim();
             if (!dataType) {
@@ -324,56 +391,165 @@
             document.getElementById('datatypeValue').textContent = dataType;
 
             const total = urls.length;
-            let done = 0;
-            let successCount = 0;
-            let failCount = 0;
-            const batchData = [];
+            let dupInfo = '';
+            if (inputDupCount > 0 || existingDupCount > 0) {
+                dupInfo = '（去重：输入重复 ' + inputDupCount + '，已存在 ' + existingDupCount + '，跳过）';
+            }
+            progressText.textContent = '待处理 ' + total + ' 张' + dupInfo;
+            let savedCount = 0;
+            let fetchFailCount = 0;
+            let saveFailCount = 0;
+            const failedUrls = []; // 保存失败的记录，供重试
 
             for (let i = 0; i < urls.length; i++) {
                 const url = urls[i];
-                progressText.textContent = '正在处理 ' + (i + 1) + ' / ' + total + '：' + url.substring(0, 60) + '...';
+                progressText.textContent = '[' + (i + 1) + '/' + total + '] 获取图片中...';
                 progressBar.style.width = ((i / total) * 100) + '%';
 
+                let base64;
                 try {
-                    const base64 = await fetchImageAsBase64(url);
-                    batchData.push({
-                        dataType: dataType,
-                        dataKey: url,
-                        dataContent: base64
-                    });
-                    successCount++;
+                    base64 = await fetchImageAsBase64(url);
                 } catch (e) {
-                    console.error('处理失败:', url, e);
-                    failCount++;
+                    console.error('图片获取失败:', url, e);
+                    fetchFailCount++;
+                    failedUrls.push({ url: url, base64: null, phase: 'fetch' });
+                    continue;
                 }
-                done++;
-                progressBar.style.width = ((done / total) * 100) + '%';
+
+                // 转换成功，立即保存（带重试）
+                const item = { dataType: dataType, dataKey: url, dataContent: base64 };
+                progressText.textContent = '[' + (i + 1) + '/' + total + '] 保存中...';
+                const ok = await saveWithRetry(item);
+                if (ok) {
+                    savedCount++;
+                } else {
+                    saveFailCount++;
+                    failedUrls.push({ url: url, base64: base64, phase: 'save' });
+                }
+
+                progressBar.style.width = (((i + 1) / total) * 100) + '%';
             }
 
-            // 批量保存
-            if (batchData.length > 0) {
-                progressText.textContent = '正在保存 ' + batchData.length + ' 条数据...';
-                try {
-                    await GDA.batchSave(batchData);
-                    progressText.textContent = '导入完成！成功 ' + successCount + ' 张' + (failCount > 0 ? '，失败 ' + failCount + ' 张' : '');
-                } catch (e) {
-                    progressText.textContent = '保存失败: ' + e.message;
-                    btn.disabled = false; btn.textContent = '开始导入';
-                    return;
-                }
+            // 汇总结果
+            const failTotal = fetchFailCount + saveFailCount;
+            if (failTotal === 0) {
+                progressText.textContent = '导入完成！共 ' + savedCount + ' 张图片全部保存成功 ✓';
             } else {
-                progressText.textContent = '没有成功获取到任何图片';
-                btn.disabled = false; btn.textContent = '开始导入';
-                return;
+                let msg = '完成：成功 ' + savedCount + ' 张';
+                if (fetchFailCount > 0) msg += '，获取失败 ' + fetchFailCount + ' 张';
+                if (saveFailCount > 0) msg += '，保存失败 ' + saveFailCount + ' 张';
+                progressText.textContent = msg;
+
+                // 缓存失败数据到 localStorage，供后续重试
+                try {
+                    localStorage.setItem('imageGallery_failedImport', JSON.stringify({
+                        dataType: dataType,
+                        items: failedUrls,
+                        time: new Date().toLocaleString()
+                    }));
+                    progressText.textContent += '（失败数据已缓存，可点击「重试失败项」恢复）';
+                    // 显示重试按钮
+                    showRetryButton(failedUrls, dataType);
+                } catch(e) {
+                    console.warn('缓存失败数据失败', e);
+                }
             }
 
             progressBar.style.width = '100%';
             setTimeout(() => {
                 progressSection.classList.remove('active');
                 progressBar.style.width = '0%';
-            }, 3000);
+            }, 5000);
 
             closeModal();
+            loadAllImages();
+        }
+
+        /**
+         * 显示重试按钮
+         */
+        function showRetryButton(failedItems, dataType) {
+            const fetchFails = failedItems.filter(f => f.phase === 'fetch');
+            const saveFails = failedItems.filter(f => f.phase === 'save');
+            let html = '<div style="margin:12px auto;max-width:600px;text-align:center;">';
+            if (saveFails.length > 0) {
+                html += '<button class="action-btn import" style="margin-right:8px;" onclick="retrySaveFailed()">重试保存失败项(' + saveFails.length + '张)</button>';
+            }
+            if (fetchFails.length > 0) {
+                html += '<button class="action-btn import" style="background:#f59e0b;" onclick="retryFetchFailed()">重试获取失败项(' + fetchFails.length + '张)</button>';
+            }
+            html += '</div>';
+            const container = document.getElementById('container');
+            container.insertAdjacentHTML('beforebegin', html);
+        }
+
+        /**
+         * 重试保存失败的项（base64 已转换好，只需重新提交）
+         */
+        async function retrySaveFailed() {
+            const cached = localStorage.getItem('imageGallery_failedImport');
+            if (!cached) { alert('没有缓存的失败数据'); return; }
+            const data = JSON.parse(cached);
+            const saveFails = data.items.filter(f => f.phase === 'save' && f.base64);
+            if (saveFails.length === 0) { alert('没有保存失败的项'); return; }
+
+            const progressSection = document.getElementById('progressSection');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            progressSection.classList.add('active');
+
+            let successCount = 0;
+            for (let i = 0; i < saveFails.length; i++) {
+                const item = { dataType: data.dataType, dataKey: saveFails[i].url, dataContent: saveFails[i].base64 };
+                progressText.textContent = '重试保存 ' + (i + 1) + '/' + saveFails.length + '...';
+                progressBar.style.width = ((i / saveFails.length) * 100) + '%';
+                const ok = await saveWithRetry(item);
+                if (ok) successCount++;
+            }
+            progressBar.style.width = '100%';
+            progressText.textContent = '重试完成：成功 ' + successCount + '/' + saveFails.length;
+            localStorage.removeItem('imageGallery_failedImport');
+            setTimeout(() => { progressSection.classList.remove('active'); }, 3000);
+            loadAllImages();
+        }
+
+        /**
+         * 重试获取失败的项（重新获取图片并保存）
+         */
+        async function retryFetchFailed() {
+            const cached = localStorage.getItem('imageGallery_failedImport');
+            if (!cached) { alert('没有缓存的失败数据'); return; }
+            const data = JSON.parse(cached);
+            const fetchFails = data.items.filter(f => f.phase === 'fetch');
+            if (fetchFails.length === 0) { alert('没有获取失败的项'); return; }
+
+            const progressSection = document.getElementById('progressSection');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            progressSection.classList.add('active');
+
+            let successCount = 0;
+            const stillFailed = [];
+            for (let i = 0; i < fetchFails.length; i++) {
+                const url = fetchFails[i].url;
+                progressText.textContent = '重试获取 ' + (i + 1) + '/' + fetchFails.length + '...';
+                progressBar.style.width = ((i / fetchFails.length) * 100) + '%';
+                try {
+                    const base64 = await fetchImageAsBase64(url);
+                    const item = { dataType: data.dataType, dataKey: url, dataContent: base64 };
+                    const ok = await saveWithRetry(item);
+                    if (ok) { successCount++; continue; }
+                } catch(e) { console.warn('重试仍失败:', url, e); }
+                stillFailed.push(fetchFails[i]);
+            }
+            progressBar.style.width = '100%';
+            progressText.textContent = '重试完成：成功 ' + successCount + '/' + fetchFails.length;
+            if (stillFailed.length > 0) {
+                localStorage.setItem('imageGallery_failedImport', JSON.stringify({ dataType: data.dataType, items: stillFailed, time: new Date().toLocaleString() }));
+            } else {
+                localStorage.removeItem('imageGallery_failedImport');
+            }
+            setTimeout(() => { progressSection.classList.remove('active'); }, 3000);
             loadAllImages();
         }
 
@@ -419,95 +595,152 @@
             renderGallery();
         }
 
+        // ========== 检测图片方向 ==========
+        function detectOrientation(src) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = function() {
+                    resolve(img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait');
+                };
+                img.onerror = function() { resolve('landscape'); }; // 默认横屏
+                img.src = src;
+            });
+        }
+
         // ========== 渲染相册 ==========
-        function renderGallery() {
+        async function renderGallery() {
             const container = document.getElementById('container');
             container.innerHTML = '';
-            const gallery = document.createElement('div');
-            gallery.className = 'gallery';
 
-            imageList.forEach((item, idx) => {
-                const card = document.createElement('div');
-                card.className = 'gallery-card';
+            // 检测所有图片方向
+            const oriented = [];
+            for (let i = 0; i < imageList.length; i++) {
+                const item = imageList[i];
+                const src = (item.dataContent && item.dataContent.startsWith('data:')) ? item.dataContent : item.dataKey;
+                const orient = await detectOrientation(src);
+                oriented.push({ item, src, orient, origIdx: i });
+            }
 
-                // 图片区域
-                const imgWrap = document.createElement('div');
-                imgWrap.className = 'card-img-wrap';
-                const loadingTip = document.createElement('div');
-                loadingTip.className = 'img-loading';
-                loadingTip.textContent = '加载中...';
-                imgWrap.appendChild(loadingTip);
+            // 排序：横屏在前，竖屏在后
+            oriented.sort((a, b) => (a.orient === 'landscape' ? 0 : 1) - (b.orient === 'landscape' ? 0 : 1));
 
-                const img = document.createElement('img');
-                img.alt = '图片 ' + (idx + 1);
-                img.loading = 'lazy';
-                img.onload = function() { loadingTip.remove(); };
-                img.onerror = function() {
-                    loadingTip.remove();
-                    const errTip = document.createElement('div');
-                    errTip.className = 'img-error';
-                    errTip.textContent = '图片加载失败';
-                    imgWrap.appendChild(errTip);
-                };
-                // dataContent 是 base64，直接作为 src
-                if (item.dataContent && item.dataContent.startsWith('data:')) {
-                    img.src = item.dataContent;
-                } else {
-                    // 兼容旧数据：可能是 URL
-                    img.src = item.dataKey;
-                }
-                imgWrap.appendChild(img);
-                // 点击预览
-                imgWrap.onclick = function() { showPreview(img.src); };
-                card.appendChild(imgWrap);
+            const landscapeItems = oriented.filter(o => o.orient === 'landscape');
+            const portraitItems = oriented.filter(o => o.orient === 'portrait');
 
-                // 信息区域
-                const body = document.createElement('div');
-                body.className = 'card-body';
+            // 渲染横屏分组
+            if (landscapeItems.length > 0) {
+                const header = createSectionHeader('横屏图片', landscapeItems.length, 'landscape');
+                container.appendChild(header);
+                const gallery = document.createElement('div');
+                gallery.className = 'gallery';
+                landscapeItems.forEach(o => gallery.appendChild(createCard(o.item, o.src, o.orient, o.origIdx)));
+                container.appendChild(gallery);
+            }
 
-                const urlDiv = document.createElement('div');
-                urlDiv.className = 'card-url';
-                urlDiv.textContent = item.dataKey;
-                urlDiv.title = item.dataKey;
-                body.appendChild(urlDiv);
+            // 渲染竖屏分组
+            if (portraitItems.length > 0) {
+                const header = createSectionHeader('竖屏图片', portraitItems.length, 'portrait');
+                container.appendChild(header);
+                const gallery = document.createElement('div');
+                gallery.className = 'gallery';
+                portraitItems.forEach(o => gallery.appendChild(createCard(o.item, o.src, o.orient, o.origIdx)));
+                container.appendChild(gallery);
+            }
 
-                const actions = document.createElement('div');
-                actions.className = 'card-actions';
+            if (imageList.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>暂无图片数据，请先导入</p></div>';
+            }
+        }
 
-                // 复制地址
-                const copyBtn = document.createElement('button');
-                copyBtn.className = 'card-btn copy';
-                copyBtn.textContent = '复制地址';
-                copyBtn.onclick = function(e) { e.stopPropagation(); copyText(item.dataKey, copyBtn); };
-                actions.appendChild(copyBtn);
+        function createSectionHeader(title, count, type) {
+            const div = document.createElement('div');
+            div.className = 'section-header';
+            const t = document.createElement('span');
+            t.className = 'section-title ' + type;
+            t.textContent = title;
+            const c = document.createElement('span');
+            c.className = 'section-count';
+            c.textContent = '(' + count + '张)';
+            div.appendChild(t);
+            div.appendChild(c);
+            return div;
+        }
 
-                // 编辑
-                const editBtn = document.createElement('button');
-                editBtn.className = 'card-btn edit';
-                editBtn.textContent = '编辑';
-                editBtn.onclick = function(e) { e.stopPropagation(); showEditModal(idx); };
-                actions.appendChild(editBtn);
+        function createCard(item, src, orient, origIdx) {
+            const card = document.createElement('div');
+            card.className = 'gallery-card';
 
-                // 删除
-                const delBtn = document.createElement('button');
-                delBtn.className = 'card-btn del';
-                delBtn.textContent = '删除';
-                delBtn.onclick = function(e) { e.stopPropagation(); deleteImage(idx); };
-                actions.appendChild(delBtn);
+            // 图片区域
+            const imgWrap = document.createElement('div');
+            imgWrap.className = 'card-img-wrap' + (orient === 'portrait' ? ' portrait' : '');
+            const loadingTip = document.createElement('div');
+            loadingTip.className = 'img-loading';
+            loadingTip.textContent = '加载中...';
+            imgWrap.appendChild(loadingTip);
 
-                // 新窗口查看
-                const viewBtn = document.createElement('button');
-                viewBtn.className = 'card-btn view';
-                viewBtn.textContent = '原图';
-                viewBtn.onclick = function(e) { e.stopPropagation(); window.open(item.dataKey, '_blank'); };
-                actions.appendChild(viewBtn);
+            // 方向标签
+            const badge = document.createElement('div');
+            badge.className = 'orient-badge ' + orient;
+            badge.textContent = orient === 'landscape' ? '横屏' : '竖屏';
+            imgWrap.appendChild(badge);
 
-                body.appendChild(actions);
-                card.appendChild(body);
-                gallery.appendChild(card);
-            });
+            const img = document.createElement('img');
+            img.alt = '图片';
+            img.loading = 'lazy';
+            img.onload = function() { loadingTip.remove(); };
+            img.onerror = function() {
+                loadingTip.remove();
+                const errTip = document.createElement('div');
+                errTip.className = 'img-error';
+                errTip.textContent = '图片加载失败';
+                imgWrap.appendChild(errTip);
+            };
+            img.src = src;
+            imgWrap.appendChild(img);
+            // 点击预览
+            imgWrap.onclick = function() { showPreview(src); };
+            card.appendChild(imgWrap);
 
-            container.appendChild(gallery);
+            // 信息区域
+            const body = document.createElement('div');
+            body.className = 'card-body';
+
+            const urlDiv = document.createElement('div');
+            urlDiv.className = 'card-url';
+            urlDiv.textContent = item.dataKey;
+            urlDiv.title = item.dataKey;
+            body.appendChild(urlDiv);
+
+            const actions = document.createElement('div');
+            actions.className = 'card-actions';
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'card-btn copy';
+            copyBtn.textContent = '复制地址';
+            copyBtn.onclick = function(e) { e.stopPropagation(); copyText(item.dataKey, copyBtn); };
+            actions.appendChild(copyBtn);
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'card-btn edit';
+            editBtn.textContent = '编辑';
+            editBtn.onclick = function(e) { e.stopPropagation(); showEditModal(origIdx); };
+            actions.appendChild(editBtn);
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'card-btn del';
+            delBtn.textContent = '删除';
+            delBtn.onclick = function(e) { e.stopPropagation(); deleteImage(origIdx); };
+            actions.appendChild(delBtn);
+
+            const viewBtn = document.createElement('button');
+            viewBtn.className = 'card-btn view';
+            viewBtn.textContent = '原图';
+            viewBtn.onclick = function(e) { e.stopPropagation(); window.open(item.dataKey, '_blank'); };
+            actions.appendChild(viewBtn);
+
+            body.appendChild(actions);
+            card.appendChild(body);
+            return card;
         }
 
         // ========== 图片预览 ==========

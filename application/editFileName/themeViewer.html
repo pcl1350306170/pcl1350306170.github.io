@@ -17,6 +17,8 @@
         .prefix-section { margin-bottom: 24px; }
         .prefix-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         .prefix-header-title { font-size: 16px; color: #a78bfa; font-weight: 600; }
+        #prefixList { column-count: 3; column-gap: 12px; }
+        .prefix-card { break-inside: avoid; }
         .prefix-add-btn {
             padding: 6px 14px; background: #7c3aed; color: #fff; border: none;
             border-radius: 6px; cursor: pointer; font-size: 13px; transition: background .2s;
@@ -168,8 +170,20 @@
             background: #7c3aed; color: #fff; border: none; border-radius: 6px;
             padding: 8px 12px; cursor: pointer; font-size: 14px;
         }
+        /* 回到顶部按钮 */
+        .back-to-top {
+            position: fixed; right: 24px; bottom: 24px; z-index: 500;
+            width: 42px; height: 42px; border-radius: 50%;
+            background: #7c3aed; color: #fff; border: none;
+            cursor: pointer; font-size: 20px; line-height: 42px; text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,.3);
+            opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s, background .2s;
+        }
+        .back-to-top.visible { opacity: 1; visibility: visible; }
+        .back-to-top:hover { background: #6d28d9; }
         @media (max-width: 768px) {
             .category { column-count: 1; }
+            #prefixList { column-count: 1; }
             .sidebar { transform: translateX(-100%); }
             .sidebar.open { transform: translateX(0); }
             .main-content { margin-left: 0; }
@@ -182,6 +196,7 @@
 </head>
 <body>
     <button class="sidebar-toggle" id="sidebarToggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰ 导航</button>
+    <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
     <div class="page-wrapper">
     <div class="sidebar" id="sidebar">
         <div class="sidebar-title">分类导航</div>
@@ -935,6 +950,14 @@
         window.addEventListener('resize', function() {
             if (window.innerWidth > 768) document.getElementById('sidebar').classList.remove('open');
         });
+        // 回到顶部按钮显示/隐藏
+        (function() {
+            var btn = document.getElementById('backToTop');
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) { btn.classList.add('visible'); }
+                else { btn.classList.remove('visible'); }
+            });
+        })();
     </script>
 </body>
 </html>
