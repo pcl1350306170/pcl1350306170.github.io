@@ -159,6 +159,8 @@
             max-width: 95vw; max-height: 95vh; object-fit: contain; border-radius: 8px;
         }
         #loading { text-align: center; color: #888; padding: 60px 0; font-size: 16px; }
+        .scroll-sentinel { height: 1px; }
+        .load-more-tip { text-align: center; color: #64748b; padding: 20px; font-size: 13px; }
         @media (max-width: 768px) {
             .gallery { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); padding: 0 10px 40px; }
         }
@@ -201,8 +203,13 @@
     <script>
         // ========== 常量与状态 ==========
         const GDA = GeneralDataApi;
-        let currentDataType = '';
-        let imageList = []; // [{ id, dataKey(url), dataContent(base64) }]
+        let currentDataType = 'cdn-jsdelivr-net-gh-pcl1350306170';
+        let imageList = []; // [{ id, dataKey(url), dataContent(base64) }] — 当前页数据
+        const PAGE_LIMIT = 20;
+        let currentPage = 1;
+        let totalRecords = 0;
+        let isLoadingPage = false;
+        let loadedDataKeys = new Set(); // 跨页去重集合
 
         // ========== 工具函数 ==========
         function escapeHtml(str) {
@@ -553,14 +560,19 @@
             loadAllImages();
         }
 
-        // ========== 加载图片列表 ==========
+        // ========== 分页加载图片列表 ==========
+        var PAGINATED_BASE = ajaxFileDealJavaIP + '/api/v1/general-data/get-by-type';
+
         async function loadAllImages() {
+            currentPage = 1;
+            totalRecords = 0;
+            imageList = [];
+            loadedDataKeys = new Set();
             const container = document.getElementById('container');
             container.innerHTML = '<div id="loading">正在加载数据...</div>';
             document.getElementById('statsInfo').textContent = '';
 
             if (!currentDataType) {
-                // 尝试从 URL 参数或上次使用的 dataType 加载
                 const saved = localStorage.getItem('imageGallery_dataType');
                 if (saved) {
                     currentDataType = saved;
@@ -573,13 +585,21 @@
             }
 
             try {
-                const list = await GDA.getByType(currentDataType);
-                imageList = list.map(d => ({
-                    id: d.id,
-                    dataKey: d.dataKey,
-                    dataContent: d.dataContent
-                }));
+                const res = await axios.get(PAGINATED_BASE, {
+                    params: { dataType: currentDataType, page: 1, limit: PAGE_LIMIT }
+                });
+                const d = res.data;
+                if (d.resultCode !== 200) throw new Error(d.message || '查询失败');
+                const pageData = d.data;
+                totalRecords = pageData.total || 0;
+                const list = pageData.list || [];
+                list.forEach(item => {
+                    imageList.push({ id: item.id, dataKey: item.dataKey, dataContent: item.dataContent });
+                    loadedDataKeys.add(item.dataKey);
+                });
                 localStorage.setItem('imageGallery_dataType', currentDataType);
+                document.getElementById('datatypeBar').style.display = 'block';
+                document.getElementById('datatypeValue').textContent = currentDataType;
             } catch (e) {
                 imageList = [];
                 container.innerHTML = '<div class="empty-state"><p>加载失败: ' + escapeHtml(e.message) + '</p></div>';
@@ -591,8 +611,40 @@
                 return;
             }
 
-            document.getElementById('statsInfo').textContent = '共 ' + imageList.length + ' 张图片';
+            document.getElementById('statsInfo').textContent = '共 ' + totalRecords + ' 张图片，已加载 ' + imageList.length + ' 张';
             renderGallery();
+        }
+
+        async function loadNextPage() {
+            if (isLoadingPage) return;
+            if (imageList.length >= totalRecords) return;
+            isLoadingPage = true;
+            currentPage++;
+            try {
+                const res = await axios.get(PAGINATED_BASE, {
+                    params: { dataType: currentDataType, page: currentPage, limit: PAGE_LIMIT }
+                });
+                const d = res.data;
+                if (d.resultCode !== 200) throw new Error(d.message || '查询失败');
+                const list = (d.data && d.data.list) || [];
+                const newItems = [];
+                list.forEach(item => {
+                    if (!loadedDataKeys.has(item.dataKey)) {
+                        const obj = { id: item.id, dataKey: item.dataKey, dataContent: item.dataContent };
+                        imageList.push(obj);
+                        loadedDataKeys.add(item.dataKey);
+                        newItems.push(obj);
+                    }
+                });
+                document.getElementById('statsInfo').textContent = '共 ' + totalRecords + ' 张图片，已加载 ' + imageList.length + ' 张';
+                if (newItems.length > 0) {
+                    await appendGalleryItems(newItems);
+                }
+            } catch (e) {
+                console.error('加载下一页失败:', e);
+                currentPage--;
+            }
+            isLoadingPage = false;
         }
 
         // ========== 检测图片方向 ==========
@@ -607,48 +659,113 @@
             });
         }
 
+        // 方向缓存：{ dataKey: 'landscape'|'portrait' }
+        const ORIENT_CACHE_KEY = 'imageGallery_orientCache';
+        function loadOrientCache() {
+            try { return JSON.parse(localStorage.getItem(ORIENT_CACHE_KEY) || '{}'); }
+            catch(e) { return {}; }
+        }
+        function saveOrientCache(cache) {
+            try { localStorage.setItem(ORIENT_CACHE_KEY, JSON.stringify(cache)); }
+            catch(e) { /* 存储超限时忽略 */ }
+        }
+
         // ========== 渲染相册 ==========
         async function renderGallery() {
             const container = document.getElementById('container');
             container.innerHTML = '';
 
-            // 检测所有图片方向
-            const oriented = [];
-            for (let i = 0; i < imageList.length; i++) {
-                const item = imageList[i];
-                const src = (item.dataContent && item.dataContent.startsWith('data:')) ? item.dataContent : item.dataKey;
-                const orient = await detectOrientation(src);
-                oriented.push({ item, src, orient, origIdx: i });
-            }
-
-            // 排序：横屏在前，竖屏在后
-            oriented.sort((a, b) => (a.orient === 'landscape' ? 0 : 1) - (b.orient === 'landscape' ? 0 : 1));
-
-            const landscapeItems = oriented.filter(o => o.orient === 'landscape');
-            const portraitItems = oriented.filter(o => o.orient === 'portrait');
-
-            // 渲染横屏分组
-            if (landscapeItems.length > 0) {
-                const header = createSectionHeader('横屏图片', landscapeItems.length, 'landscape');
-                container.appendChild(header);
-                const gallery = document.createElement('div');
-                gallery.className = 'gallery';
-                landscapeItems.forEach(o => gallery.appendChild(createCard(o.item, o.src, o.orient, o.origIdx)));
-                container.appendChild(gallery);
-            }
-
-            // 渲染竖屏分组
-            if (portraitItems.length > 0) {
-                const header = createSectionHeader('竖屏图片', portraitItems.length, 'portrait');
-                container.appendChild(header);
-                const gallery = document.createElement('div');
-                gallery.className = 'gallery';
-                portraitItems.forEach(o => gallery.appendChild(createCard(o.item, o.src, o.orient, o.origIdx)));
-                container.appendChild(gallery);
-            }
-
             if (imageList.length === 0) {
                 container.innerHTML = '<div class="empty-state"><p>暂无图片数据，请先导入</p></div>';
+                return;
+            }
+
+            // 创建主网格
+            const gallery = document.createElement('div');
+            gallery.className = 'gallery';
+            gallery.id = 'mainGallery';
+            container.appendChild(gallery);
+
+            await renderGalleryItems(imageList, gallery, true);
+        }
+
+        // 追加加载更多的图片
+        async function appendGalleryItems(newItems) {
+            let gallery = document.getElementById('mainGallery');
+            if (!gallery) {
+                const container = document.getElementById('container');
+                container.innerHTML = '';
+                gallery = document.createElement('div');
+                gallery.className = 'gallery';
+                gallery.id = 'mainGallery';
+                container.appendChild(gallery);
+            }
+            await renderGalleryItems(newItems, gallery, false);
+        }
+
+        // 渲染图片项到指定网格
+        async function renderGalleryItems(items, gallery, isFirstPage) {
+            const orientCache = loadOrientCache();
+            const oriented = [];
+            const needDetect = [];
+
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const src = (item.dataContent && item.dataContent.startsWith('data:')) ? item.dataContent : item.dataKey;
+                const cached = orientCache[item.dataKey];
+                if (cached) {
+                    oriented.push({ item, src, orient: cached });
+                } else {
+                    needDetect.push({ item, src });
+                }
+            }
+
+            // 并行批量检测未缓存方向（每批 6 张）
+            if (needDetect.length > 0) {
+                const BATCH = 6;
+                for (let b = 0; b < needDetect.length; b += BATCH) {
+                    const batch = needDetect.slice(b, b + BATCH);
+                    const results = await Promise.all(batch.map(async ({ item, src }) => {
+                        const orient = await detectOrientation(src);
+                        return { item, src, orient };
+                    }));
+                    results.forEach(r => {
+                        oriented.push(r);
+                        orientCache[r.item.dataKey] = r.orient;
+                    });
+                }
+                saveOrientCache(orientCache);
+            }
+
+            // 渲染卡片到网格
+            oriented.forEach(({ item, src, orient }) => {
+                const globalIdx = imageList.indexOf(item);
+                gallery.appendChild(createCard(item, src, orient, globalIdx));
+            });
+
+            // 底部：加载更多提示 / 滚动哨兵
+            const container = document.getElementById('container');
+            const oldSentinel = document.getElementById('scrollSentinel');
+            const oldTip = document.getElementById('loadMoreTip');
+            if (oldSentinel) oldSentinel.remove();
+            if (oldTip) oldTip.remove();
+
+            if (imageList.length < totalRecords) {
+                const tip = document.createElement('div');
+                tip.className = 'load-more-tip';
+                tip.id = 'loadMoreTip';
+                tip.textContent = '向下滚动加载更多...';
+                container.appendChild(tip);
+                const sentinel = document.createElement('div');
+                sentinel.className = 'scroll-sentinel';
+                sentinel.id = 'scrollSentinel';
+                container.appendChild(sentinel);
+            } else if (totalRecords > PAGE_LIMIT) {
+                const tip = document.createElement('div');
+                tip.className = 'load-more-tip';
+                tip.id = 'loadMoreTip';
+                tip.textContent = '已全部加载（共 ' + totalRecords + ' 张）';
+                container.appendChild(tip);
             }
         }
 
@@ -723,13 +840,13 @@
             const editBtn = document.createElement('button');
             editBtn.className = 'card-btn edit';
             editBtn.textContent = '编辑';
-            editBtn.onclick = function(e) { e.stopPropagation(); showEditModal(origIdx); };
+            editBtn.onclick = function(e) { e.stopPropagation(); showEditModal(item.dataKey); };
             actions.appendChild(editBtn);
 
             const delBtn = document.createElement('button');
             delBtn.className = 'card-btn del';
             delBtn.textContent = '删除';
-            delBtn.onclick = function(e) { e.stopPropagation(); deleteImage(origIdx); };
+            delBtn.onclick = function(e) { e.stopPropagation(); deleteImage(item.dataKey); };
             actions.appendChild(delBtn);
 
             const viewBtn = document.createElement('button');
@@ -750,8 +867,9 @@
         }
 
         // ========== 编辑图片 ==========
-        function showEditModal(idx) {
-            const item = imageList[idx];
+        function showEditModal(dataKey) {
+            const item = imageList.find(d => d.dataKey === dataKey);
+            if (!item) return;
             openModal(
                 '<h3>编辑图片信息</h3>' +
                 '<label>图片地址（dataKey）：</label>' +
@@ -759,13 +877,14 @@
                 '<div class="hint">修改地址后，图片预览将使用新地址（需确保新地址可访问）</div>' +
                 '<div class="modal-actions">' +
                 '<button class="modal-btn cancel" onclick="closeModal()">取消</button>' +
-                '<button class="modal-btn confirm" id="editSaveBtn" onclick="doEditImage(' + idx + ')">保存</button>' +
+                '<button class="modal-btn confirm" id="editSaveBtn" onclick="doEditImage(\'' + dataKey.replace(/'/g, "\\'") + '\')">保存</button>' +
                 '</div>'
             );
         }
 
-        async function doEditImage(idx) {
-            const item = imageList[idx];
+        async function doEditImage(oldDataKey) {
+            const item = imageList.find(d => d.dataKey === oldDataKey);
+            if (!item) return;
             const newUrl = document.getElementById('editUrl').value.trim();
             if (!newUrl) { alert('地址不能为空'); return; }
             const btn = document.getElementById('editSaveBtn');
@@ -786,8 +905,9 @@
         }
 
         // ========== 删除图片 ==========
-        async function deleteImage(idx) {
-            const item = imageList[idx];
+        async function deleteImage(dataKey) {
+            const item = imageList.find(d => d.dataKey === dataKey);
+            if (!item) return;
             const shortUrl = item.dataKey.length > 50 ? item.dataKey.substring(0, 50) + '...' : item.dataKey;
             if (!confirm('确定删除此图片？\n' + shortUrl)) return;
             try {
@@ -796,16 +916,33 @@
                 } else {
                     await GDA.removeByKey(currentDataType, item.dataKey);
                 }
-                imageList.splice(idx, 1);
-                document.getElementById('statsInfo').textContent = '共 ' + imageList.length + ' 张图片';
+                const idx = imageList.indexOf(item);
+                if (idx > -1) imageList.splice(idx, 1);
+                loadedDataKeys.delete(dataKey);
+                totalRecords = Math.max(0, totalRecords - 1);
+                document.getElementById('statsInfo').textContent = '共 ' + totalRecords + ' 张图片，已加载 ' + imageList.length + ' 张';
                 renderGallery();
             } catch (e) {
                 alert('删除失败: ' + e.message);
             }
         }
 
+        // ========== 滚动加载监听 ==========
+        function initScrollLoad() {
+            window.addEventListener('scroll', function() {
+                if (isLoadingPage) return;
+                if (imageList.length >= totalRecords) return;
+                const scrollBottom = window.innerHeight + window.pageYOffset;
+                const docHeight = document.documentElement.scrollHeight;
+                if (docHeight - scrollBottom < 300) {
+                    loadNextPage();
+                }
+            });
+        }
+
         // ========== 初始化 ==========
         loadAllImages();
+        initScrollLoad();
     </script>
 </body>
 </html>

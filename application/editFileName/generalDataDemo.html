@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <link rel="icon" href="https://raw.githubusercontent.com/pcl1350306170/test-data-backup/refs/heads/main/img/T/头像-蒂法高清-grf6fb.jpg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>General Data CRUD 演示</title>
+    <title>General Data CRUD + 上传 演示</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -48,7 +48,7 @@
     <script src="../../js/GeneralDataApi.js"></script>
 </head>
 <body>
-    <h1>General Data CRUD 演示</h1>
+    <h1>General Data CRUD + 上传 演示</h1>
 
     <!-- 表单 -->
     <div class="panel">
@@ -78,6 +78,24 @@
             <input id="fId" placeholder="用于 update / delete / get-by-id">
             <button onclick="doUpdate()">更新</button>
         </div>
+    </div>
+
+    <!-- 上传面板 -->
+    <div class="panel">
+        <h2>文件上传演示（dataType: demo_test_upload）</h2>
+        <div class="row">
+            <label>选择文件</label>
+            <input id="fFile" type="file" style="padding:6px;">
+            <button class="success" onclick="doUpload()">上传并保存</button>
+        </div>
+        <div class="row">
+            <label>dataKey</label>
+            <input id="fUploadKey" value="" placeholder="可选，用于 saveOrUpdate">
+        </div>
+        <div class="row" style="margin-top:4px;">
+            <button class="success" onclick="doQueryUpload()">查询上传记录</button>
+        </div>
+        <div id="uploadPreview" style="margin-top:8px;font-size:13px;color:#94a3b8;"></div>
     </div>
 
     <!-- 日志 -->
@@ -189,6 +207,81 @@
                     document.getElementById('fType').value = item.dataType || '';
                     document.getElementById('fKey').value = item.dataKey || '';
                     document.getElementById('fContent').value = typeof item.dataContent === 'string' ? item.dataContent : JSON.stringify(item.dataContent);
+                })
+                .catch(function (e) { log('<<< 查询失败: ' + e.message, 'err'); });
+        }
+
+        // ========== 8. 文件上传并保存到 GeneralData ==========
+        function doUpload() {
+            var fileInput = document.getElementById('fFile');
+            if (!fileInput.files.length) return log('请先选择文件', 'err');
+
+            var formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            var fileName = fileInput.files[0].name;
+
+            log('>>> 上传文件: ' + fileName + ' (' + (fileInput.files[0].size / 1024).toFixed(1) + ' KB)', 'info');
+
+            axios.post(ajaxFileDealJavaIP + '/blog-api/v1/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            }).then(function (res) {
+                var d = res.data;
+                if (d && d.resultCode === 200 && d.data) {
+                    var fileUrl = d.data.fileUrl;
+                    var fullUrl = ajaxFileDealJavaIP + fileUrl;
+                    log('<<< 上传成功: ' + fileUrl, 'ok');
+                    log('    完整地址: ' + fullUrl, 'ok');
+
+                    // 预览图片
+                    var previewEl = document.getElementById('uploadPreview');
+                    if (fileUrl.match(/\.(png|jpe?g|gif|webp|bmp|svg)$/i)) {
+                        previewEl.innerHTML = '<img src="' + fullUrl + '" style="max-width:300px;max-height:200px;border-radius:6px;border:1px solid #1f3056;margin-top:4px;" />';
+                    } else {
+                        previewEl.innerHTML = '<span style="color:#60a5fa;">文件: ' + d.data.fileName + ' (' + d.data.fileSize + ' bytes)</span>';
+                    }
+
+                    // 将上传结果保存到 GeneralData
+                    var dataKey = document.getElementById('fUploadKey').value.trim();
+                    var contentObj = {
+                        fileName: d.data.fileName,
+                        newFileName: d.data.newFileName,
+                        fileUrl: fileUrl,
+                        fullUrl: fullUrl,
+                        fileSize: d.data.fileSize,
+                        uploadTime: new Date().toISOString()
+                    };
+
+                    var payload = {
+                        dataType: 'demo_test_upload',
+                        dataContent: JSON.stringify(contentObj)
+                    };
+                    if (dataKey) payload.dataKey = dataKey;
+
+                    log('>>> 保存到 GeneralData (dataType=demo_test_upload)', 'info');
+                    return GeneralDataApi.save(payload);
+                } else {
+                    throw new Error('上传接口返回异常: ' + JSON.stringify(d));
+                }
+            }).then(function (saveRes) {
+                if (saveRes && saveRes.data && saveRes.data.id) {
+                    log('<<< 保存成功, id=' + saveRes.data.id, 'ok');
+                }
+            }).catch(function (e) {
+                log('<<< 上传/保存失败: ' + (e.message || e), 'err');
+            });
+        }
+
+        // ========== 9. 查询上传记录 ==========
+        function doQueryUpload() {
+            log('>>> GeneralDataApi.getByType("demo_test_upload")', 'info');
+            GeneralDataApi.getByType('demo_test_upload')
+                .then(function (list) {
+                    log('<<< 查询上传记录，共 ' + list.length + ' 条:', 'ok');
+                    list.forEach(function (item) {
+                        var content = typeof item.dataContent === 'string'
+                            ? JSON.parse(item.dataContent) : item.dataContent;
+                        log('  [id=' + item.id + '] ' + (content.fileName || '-') + ' -> ' + (content.fullUrl || content.fileUrl || '-'));
+                    });
                 })
                 .catch(function (e) { log('<<< 查询失败: ' + e.message, 'err'); });
         }
