@@ -362,24 +362,7 @@
             urls = [...new Set(urls)];
             const inputDupCount = beforeDedup - urls.length;
 
-            // 2. 与已保存数据去重（对比 dataKey）
-            let existingDupCount = 0;
-            if (imageList.length > 0) {
-                const existingKeys = new Set(imageList.map(d => d.dataKey));
-                const filtered = urls.filter(u => !existingKeys.has(u));
-                existingDupCount = urls.length - filtered.length;
-                urls = filtered;
-            }
-
-            if (urls.length === 0) {
-                let msg = '所有地址均已跳过';
-                if (inputDupCount > 0) msg += '（重复 ' + inputDupCount + ' 条）';
-                if (existingDupCount > 0) msg += '（已存在 ' + existingDupCount + ' 条）';
-                alert(msg);
-                btn.disabled = false; btn.textContent = '开始导入';
-                return;
-            }
-
+            // 确定 dataType（接口去重需要）
             let dataType = document.getElementById('importDataType').value.trim();
             if (!dataType) {
                 dataType = deriveDataType(urls[0]);
@@ -387,6 +370,27 @@
 
             const btn = document.getElementById('importBtn');
             btn.disabled = true; btn.textContent = '导入中...';
+
+            // 2. 调用接口去重：获取不存在的 dataKey 列表
+            let apiDedupCount = 0;
+            try {
+                const notExistKeys = await GDA.checkKeys(dataType, urls);
+                console.log('check-keys 返回:', notExistKeys);
+                const notExistSet = new Set(notExistKeys || []);
+                apiDedupCount = urls.length - notExistSet.size;
+                urls = urls.filter(u => notExistSet.has(u));
+            } catch (e) {
+                console.warn('接口去重失败，将使用原始列表继续:', e.message);
+            }
+
+            if (urls.length === 0) {
+                let msg = '所有地址均已跳过';
+                if (inputDupCount > 0) msg += '（输入重复 ' + inputDupCount + ' 条）';
+                if (apiDedupCount > 0) msg += '（已存在 ' + apiDedupCount + ' 条）';
+                alert(msg);
+                btn.disabled = false; btn.textContent = '开始导入';
+                return;
+            }
 
             const progressSection = document.getElementById('progressSection');
             const progressBar = document.getElementById('progressBar');
@@ -399,8 +403,8 @@
 
             const total = urls.length;
             let dupInfo = '';
-            if (inputDupCount > 0 || existingDupCount > 0) {
-                dupInfo = '（去重：输入重复 ' + inputDupCount + '，已存在 ' + existingDupCount + '，跳过）';
+            if (inputDupCount > 0 || apiDedupCount > 0) {
+                dupInfo = '（去重：输入重复 ' + inputDupCount + '，已存在 ' + apiDedupCount + '，跳过）';
             }
             progressText.textContent = '待处理 ' + total + ' 张' + dupInfo;
             let savedCount = 0;

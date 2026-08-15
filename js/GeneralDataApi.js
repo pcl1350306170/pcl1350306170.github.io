@@ -30,6 +30,7 @@
  * | GET  | /delete?id=       | 逻辑删除                                  |
  * | GET  | /get-by-id?id=    | 按 ID 查询                                |
  * | GET  | /get-by-type?dataType= | 按分类查询全部数据                    |
+ * | POST | /check-keys       | 批量检查 dataKey 是否已存在，返回不存在的列表 |
  */
 var GeneralDataApi = (function () {
     var BASE = ajaxFileDealJavaIP + '/api/v1/general-data';
@@ -174,6 +175,24 @@ var GeneralDataApi = (function () {
                 }
                 return Promise.reject(new Error('未找到 dataKey=' + dataKey + ' 的记录'));
             });
+        },
+
+        /**
+         * 批量检查 dataKey 是否已存在
+         * @param {string} dataType - 数据分类
+         * @param {string[]} dataKeys - 要检查的 dataKey 数组
+         * @returns {Promise} resolve(data) - data 为不存在的 dataKey 数组
+         */
+        checkKeys: function (dataType, dataKeys) {
+            return axios.post(BASE + '/check-keys', { dataType: dataType, dataKeys: dataKeys }, { headers: HEADERS })
+                .then(function (res) {
+                    var d = res.data;
+                    if (d && d.resultCode === 200) {
+                        return d.data || [];
+                    }
+                    return Promise.reject(new Error((d && d.message) || 'check-keys 失败'));
+                })
+                .catch(_catch);
         },
 
         /**
