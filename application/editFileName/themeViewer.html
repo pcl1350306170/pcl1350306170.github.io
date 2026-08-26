@@ -86,8 +86,11 @@
         .item-btn.copy { background: #7c3aed; }
         .item-btn.copy:hover { background: #6d28d9; }
         .item-btn.copy.copied { background: #22c55e; }
+        .copy-count-badge { font-size: 11px; color: #a78bfa; text-align: center; }
         .item-btn.edit { background: #0ea5e9; }
         .item-btn.edit:hover { background: #0284c7; }
+        .item-btn.reset { background: #f59e0b; }
+        .item-btn.reset:hover { background: #d97706; }
         .item-btn.del { background: #ef4444; }
         .item-btn.del:hover { background: #dc2626; }
         .add-item-btn {
@@ -238,25 +241,38 @@
         const GDA = GeneralDataApi;
 
         // ========== 前缀管理 ==========
-        // 解析前缀 JSON：{ content: '实际内容', active: true/false }
+        // 解析前缀 JSON：{ content: '实际内容', active: true/false, copyCount, lastCopyTime }
         function parsePrefixData(jsonStr) {
             try {
                 const obj = JSON.parse(jsonStr);
-                return { content: obj.content || '', active: !!obj.active };
+                return { content: obj.content || '', active: !!obj.active, copyCount: obj.copyCount || 0, lastCopyTime: obj.lastCopyTime || null };
             } catch(e) {
                 // 兼容旧数据（纯文本）
-                return { content: jsonStr || '', active: false };
+                return { content: jsonStr || '', active: false, copyCount: 0, lastCopyTime: null };
             }
         }
-        function buildPrefixJson(content, active) {
-            return JSON.stringify({ content: content, active: active });
+        function buildPrefixJson(content, active, copyCount, lastCopyTime) {
+            return JSON.stringify({ content: content, active: active, copyCount: copyCount || 0, lastCopyTime: lastCopyTime || null });
+        }
+        // ========== 条目数据解析（含复制次数） ==========
+        function parseItemData(dataContent) {
+            try {
+                const obj = JSON.parse(dataContent);
+                if (obj && typeof obj.content === 'string') {
+                    return { content: obj.content, copyCount: obj.copyCount || 0, lastCopyTime: obj.lastCopyTime || null };
+                }
+            } catch(e) {}
+            return { content: dataContent || '', copyCount: 0, lastCopyTime: null };
+        }
+        function buildItemJson(content, copyCount, lastCopyTime) {
+            return JSON.stringify({ content: content, copyCount: copyCount, lastCopyTime: lastCopyTime });
         }
         async function loadPrefixes() {
             try {
                 const list = await GDA.getByType(PREFIX_TYPE);
                 prefixes = list.map(d => {
                     const parsed = parsePrefixData(d.dataContent);
-                    return { id: d.id, dataKey: d.dataKey, content: parsed.content, active: parsed.active };
+                    return { id: d.id, dataKey: d.dataKey, content: parsed.content, active: parsed.active, copyCount: parsed.copyCount, lastCopyTime: parsed.lastCopyTime };
                 });
             } catch(e) { prefixes = []; }
             renderPrefixList();
@@ -290,6 +306,22 @@
                 card.appendChild(content);
                 const actions = document.createElement('div');
                 actions.className = 'prefix-card-actions';
+                // 复制次数显示
+                const countBadge = document.createElement('span');
+                countBadge.className = 'copy-count-badge';
+                countBadge.title = p.lastCopyTime ? '最近复制: ' + p.lastCopyTime : '尚未复制';
+                countBadge.textContent = '复制次数：' + (p.copyCount || 0) + '次';
+                actions.appendChild(countBadge);
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'item-btn copy';
+                copyBtn.textContent = '复制内容';
+                copyBtn.onclick = () => copyPrefixContent(p, copyBtn);
+                actions.appendChild(copyBtn);
+                const resetBtn = document.createElement('button');
+                resetBtn.className = 'item-btn reset';
+                resetBtn.textContent = '重置次数';
+                resetBtn.onclick = () => resetPrefixCopyCount(p, resetBtn);
+                actions.appendChild(resetBtn);
                 if (!p.active) {
                     const activateBtn = document.createElement('button');
                     activateBtn.className = 'item-btn copy';
@@ -335,12 +367,12 @@
                 if (isActive) {
                     for (const p of prefixes) {
                         if (p.active) {
-                            await GDA.update(p.id, { dataContent: buildPrefixJson(p.content, false) });
+                            await GDA.update(p.id, { dataContent: buildPrefixJson(p.content, false, p.copyCount, p.lastCopyTime) });
                             p.active = false;
                         }
                     }
                 }
-                const jsonContent = buildPrefixJson(content, isActive);
+                const jsonContent = buildPrefixJson(content, isActive, 0, null);
                 const res = await GDA.save({ dataType: PREFIX_TYPE, dataKey: name, dataContent: jsonContent });
                 // 兼容不同返回格式：尝试 res.data.id / res.id / 回查
                 let newId = (res && res.data && res.data.id) || (res && res.id) || null;
@@ -374,7 +406,7 @@
             btn.disabled = true; btn.textContent = '保存中...';
             try {
                 const p = prefixes.find(x => x.dataKey === oldKey);
-                const jsonContent = buildPrefixJson(newContent, p ? p.active : false);
+                const jsonContent = buildPrefixJson(newContent, p ? p.active : false, p ? p.copyCount : 0, p ? p.lastCopyTime : null);
                 if (p && p.id) {
                     await GDA.update(p.id, { dataKey: newName, dataContent: jsonContent });
                 } else {
@@ -407,7 +439,7 @@
                 for (const p of prefixes) {
                     const newActive = (p.dataKey === name);
                     if (p.active !== newActive) {
-                        promises.push(GDA.update(p.id, { dataContent: buildPrefixJson(p.content, newActive) }));
+                        promises.push(GDA.update(p.id, { dataContent: buildPrefixJson(p.content, newActive, p.copyCount, p.lastCopyTime) }));
                         p.active = newActive;
                     }
                 }
@@ -425,6 +457,46 @@
             }
             prefixes = prefixes.filter(x => x.dataKey !== key);
             renderPrefixList();
+        }
+        function copyPrefixContent(p, btn) {
+            const text = p.content || '';
+            const onSuccess = () => {
+                p.copyCount = (p.copyCount || 0) + 1;
+                p.lastCopyTime = new Date().toLocaleString('zh-CN');
+                if (p.id) {
+                    GDA.update(p.id, { dataContent: buildPrefixJson(p.content, p.active, p.copyCount, p.lastCopyTime) }).catch(() => {});
+                }
+                btn.textContent = '已复制 ✓ (' + p.copyCount + ')'; btn.classList.add('copied');
+                // 更新卡片上的复制次数显示
+                const badge = btn.closest('.prefix-card-actions').querySelector('.copy-count-badge');
+                if (badge) {
+                    badge.textContent = '复制次数：' + p.copyCount + '次';
+                    badge.title = '最近复制: ' + p.lastCopyTime;
+                }
+                setTimeout(() => { btn.textContent = '复制内容'; btn.classList.remove('copied'); }, 1500);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+                    if (fallbackCopy(text)) onSuccess(); else alert('复制失败，请手动复制');
+                });
+            } else {
+                if (fallbackCopy(text)) onSuccess(); else alert('复制失败，请手动复制');
+            }
+        }
+        function resetPrefixCopyCount(p, btn) {
+            if (!confirm('确定重置前缀「' + p.dataKey + '」的复制次数？')) return;
+            p.copyCount = 0;
+            p.lastCopyTime = null;
+            if (p.id) {
+                GDA.update(p.id, { dataContent: buildPrefixJson(p.content, p.active, 0, null) }).catch(() => {});
+            }
+            const badge = btn.closest('.prefix-card-actions').querySelector('.copy-count-badge');
+            if (badge) {
+                badge.textContent = '复制次数：0次';
+                badge.title = '尚未复制';
+            }
+            btn.textContent = '已重置 ✓';
+            setTimeout(() => { btn.textContent = '重置次数'; }, 1200);
         }
 
         // ========== 加载主题数据 ==========
@@ -451,9 +523,10 @@
                     promises.push(
                         GDA.getByType(dt)
                             .then(list => {
-                                themeItems[key] = list.map(d => ({
-                                    id: d.id, dataKey: d.dataKey, dataContent: d.dataContent
-                                }));
+                                themeItems[key] = list.map(d => {
+                                    const parsed = parseItemData(d.dataContent);
+                                    return { id: d.id, dataKey: d.dataKey, dataContent: d.dataContent, content: parsed.content, copyCount: parsed.copyCount, lastCopyTime: parsed.lastCopyTime };
+                                });
                             }).catch(() => {})
                     );
                 });
@@ -510,14 +583,22 @@
                         nameDiv.innerHTML = '<span class="seq">[' + (idx + 1) + ']</span>' + escapeHtml(item.dataKey);
                         const descDiv = document.createElement('div');
                         descDiv.className = 'item-desc';
-                        descDiv.textContent = item.dataContent;
+                        descDiv.textContent = item.content || '';
                         info.appendChild(nameDiv);
                         info.appendChild(descDiv);
                         const actions = document.createElement('div');
                         actions.className = 'item-actions';
+                        const countBadge = document.createElement('span');
+                        countBadge.className = 'copy-count-badge';
+                        countBadge.title = item.lastCopyTime ? '最近复制: ' + item.lastCopyTime : '尚未复制';
+                        countBadge.textContent = '复制次数：' + (item.copyCount || 0) + '次';
+                        actions.appendChild(countBadge);
                         const copyBtn = document.createElement('button');
-                        copyBtn.className = 'item-btn copy'; copyBtn.textContent = '复制描述';
-                        copyBtn.onclick = () => copyDesc(item.dataContent, copyBtn);
+                        copyBtn.className = 'item-btn copy'; copyBtn.textContent = '复制内容';
+                        copyBtn.onclick = () => copyDesc(item, copyBtn);
+                        const resetBtn = document.createElement('button');
+                        resetBtn.className = 'item-btn reset'; resetBtn.textContent = '重置次数';
+                        resetBtn.onclick = () => resetCopyCount(item, resetBtn);
                         const editBtn = document.createElement('button');
                         editBtn.className = 'item-btn edit'; editBtn.textContent = '编辑';
                         editBtn.onclick = () => showEditItemModal(ti, ci, idx);
@@ -525,6 +606,7 @@
                         delItemBtn.className = 'item-btn del'; delItemBtn.textContent = '删除';
                         delItemBtn.onclick = () => deleteItem(ti, ci, idx);
                         actions.appendChild(copyBtn);
+                        actions.appendChild(resetBtn);
                         actions.appendChild(editBtn);
                         actions.appendChild(delItemBtn);
                         row.appendChild(info);
@@ -637,13 +719,24 @@
             document.body.removeChild(ta);
             return ok;
         }
-        function copyDesc(desc, btn) {
+        function copyDesc(item, btn) {
             const activePrefix = prefixes.find(p => p.active);
             const prefix = activePrefix ? activePrefix.content : '';
-            const text = prefix + desc;
+            const text = prefix + (item.content || '');
             const onSuccess = () => {
-                btn.textContent = '已复制 ✓'; btn.classList.add('copied');
-                setTimeout(() => { btn.textContent = '复制描述'; btn.classList.remove('copied'); }, 1500);
+                item.copyCount = (item.copyCount || 0) + 1;
+                item.lastCopyTime = new Date().toLocaleString('zh-CN');
+                if (item.id) {
+                    GDA.update(item.id, { dataContent: buildItemJson(item.content, item.copyCount, item.lastCopyTime) }).catch(() => {});
+                }
+                btn.textContent = '已复制 ✓ (' + item.copyCount + ')'; btn.classList.add('copied');
+                // 更新卡片上的复制次数显示
+                const badge = btn.closest('.item').querySelector('.copy-count-badge');
+                if (badge) {
+                    badge.textContent = '复制次数：' + item.copyCount + '次';
+                    badge.title = '最近复制: ' + item.lastCopyTime;
+                }
+                setTimeout(() => { btn.textContent = '复制内容'; btn.classList.remove('copied'); }, 1500);
             };
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
@@ -652,6 +745,21 @@
             } else {
                 if (fallbackCopy(text)) onSuccess(); else alert('复制失败，请手动复制');
             }
+        }
+        function resetCopyCount(item, btn) {
+            if (!confirm('确定重置「' + item.dataKey + '」的复制次数？')) return;
+            item.copyCount = 0;
+            item.lastCopyTime = null;
+            if (item.id) {
+                GDA.update(item.id, { dataContent: buildItemJson(item.content, 0, null) }).catch(() => {});
+            }
+            const badge = btn.closest('.item').querySelector('.copy-count-badge');
+            if (badge) {
+                badge.textContent = '复制次数：0次';
+                badge.title = '尚未复制';
+            }
+            btn.textContent = '已重置 ✓';
+            setTimeout(() => { btn.textContent = '重置次数'; }, 1200);
         }
 
         // ========== 模态框 ==========
@@ -705,7 +813,7 @@
                         const items = cat['内容'] || [];
                         for (let ii = 0; ii < items.length; ii++) {
                             const item = items[ii];
-                            await GDA.saveOrUpdate(dt, item['名称'] || ('item_' + ii), item['描述'] || '');
+                            await GDA.saveOrUpdate(dt, item['名称'] || ('item_' + ii), buildItemJson(item['描述'] || '', 0, null));
                         }
                         done++;
                         progress.textContent = '导入进度: ' + done + ' / ' + total + ' 个类别';
@@ -768,7 +876,10 @@
                         if (!themeItems[key]) themeItems[key] = [];
                         // 重新加载该类别的数据
                         const list = await GDA.getByType(dataType);
-                        themeItems[key] = list.map(d => ({ id: d.id, dataKey: d.dataKey, dataContent: d.dataContent }));
+                        themeItems[key] = list.map(d => {
+                            const parsed = parseItemData(d.dataContent);
+                            return { id: d.id, dataKey: d.dataKey, dataContent: d.dataContent, content: parsed.content, copyCount: parsed.copyCount, lastCopyTime: parsed.lastCopyTime };
+                        });
                     }
                 }
                 progress.textContent = '导入完成！共 ' + batchList.length + ' 条';
@@ -850,9 +961,9 @@
             const theme = themeStructure[themeIdx];
             const catName = theme.类别[catIdx];
             const dt = 'theme_' + theme.大类 + '_' + catName;
-            const res = await GDA.save({ dataType: dt, dataKey: name, dataContent: desc });
+            const res = await GDA.save({ dataType: dt, dataKey: name, dataContent: buildItemJson(desc, 0, null) });
             const key = theme.大类 + '|' + catName;
-            themeItems[key].push({ id: res.data ? res.data.id : null, dataKey: name, dataContent: desc });
+            themeItems[key].push({ id: res.data ? res.data.id : null, dataKey: name, dataContent: buildItemJson(desc, 0, null), content: desc, copyCount: 0, lastCopyTime: null });
             closeModal(); renderAll();
         }
 
@@ -865,7 +976,7 @@
             openModal(
                 '<h3>编辑条目</h3>' +
                 '<label>名称：</label><input id="editItemName" value="' + escapeHtml(item.dataKey) + '">' +
-                '<label>描述：</label><textarea id="editItemDesc" rows="6">' + escapeHtml(item.dataContent) + '</textarea>' +
+                '<label>描述：</label><textarea id="editItemDesc" rows="6">' + escapeHtml(item.content || '') + '</textarea>' +
                 '<div class="modal-actions">' +
                 '<button class="modal-btn cancel" onclick="closeModal()">取消</button>' +
                 '<button class="modal-btn confirm" id="editConfirmBtn" onclick="doEditItem(' + themeIdx + ',' + catIdx + ',' + itemIdx + ')">保存</button>' +
@@ -891,12 +1002,13 @@
                     if (dup) { alert('该名称已存在'); btn.disabled = false; btn.textContent = '保存'; return; }
                 }
                 if (item.id) {
-                    await GDA.update(item.id, { dataContent: newDesc, dataKey: newName });
+                    await GDA.update(item.id, { dataContent: buildItemJson(newDesc, item.copyCount || 0, item.lastCopyTime || null), dataKey: newName });
                 } else {
-                    await GDA.saveOrUpdate(dt, newName, newDesc);
+                    await GDA.saveOrUpdate(dt, newName, buildItemJson(newDesc, item.copyCount || 0, item.lastCopyTime || null));
                 }
                 item.dataKey = newName;
-                item.dataContent = newDesc;
+                item.content = newDesc;
+                item.dataContent = buildItemJson(newDesc, item.copyCount || 0, item.lastCopyTime || null);
                 closeModal(); renderAll();
             } catch (e) { alert('保存失败: ' + e.message); btn.disabled = false; btn.textContent = '保存'; }
         }
