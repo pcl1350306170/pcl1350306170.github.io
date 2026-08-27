@@ -238,41 +238,45 @@
 
         /**
          * 获取远程图片并压缩为 base64
-         * 超过 1MB 的图片自动压缩，逐步降低质量
+         * 保证最终大小不超过 300KB：先逐步降低质量，仍超限则逐步缩小分辨率重绘
          */
         function fetchImageAsBase64(url, maxWidth = 1920, quality = 0.85) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.crossOrigin = 'Anonymous';
                 img.onload = function () {
+                    const SIZE_LIMIT_KB = 300; // 300KB
+                    const sizeKB = b64 => b64.length * 0.75 / 1024;
+
+                    // 在指定尺寸下绘制并输出 base64，同时返回实际宽高便于后续缩小
+                    const renderAt = (rw, rh, q) => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = rw;
+                        canvas.height = rh;
+                        canvas.getContext('2d').drawImage(img, 0, 0, rw, rh);
+                        return { base64: canvas.toDataURL('image/jpeg', q), w: rw, h: rh };
+                    };
+
                     let w = img.naturalWidth, h = img.naturalHeight;
                     // 如果宽度超过限制，等比缩放
                     if (w > maxWidth) {
                         h = Math.round(h * maxWidth / w);
                         w = maxWidth;
                     }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    // 先尝试较高质量
-                    let base64 = canvas.toDataURL('image/jpeg', quality);
-                    // 超过 1MB 则逐步降低质量压缩
-                    const SIZE_LIMIT = 1; // 1MB
-                    let sizeMB = base64.length * 0.75 / 1024 / 1024;
-                    if (sizeMB > SIZE_LIMIT) {
-                        base64 = canvas.toDataURL('image/jpeg', 0.6);
-                        sizeMB = base64.length * 0.75 / 1024 / 1024;
+
+                    // 先尝试较高质量，超过 300KB 则逐步降低质量压缩（0.85 → 0.6 → 0.4 → 0.2）
+                    let result = renderAt(w, h, quality);
+                    if (sizeKB(result.base64) > SIZE_LIMIT_KB) result = renderAt(w, h, 0.6);
+                    if (sizeKB(result.base64) > SIZE_LIMIT_KB) result = renderAt(w, h, 0.4);
+                    if (sizeKB(result.base64) > SIZE_LIMIT_KB) result = renderAt(w, h, 0.2);
+
+                    // 质量已到下限仍超过 300KB，则逐步缩小分辨率（每次缩到 75%）重绘，直到达标或无法再缩
+                    while (sizeKB(result.base64) > SIZE_LIMIT_KB && result.w > 80 && result.h > 80) {
+                        const rw = Math.round(result.w * 0.75);
+                        const rh = Math.round(result.h * 0.75);
+                        result = renderAt(rw, rh, 0.2);
                     }
-                    if (sizeMB > SIZE_LIMIT) {
-                        base64 = canvas.toDataURL('image/jpeg', 0.4);
-                        sizeMB = base64.length * 0.75 / 1024 / 1024;
-                    }
-                    if (sizeMB > SIZE_LIMIT) {
-                        base64 = canvas.toDataURL('image/jpeg', 0.2);
-                    }
-                    resolve(base64);
+                    resolve(result.base64);
                 };
                 img.onerror = function () { reject(new Error('图片加载失败: ' + url)); };
                 // 加时间戳防缓存
@@ -323,7 +327,7 @@
                 '<h3>导入图片地址</h3>' +
                 '<label>图片地址列表（每行一个 URL）：</label>' +
                 '<textarea id="importUrls" rows="10" placeholder="粘贴图片地址，每行一个&#10;例如：&#10;https://raw.githubusercontent.com/xxx/img1.png&#10;https://raw.githubusercontent.com/xxx/img2.jpg"></textarea>' +
-                '<div class="hint">系统会自动获取远程图片并压缩为 base64 格式保存。超过 10MB 的图片会自动压缩。</div>' +
+                '<div class="hint">系统会自动获取远程图片并压缩为 base64 格式保存，保存后单张不超过 300KB。</div>' +
                 '<label>dataType（数据分类，留空则自动从 URL 推导）：</label>' +
                 '<input id="importDataType" value="' + escapeHtml(defaultDT) + '" placeholder="留空自动推导">' +
                 '<div class="modal-actions">' +

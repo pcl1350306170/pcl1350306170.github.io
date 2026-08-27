@@ -36,7 +36,7 @@
             font-size: 11px; padding: 2px 8px; border-radius: 10px;
             background: #22c55e; color: #fff; white-space: nowrap;
         }
-        .prefix-card-content { font-size: 13px; color: #94a3b8; line-height: 1.5; word-break: break-all; margin-bottom: 8px; }
+        .prefix-card-content { font-size: 13px; color: #94a3b8; line-height: 1.5; word-break: break-all; margin-bottom: 8px; white-space: pre-wrap; }
         .prefix-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
         .prefix-card-actions .item-btn { font-size: 11px; padding: 4px 10px; }
         .prefix-empty { text-align: center; color: #4a5568; padding: 20px; font-size: 13px; }
@@ -67,6 +67,12 @@
         }
         .cat-del { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; }
         .cat-del:hover { background: rgba(239,68,68,.15); }
+        .category-title { cursor: pointer; }
+        .cat-toggle { font-size: 11px; color: #64748b; display: inline-block; transition: transform .2s; }
+        .category:not(.collapsed) .cat-toggle { transform: rotate(90deg); }
+        .cat-count { font-size: 12px; color: #64748b; font-weight: 400; margin-left: 8px; }
+        .cat-loading { column-span: all; font-size: 13px; color: #64748b; padding: 6px 0; }
+        .category.collapsed { column-count: 1; margin-bottom: 12px; }
         /* 条目 */
         .item {
             background: #16213e; border-radius: 8px; padding: 14px 18px; margin-bottom: 10px;
@@ -77,7 +83,7 @@
         .item-info { flex: 1; min-width: 0; }
         .item-name { font-size: 16px; font-weight: 600; color: #e2e8f0; margin-bottom: 6px; }
         .item-name .seq { color: #64748b; font-weight: 400; margin-right: 6px; }
-        .item-desc { font-size: 14px; color: #94a3b8; line-height: 1.6; word-break: break-all; }
+        .item-desc { font-size: 14px; color: #94a3b8; line-height: 1.6; word-break: break-all; white-space: pre-wrap; }
         .item-actions { flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; align-self: center; }
         .item-btn {
             padding: 5px 12px; border: none; border-radius: 5px; cursor: pointer;
@@ -108,7 +114,7 @@
         .modal-overlay.active { display: flex; }
         .modal {
             background: #1e293b; border: 1px solid #334155; border-radius: 12px;
-            padding: 24px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;
+            padding: 24px; width: 90%; max-width: 900px; max-height: 80vh; overflow-y: auto;
         }
         .modal h3 { color: #c084fc; margin-bottom: 16px; font-size: 18px; }
         .modal label { display: block; color: #a78bfa; font-size: 13px; margin-bottom: 4px; margin-top: 12px; }
@@ -236,6 +242,7 @@
         let themeStructure = [];
         let themeItems = {};
         let prefixes = []; // { id, dataKey, content, active }
+        let expandedCats = new Set(); // 已展开类别的 key 集合（大类|类别）
 
         // GDA = GeneralDataApi 的简写别名
         const GDA = GeneralDataApi;
@@ -500,6 +507,7 @@
         }
 
         // ========== 加载主题数据 ==========
+        // 懒加载：首屏只请求结构数据，各类别条目在展开时按需加载（方案B）
         async function loadAllData() {
             const container = document.getElementById('container');
             container.innerHTML = '<div id="loading">正在加载数据...</div>';
@@ -507,32 +515,48 @@
                 const list = await GDA.getByType(STRUCT_TYPE);
                 themeStructure = list.length > 0 ? JSON.parse(list[0].dataContent || '[]') : [];
             } catch (e) { themeStructure = []; }
+            // 重置已加载数据与展开状态，等待展开时按需加载
+            themeItems = {};
+            expandedCats.clear();
 
             if (themeStructure.length === 0) {
                 container.innerHTML = '<div class="empty-state"><p>暂无数据，请先导入 JSON 数据</p></div>';
                 return;
             }
-            // 并行加载所有类别的条目
-            const promises = [];
-            themeItems = {};
-            themeStructure.forEach(theme => {
-                (theme.类别 || []).forEach(catName => {
-                    const key = theme.大类 + '|' + catName;
-                    themeItems[key] = [];
-                    const dt = 'theme_' + theme.大类 + '_' + catName;
-                    promises.push(
-                        GDA.getByType(dt)
-                            .then(list => {
-                                themeItems[key] = list.map(d => {
-                                    const parsed = parseItemData(d.dataContent);
-                                    return { id: d.id, dataKey: d.dataKey, dataContent: d.dataContent, content: parsed.content, copyCount: parsed.copyCount, lastCopyTime: parsed.lastCopyTime };
-                                });
-                            }).catch(() => {})
-                    );
-                });
-            });
-            await Promise.all(promises);
             renderAll();
+        }
+        // 原始记录 → 本地条目对象
+        function mapRawItems(list) {
+            return list.map(d => {
+                const parsed = parseItemData(d.dataContent);
+                return { id: d.id, dataKey: d.dataKey, dataContent: d.dataContent, content: parsed.content, copyCount: parsed.copyCount, lastCopyTime: parsed.lastCopyTime };
+            });
+        }
+        // 按需加载某类别的条目（已加载则跳过）
+        async function ensureCatLoaded(themeName, catName) {
+            const key = themeName + '|' + catName;
+            if (themeItems[key]) return;
+            const dt = 'theme_' + themeName + '_' + catName;
+            try {
+                themeItems[key] = mapRawItems(await GDA.getByType(dt));
+            } catch (e) { themeItems[key] = []; }
+        }
+        // 展开/收起类别（方案A：按需渲染 + 方案B：按需请求）
+        async function toggleCategory(ti, ci) {
+            const theme = themeStructure[ti];
+            const catName = theme.类别[ci];
+            const key = theme.大类 + '|' + catName;
+            if (expandedCats.has(key)) {
+                expandedCats.delete(key);
+                renderAll();
+                return;
+            }
+            expandedCats.add(key);
+            renderAll(); // 先渲染出"加载中"占位
+            if (!themeItems[key]) {
+                await ensureCatLoaded(theme.大类, catName);
+                if (expandedCats.has(key)) renderAll();
+            }
         }
 
         // ========== 渲染 ==========
@@ -557,22 +581,43 @@
                 group.appendChild(header);
                 // 各类别
                 (theme.类别 || []).forEach((catName, ci) => {
+                    const key = theme.大类 + '|' + catName;
+                    const expanded = expandedCats.has(key);
                     const section = document.createElement('div');
-                    section.className = 'category';
+                    section.className = 'category' + (expanded ? '' : ' collapsed');
                     section.id = 'cat_' + ti + '_' + ci;
                     const catTitle = document.createElement('div');
                     catTitle.className = 'category-title';
+                    catTitle.title = expanded ? '点击收起' : '点击展开并加载条目';
+                    catTitle.onclick = () => toggleCategory(ti, ci);
+                    const toggleIcon = document.createElement('span');
+                    toggleIcon.className = 'cat-toggle';
+                    toggleIcon.textContent = '▶';
                     const catText = document.createElement('span');
                     catText.textContent = catName;
+                    // 已加载的类别显示条目数量
+                    if (themeItems[key]) {
+                        const countTag = document.createElement('span');
+                        countTag.className = 'cat-count';
+                        countTag.textContent = '(' + themeItems[key].length + '条)';
+                        catText.appendChild(countTag);
+                    }
                     const catDel = document.createElement('button');
                     catDel.className = 'cat-del'; catDel.textContent = '✕'; catDel.title = '删除此类别';
-                    catDel.onclick = () => deleteCategory(ti, ci);
+                    catDel.onclick = (e) => { e.stopPropagation(); deleteCategory(ti, ci); };
+                    catTitle.appendChild(toggleIcon);
                     catTitle.appendChild(catText);
                     catTitle.appendChild(catDel);
                     section.appendChild(catTitle);
-                    // 条目
-                    const key = theme.大类 + '|' + catName;
-                    const items = themeItems[key] || [];
+                    // 加载中占位提示
+                    if (expanded && !themeItems[key]) {
+                        const loadingTip = document.createElement('div');
+                        loadingTip.className = 'cat-loading';
+                        loadingTip.textContent = '加载中...';
+                        section.appendChild(loadingTip);
+                    }
+                    // 条目：仅展开的类别渲染（方案A按需渲染）
+                    const items = (expanded && themeItems[key]) ? themeItems[key] : [];
                     items.forEach((item, idx) => {
                         const row = document.createElement('div');
                         row.className = 'item';
@@ -662,10 +707,11 @@
                 (theme.类别 || []).forEach(function(catName, ci) {
                     var li = document.createElement('li');
                     li.className = 'tree-cat-item';
-                    var itemCount = (themeItems[theme.大类 + '|' + catName] || []).length;
-                    li.textContent = catName + ' (' + itemCount + '条)';
+                    var key = theme.大类 + '|' + catName;
+                    // 未加载的类别不显示数量，避免误导
+                    li.textContent = themeItems[key] ? catName + ' (' + themeItems[key].length + '条)' : catName;
                     li.id = 'tree_cat_' + ti + '_' + ci;
-                    li.onclick = function() { scrollToSection('cat_' + ti + '_' + ci); };
+                    li.onclick = function() { expandAndScrollToCat(ti, ci); };
                     ul.appendChild(li);
                 });
                 div.appendChild(ul);
@@ -673,16 +719,16 @@
             });
         }
         var _activeTreeId = null;
+        // 滚动高亮（方案C：IntersectionObserver 替代滚动时遍历 getBoundingClientRect）
+        var _spyObserver = null;
+        var _visibleIds = new Set(); // 当前可见区块 id 集合
+        var _sectionOrder = [];      // 按文档顺序记录的区块 id
         function updateScrollSpy() {
+            // 取文档顺序中最靠前的可见区块作为当前高亮项
             var activeId = null;
-            themeStructure.forEach(function(theme, ti) {
-                var themeEl = document.getElementById('theme_' + ti);
-                if (themeEl && themeEl.getBoundingClientRect().top - 80 <= 0) activeId = 'theme_' + ti;
-                (theme.类别 || []).forEach(function(catName, ci) {
-                    var catEl = document.getElementById('cat_' + ti + '_' + ci);
-                    if (catEl && catEl.getBoundingClientRect().top - 80 <= 0) activeId = 'cat_' + ti + '_' + ci;
-                });
-            });
+            for (var i = 0; i < _sectionOrder.length; i++) {
+                if (_visibleIds.has(_sectionOrder[i])) { activeId = _sectionOrder[i]; break; }
+            }
             if (activeId !== _activeTreeId) {
                 _activeTreeId = activeId;
                 document.querySelectorAll('.tree-cat-item.active').forEach(function(el) { el.classList.remove('active'); });
@@ -696,10 +742,36 @@
             }
         }
         function initScrollSpy() {
-            if (window._spyBound) return;
-            window._spyBound = true;
-            window.addEventListener('scroll', updateScrollSpy);
+            if (_spyObserver) _spyObserver.disconnect();
+            _visibleIds.clear();
+            _sectionOrder = [];
+            _spyObserver = new IntersectionObserver(function(entries) {
+                entries.forEach(function(en) {
+                    if (en.isIntersecting) _visibleIds.add(en.target.id);
+                    else _visibleIds.delete(en.target.id);
+                });
+                updateScrollSpy();
+            }, { rootMargin: '-80px 0px -55% 0px' });
+            document.querySelectorAll('.theme-group, .category').forEach(function(el) {
+                _sectionOrder.push(el.id);
+                _spyObserver.observe(el);
+            });
             updateScrollSpy();
+        }
+        // 树导航点击：先展开并加载类别，再滚动定位
+        async function expandAndScrollToCat(ti, ci) {
+            var theme = themeStructure[ti];
+            var catName = theme.类别[ci];
+            var key = theme.大类 + '|' + catName;
+            if (!expandedCats.has(key)) {
+                expandedCats.add(key);
+                renderAll();
+                await ensureCatLoaded(theme.大类, catName);
+                if (!expandedCats.has(key)) return; // 加载期间被收起了就不继续
+                renderAll();
+            }
+            scrollToSection('cat_' + ti + '_' + ci);
+            if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
         }
         function scrollToSection(id) {
             var el = document.getElementById(id);
@@ -874,12 +946,8 @@
                     if (themeObj && themeObj.类别.includes(catName)) {
                         const key = themeName + '|' + catName;
                         if (!themeItems[key]) themeItems[key] = [];
-                        // 重新加载该类别的数据
-                        const list = await GDA.getByType(dataType);
-                        themeItems[key] = list.map(d => {
-                            const parsed = parseItemData(d.dataContent);
-                            return { id: d.id, dataKey: d.dataKey, dataContent: d.dataContent, content: parsed.content, copyCount: parsed.copyCount, lastCopyTime: parsed.lastCopyTime };
-                        });
+                        // 重新加载该类别的数据（兼容懒加载：未展开也更新内存缓存）
+                        themeItems[key] = mapRawItems(await GDA.getByType(dataType));
                     }
                 }
                 progress.textContent = '导入完成！共 ' + batchList.length + ' 条';
@@ -961,9 +1029,12 @@
             const theme = themeStructure[themeIdx];
             const catName = theme.类别[catIdx];
             const dt = 'theme_' + theme.大类 + '_' + catName;
+            // 懒加载兼容：确保该类别数据已加载，避免本地数组覆盖服务端数据
+            await ensureCatLoaded(theme.大类, catName);
             const res = await GDA.save({ dataType: dt, dataKey: name, dataContent: buildItemJson(desc, 0, null) });
             const key = theme.大类 + '|' + catName;
             themeItems[key].push({ id: res.data ? res.data.id : null, dataKey: name, dataContent: buildItemJson(desc, 0, null), content: desc, copyCount: 0, lastCopyTime: null });
+            expandedCats.add(key); // 新增后自动展开，保证新条目可见
             closeModal(); renderAll();
         }
 
@@ -1028,28 +1099,36 @@
             const theme = themeStructure[themeIdx];
             const catName = theme.类别[catIdx];
             if (!confirm('确定删除类别「' + catName + '」及其所有条目？')) return;
-            // 删除该类别下所有条目
+            // 删除该类别下所有条目（懒加载兼容：未加载时先请求接口获取）
             const key = theme.大类 + '|' + catName;
-            const items = themeItems[key] || [];
+            let items = themeItems[key];
+            if (!items) {
+                try { items = mapRawItems(await GDA.getByType('theme_' + theme.大类 + '_' + catName)); } catch (e) { items = []; }
+            }
             for (const item of items) {
                 if (item.id) await GDA.remove(item.id).catch(() => {});
             }
             theme.类别.splice(catIdx, 1);
             delete themeItems[key];
+            expandedCats.delete(key);
             await GDA.saveOrUpdate(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(themeStructure));
             renderAll();
         }
         async function deleteTheme(themeIdx) {
             const theme = themeStructure[themeIdx];
             if (!confirm('确定删除整个主题「' + theme.大类 + '」及其所有数据？')) return;
-            // 删除所有类别下的所有条目
+            // 删除所有类别下的所有条目（懒加载兼容：未加载的类别先请求接口）
             for (const catName of theme.类别) {
                 const key = theme.大类 + '|' + catName;
-                const items = themeItems[key] || [];
+                let items = themeItems[key];
+                if (!items) {
+                    try { items = mapRawItems(await GDA.getByType('theme_' + theme.大类 + '_' + catName)); } catch (e) { items = []; }
+                }
                 for (const item of items) {
                     if (item.id) await GDA.remove(item.id).catch(() => {});
                 }
                 delete themeItems[key];
+                expandedCats.delete(key);
             }
             themeStructure.splice(themeIdx, 1);
             await GDA.saveOrUpdate(STRUCT_TYPE, STRUCT_TYPE, JSON.stringify(themeStructure));
@@ -1068,7 +1147,7 @@
             window.addEventListener('scroll', function() {
                 if (window.pageYOffset > 300) { btn.classList.add('visible'); }
                 else { btn.classList.remove('visible'); }
-            });
+            }, { passive: true });
         })();
     </script>
 </body>
