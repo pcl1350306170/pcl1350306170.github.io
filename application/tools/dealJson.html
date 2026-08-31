@@ -5,10 +5,14 @@
     <meta charset="UTF-8">
     <title>JSON数据分组及剧情提取处理工具</title>
     <!-- 引入Vue -->
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="../../lib/vue/vue.min.js"></script>
     <!-- 引入Element UI -->
-    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
-    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <link rel="stylesheet" href="../../lib/vue/element-ui/index.css">
+    <script src="../../lib/vue/element-ui/index.js"></script>
+    <!-- 引入axios -->
+    <script src="../../lib/vue/axios.min.js"></script>
+    <!-- 引入全局变量配置 -->
+    <script src="../../js/_variable.js" type="text/javascript"></script>
     <style>
         body {
             padding: 20px;
@@ -198,6 +202,53 @@
             color: #409EFF;
             font-size: 14px;
         }
+
+        /* 复制下一组悬浮按钮 */
+        .copy-next-group {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background-color: #67C23A;
+            color: white;
+            border-radius: 25px;
+            padding: 12px 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-size: 14px;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .copy-next-group:hover {
+            background-color: #85ce61;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .copy-next-group .copied-count {
+            display: block;
+            font-size: 12px;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        /* 分组高亮动画 */
+        .result-item.highlight {
+            border-color: #67C23A;
+            background-color: #f0f9eb;
+            box-shadow: 0 0 12px rgba(103, 194, 58, 0.3);
+            transition: all 0.5s ease;
+        }
+
+        /* 已复制分组标记 */
+        .result-item.copied .result-title::after {
+            content: ' ✓ 已复制';
+            color: #67C23A;
+            font-size: 12px;
+            font-weight: normal;
+        }
     </style>
 </head>
 
@@ -251,7 +302,9 @@
 
             <div class="tab-panel" :class="{ active: activeTab === 'group' }">
                 <h3>分组处理结果</h3>
-                <div class="result-item" v-for="(group, index) in processedResults" :key="'group-' + index">
+                <div class="result-item" v-for="(group, index) in processedResults" :key="'group-' + index"
+                    :class="{ copied: copiedGroups.includes(index), highlight: highlightIndex === index }"
+                    :ref="'group-' + index">
                     <div class="result-title">{{ group.title }}</div>
                     <el-input type="textarea" class="result-textarea" :value="group.content" :readonly="true"
                         :autosize="{ minRows: 6, maxRows: 20 }"></el-input>
@@ -289,6 +342,15 @@
         <!-- 返回顶部按钮 -->
         <div class="back-to-top" :class="{ show: showBackToTop }" @click="scrollToTop" title="返回顶部">
             <i class="el-icon-caret-top"></i>
+        </div>
+
+        <!-- 复制下一组悬浮按钮 -->
+        <div class="copy-next-group" v-if="processedResults.length > 0" @click="copyNextGroup"
+            :title="nextCopyIndex >= processedResults.length ? '已全部复制完毕' : '点击复制下一组'">
+            📋 复制下一组
+            <span class="copied-count" v-if="copiedGroups.length > 0">
+                已复制 {{ copiedGroups.length }}/{{ processedResults.length }} 组
+            </span>
         </div>
 
     </div>
@@ -358,7 +420,10 @@
                     showLoading: false,
                     loadingText: '处理中，请稍候...',
                     activeTab: 'group',
-                    showBackToTop: false
+                    showBackToTop: false,
+                    nextCopyIndex: 0,
+                    copiedGroups: [],
+                    highlightIndex: -1
                 };
             },
             mounted() {
@@ -495,6 +560,45 @@
                     this.copyToClipboard(text);
                 },
 
+                copyNextGroup() {
+                    if (this.processedResults.length === 0) return;
+
+                    // 如果已经全部复制完，从头开始
+                    if (this.nextCopyIndex >= this.processedResults.length) {
+                        this.nextCopyIndex = 0;
+                        this.copiedGroups = [];
+                    }
+
+                    const index = this.nextCopyIndex;
+                    const group = this.processedResults[index];
+
+                    // 复制内容
+                    this.copyToClipboard(group.content);
+
+                    // 记录已复制的分组
+                    if (!this.copiedGroups.includes(index)) {
+                        this.copiedGroups.push(index);
+                    }
+
+                    // 移动到下一次的索引
+                    this.nextCopyIndex = index + 1;
+
+                    // 高亮定位到当前分组
+                    this.highlightIndex = index;
+                    this.$nextTick(() => {
+                        const refKey = 'group-' + index;
+                        const el = this.$refs[refKey];
+                        if (el && el[0]) {
+                            el[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+
+                    // 3秒后取消高亮
+                    setTimeout(() => {
+                        this.highlightIndex = -1;
+                    }, 3000);
+                },
+
                 clearAll() {
                     this.$confirm('确定要清空所有内容吗？', '提示', {
                         confirmButtonText: '确定',
@@ -507,6 +611,9 @@
                         this.processedResults = [];
                         this.extractedJson = '';
                         this.activeTab = 'group';
+                        this.nextCopyIndex = 0;
+                        this.copiedGroups = [];
+                        this.highlightIndex = -1;
 
                         this.$message({
                             type: 'success',
