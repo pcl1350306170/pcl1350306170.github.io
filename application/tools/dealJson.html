@@ -484,6 +484,10 @@
 
                                     // 生成分组内容
                                     let content = '';
+                                    // 通用要求只拼接在开头
+                                    if (this.formData.commonRequirement) {
+                                        content += `通用要求：${this.formData.commonRequirement}\n\n`;
+                                    }
                                     group.forEach(item => {
                                         content += `${item.title}\n`;
                                         if (this.formData.showPlotContent) {
@@ -492,10 +496,7 @@
                                         content += `画面要求：${item.sceneSetting}\n`;
                                         content += `出场人物：${item.Character}\n`;
                                         if (item.common) {
-                                            content += `通用要求：${item.common}\n`;
-                                        }
-                                        else if (this.formData.commonRequirement) {
-                                            content += `通用要求：${this.formData.commonRequirement}\n`;
+                                            content += `特殊要求：${item.common}\n`;
                                         }
                                         content += `\n`;
                                     });
