@@ -23,6 +23,21 @@
         .action-btn.import:hover { background: #0284c7; }
         .action-btn.refresh { background: #22c55e; }
         .action-btn.refresh:hover { background: #16a34a; }
+        /* 搜索框 */
+        .search-bar {
+            display: flex; justify-content: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+        }
+        .search-bar input {
+            padding: 8px 14px; width: 320px; max-width: 60vw; background: #16213e;
+            border: 1px solid #1f3056; border-radius: 6px; color: #e2e8f0;
+            font-size: 13px; outline: none; transition: border-color .2s;
+        }
+        .search-bar input:focus { border-color: #7c3aed; }
+        .search-bar input::placeholder { color: #64748b; }
+        .action-btn.search { background: #8b5cf6; }
+        .action-btn.search:hover { background: #7c3aed; }
+        .action-btn.clear-search { background: #64748b; }
+        .action-btn.clear-search:hover { background: #475569; }
         /* 进度条 */
         .progress-section { margin: 0 auto 20px; max-width: 600px; display: none; }
         .progress-section.active { display: block; }
@@ -180,6 +195,12 @@
     <div class="action-bar">
         <button class="action-btn import" onclick="showImportModal()">导入图片地址</button>
         <button class="action-btn refresh" onclick="loadAllImages()">刷新列表</button>
+    </div>
+
+    <div class="search-bar">
+        <input type="text" id="keywordInput" placeholder="输入关键字搜索（匹配图片地址）..." onkeydown="if(event.key==='Enter') doSearch()">
+        <button class="action-btn search" onclick="doSearch()">搜索</button>
+        <button class="action-btn clear-search" onclick="clearSearch()">清除</button>
     </div>
 
     <div class="progress-section" id="progressSection">
@@ -571,6 +592,20 @@
         // ========== 分页加载图片列表 ==========
         var PAGINATED_BASE = ajaxFileDealJavaIP + '/api/v1/general-data/get-by-type';
 
+        function getSearchKeyword() {
+            const input = document.getElementById('keywordInput');
+            return input ? input.value.trim() : '';
+        }
+
+        function doSearch() {
+            loadAllImages();
+        }
+
+        function clearSearch() {
+            document.getElementById('keywordInput').value = '';
+            loadAllImages();
+        }
+
         async function loadAllImages() {
             currentPage = 1;
             totalRecords = 0;
@@ -592,10 +627,12 @@
                 }
             }
 
+            const keyword = getSearchKeyword();
+            const params = { dataType: currentDataType, page: 1, limit: PAGE_LIMIT };
+            if (keyword) params.keyword = keyword;
+
             try {
-                const res = await axios.get(PAGINATED_BASE, {
-                    params: { dataType: currentDataType, page: 1, limit: PAGE_LIMIT }
-                });
+                const res = await axios.get(PAGINATED_BASE, { params });
                 const d = res.data;
                 if (d.resultCode !== 200) throw new Error(d.message || '查询失败');
                 const pageData = d.data;
@@ -615,11 +652,13 @@
             }
 
             if (imageList.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>暂无图片数据，请先导入</p></div>';
+                const tip = keyword ? '未找到匹配「' + escapeHtml(keyword) + '」的图片' : '暂无图片数据，请先导入';
+                container.innerHTML = '<div class="empty-state"><p>' + tip + '</p></div>';
                 return;
             }
 
-            document.getElementById('statsInfo').textContent = '共 ' + totalRecords + ' 张图片，已加载 ' + imageList.length + ' 张';
+            const searchTip = keyword ? '（搜索：' + escapeHtml(keyword) + '）' : '';
+            document.getElementById('statsInfo').textContent = '共 ' + totalRecords + ' 张图片，已加载 ' + imageList.length + ' 张' + searchTip;
             renderGallery();
         }
 
@@ -628,10 +667,11 @@
             if (imageList.length >= totalRecords) return;
             isLoadingPage = true;
             currentPage++;
+            const keyword = getSearchKeyword();
+            const params = { dataType: currentDataType, page: currentPage, limit: PAGE_LIMIT };
+            if (keyword) params.keyword = keyword;
             try {
-                const res = await axios.get(PAGINATED_BASE, {
-                    params: { dataType: currentDataType, page: currentPage, limit: PAGE_LIMIT }
-                });
+                const res = await axios.get(PAGINATED_BASE, { params });
                 const d = res.data;
                 if (d.resultCode !== 200) throw new Error(d.message || '查询失败');
                 const list = (d.data && d.data.list) || [];
