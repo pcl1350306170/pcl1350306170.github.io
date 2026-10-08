@@ -2,115 +2,259 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>触摸数字操作</title>
     <style>
-        body {
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
             background-color: black;
             color: white;
-            margin: 0;
             font-family: Arial, sans-serif;
-            overflow: hidden;
-            position: relative;
-            width: 100vw;
-            height: 100vh;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        #number {
-            font-size: 35rem;
-            width: 100vw;
-            height: 100vh;
-            line-height: 100vh;
-            text-align: center;
-            z-index: 10;
-            position: relative;
-        }
-
-        input {
-            font-size: 1.5rem;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            outline: none;
+        /* 主页面：只显示一个按钮 */
+        #openPanelBtn {
             position: fixed;
-            left: 10px;
-            top: 10px;
-            z-index: 90;
-        }
-
-        #confirmBtn {
-            position: fixed;
-            left: 220px;
-            top: 10px;
-            padding: 10px 20px;
-            font-size: 1.2rem;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 28px 48px;
+            font-size: 8vw;
+            border: 2px solid rgba(255,255,255,0.6);
+            border-radius: 14px;
+            background: rgba(255,255,255,0.1);
+            color: white;
             cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background-color: white;
-            color: black;
-            z-index: 90;
+            z-index: 10;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            transition: background 0.2s;
+        }
+        #openPanelBtn:active {
+            background: rgba(255,255,255,0.25);
+        }
+        #openPanelBtn.at-bottom {
+            top: auto;
+            bottom: 5vh;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 16px 36px;
+            font-size: 5.5vw;
+            z-index: 60;
         }
 
-        .input-2 {
-            left: 30%;
-        }
-
-        #countdown {
-            font-size: 6rem;
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 100;
-        }
-
-        #timeUpMessage {
-            width: 100vw;
-            height: 100vh;
-            font-size: 15rem;
-            color: #1a1818;
-            position: fixed;
-            left: 0;
-            top: 0;
+        /* 遮罩层 */
+        #overlay {
             display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        #overlay.show {
+            display: flex;
+        }
+
+        /* 弹窗 */
+        #panel {
+            width: 92vw;
+            max-width: 500px;
+            max-height: 85vh;
+            overflow-y: auto;
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 28px 24px;
+            position: relative;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+        }
+
+        #panel h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 7vw;
+            color: #fff;
+        }
+
+        #closePanelBtn {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            width: 10vw;
+            height: 10vw;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            font-size: 5.5vw;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #closePanelBtn:active {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .panel-group {
+            margin-bottom: 18px;
+        }
+        .panel-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 5vw;
+            color: #aaa;
+        }
+        .panel-group input {
+            width: 100%;
+            padding: 16px 14px;
+            font-size: 6.5vw;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: #2a2a2a;
+            color: #fff;
+            outline: none;
+        }
+        .panel-group input:focus {
+            border-color: #6c9fff;
+        }
+
+        .panel-group {
+            margin-bottom: 22px;
+        }
+
+        #panelConfirmBtn {
+            width: 100%;
+            padding: 18px;
+            font-size: 5.5vw;
+            border: none;
+            border-radius: 10px;
+            background: #4a8cff;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        #panelConfirmBtn:active {
+            background: #3a6fcc;
+        }
+
+        #panelCountdownBtn {
+            width: 100%;
+            padding: 18px;
+            font-size: 5.5vw;
+            border: none;
+            border-radius: 10px;
+            background: #ff7a4a;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #panelCountdownBtn:active {
+            background: #cc5a30;
+        }
+
+        /* 倒计时显示 */
+        #countdown {
+            display: none;
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            font-size: 10vw;
+            z-index: 200;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 8px rgba(0,0,0,0.8);
+        }
+
+        /* 时间到全屏提示 */
+        #timeUpMessage {
+            display: none;
+            position: fixed;
+            inset: 0;
+            font-size: 20vw;
+            color: #1a1818;
+            background: #fff;
             z-index: 999;
             text-align: center;
-            background: #fff;
-            white-space: normal;
-            word-break:break-all;
-
-            line-height: 2.2;
+            line-height: 1.6;
+            word-break: break-all;
         }
 
-        /* 左右点击区域 */
+        /* 左右触摸区域 */
         .touch-zone {
+            display: none;
             position: fixed;
             top: 0;
             bottom: 0;
             width: 50vw;
             z-index: 50;
         }
-
-        .left-zone {
-            left: 0;
+        .touch-zone.active {
+            display: block;
         }
+        .left-zone { left: 0; }
+        .right-zone { right: 0; }
 
-        .right-zone {
-            right: 0;
+        /* 当前数字显示 */
+        #numberDisplay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            text-align: center;
+            z-index: 20;
+            pointer-events: none;
+            font-weight: bold;
+        }
+        #numberDisplay.active {
+            display: block;
         }
     </style>
 </head>
 <body>
-<div id="number">0</div>
-<input id="inputField" type="number" placeholder="输入数字" />
-<button id="confirmBtn">确定</button>
-<input class="input-2" id="countdownInput" type="number" placeholder="倒计时(分钟)" />
+
+<!-- 主页面唯一按钮 -->
+<button id="openPanelBtn">打开操作面板</button>
+
+<!-- 数字显示 -->
+<div id="numberDisplay">0</div>
+
+<!-- 倒计时显示 -->
 <div id="countdown"></div>
+
+<!-- 时间到提示 -->
 <div id="timeUpMessage">时间到啦</div>
 
 <!-- 左右触摸区域 -->
 <div class="touch-zone left-zone" id="leftZone"></div>
 <div class="touch-zone right-zone" id="rightZone"></div>
+
+<!-- 弹窗遮罩 -->
+<div id="overlay">
+    <div id="panel">
+        <button id="closePanelBtn">✕</button>
+        <h2>操作面板</h2>
+
+        <div class="panel-group">
+            <label>设置数字</label>
+            <input id="inputField" type="number" placeholder="输入数字" />
+        </div>
+        <div class="panel-group">
+            <label>倒计时(分钟)</label>
+            <input id="countdownInput" type="number" placeholder="分钟数" />
+        </div>
+
+        <button id="panelConfirmBtn">确认设置</button>
+        <button id="panelCountdownBtn">开始倒计时</button>
+    </div>
+</div>
 
 <script>
     class TouchNumberControl {
@@ -120,31 +264,46 @@
             this.isTimerRunning = false;
             this.countdownTimer = null;
 
-            this.numberElement = document.getElementById('number');
-            this.inputField = document.getElementById('inputField');
-            this.countdownInput = document.getElementById('countdownInput');
-            this.confirmBtn = document.getElementById('confirmBtn');
+            // 主页面元素
+            this.openPanelBtn = document.getElementById('openPanelBtn');
+            this.numberDisplay = document.getElementById('numberDisplay');
             this.countdownElement = document.getElementById('countdown');
             this.timeUpMessage = document.getElementById('timeUpMessage');
             this.leftZone = document.getElementById('leftZone');
             this.rightZone = document.getElementById('rightZone');
+
+            // 弹窗元素
+            this.overlay = document.getElementById('overlay');
+            this.closePanelBtn = document.getElementById('closePanelBtn');
+            this.inputField = document.getElementById('inputField');
+            this.countdownInput = document.getElementById('countdownInput');
+            this.panelConfirmBtn = document.getElementById('panelConfirmBtn');
+            this.panelCountdownBtn = document.getElementById('panelCountdownBtn');
 
             this.init();
         }
 
         init() {
             this.adjustFontSize(this.currentNumber);
-            this.addTouchEvents();
+            this.addEvents();
         }
 
         adjustFontSize(num) {
             const len = num.toString().length;
-            if (len > 10) this.numberElement.style.fontSize = '10rem';
-            else if (len > 9) this.numberElement.style.fontSize = '12rem';
-            else if (len > 8) this.numberElement.style.fontSize = '13rem';
-            else if (len > 7) this.numberElement.style.fontSize = '14rem';
-            else if (len >= 5) this.numberElement.style.fontSize = '22rem';
-            else this.numberElement.style.fontSize = '39rem';
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            // 基于可视区域动态计算，让数字尽量撑满屏幕
+            const base = Math.min(vw * 0.9, vh * 0.85);
+            let size;
+            if (len > 10) size = base * 0.12;
+            else if (len > 9) size = base * 0.15;
+            else if (len > 8) size = base * 0.18;
+            else if (len > 7) size = base * 0.22;
+            else if (len >= 5) size = base * 0.35;
+            else if (len >= 3) size = base * 0.5;
+            else size = base * 0.75;
+            this.numberDisplay.style.fontSize = size + 'px';
+            this.numberDisplay.style.lineHeight = vh + 'px';
         }
 
         updateNumber(newNumber) {
@@ -153,7 +312,7 @@
                 this.lastSpeechTrigger = newNumber;
             }
             this.currentNumber = newNumber;
-            this.numberElement.textContent = this.currentNumber;
+            this.numberDisplay.textContent = this.currentNumber;
             this.adjustFontSize(this.currentNumber);
         }
 
@@ -182,10 +341,9 @@
                 if (this.countdownTime <= 0) {
                     clearInterval(this.countdownTimer);
                     this.timeUpMessage.style.display = 'block';
-                    this.numberElement.textContent = '';
-                    this.inputField.disabled = true;
-                    this.countdownInput.disabled = true;
-                    this.confirmBtn.disabled = true;
+                    this.numberDisplay.style.display = 'none';
+                    this.leftZone.classList.remove('active');
+                    this.rightZone.classList.remove('active');
                 }
             }, 1000);
         }
@@ -196,45 +354,99 @@
             return `${min}:${sec}`;
         }
 
-        addTouchEvents() {
-            // 禁用右键菜单（触摸长按可能触发）
+        openPanel() {
+            this.overlay.classList.add('show');
+        }
+
+        closePanel() {
+            this.overlay.classList.remove('show');
+        }
+
+        startTouchMode() {
+            this.numberDisplay.classList.add('active');
+            this.leftZone.classList.add('active');
+            this.rightZone.classList.add('active');
+            this.openPanelBtn.classList.add('at-bottom');
+            this.openPanelBtn.textContent = '操作面板';
+        }
+
+        addEvents() {
+            // 禁用右键菜单
             document.addEventListener('contextmenu', e => e.preventDefault());
 
-            // 左边减
-            this.leftZone.addEventListener('touchstart', () => {
-                this.updateNumber(this.currentNumber - this.getIncrement());
+            // 打开弹窗
+            this.openPanelBtn.addEventListener('click', () => {
+                this.openPanel();
             });
 
-            // 右边加
-            this.rightZone.addEventListener('touchstart', () => {
-                this.updateNumber(this.currentNumber + this.getIncrement());
+            // 关闭弹窗
+            this.closePanelBtn.addEventListener('click', () => {
+                this.closePanel();
             });
 
-            // 确定按钮设置数字
-            this.confirmBtn.addEventListener('click', () => {
-                const val = parseInt(this.inputField.value, 10);
-                if (!isNaN(val)) {
-                    this.updateNumber(val);
-                    this.inputField.value = '';
+            // 点击遮罩关闭
+            this.overlay.addEventListener('click', (e) => {
+                if (e.target === this.overlay) {
+                    this.closePanel();
                 }
             });
 
-            // 倒计时按钮（仅回车被取消）
-            this.countdownInput.addEventListener('change', () => {
+            // 确认设置（同时处理数字和倒计时）
+            this.panelConfirmBtn.addEventListener('click', () => {
+                const numVal = parseInt(this.inputField.value, 10);
+                const cdVal = parseInt(this.countdownInput.value, 10);
+
+                // 设置数字
+                if (!isNaN(numVal)) {
+                    this.updateNumber(numVal);
+                    this.inputField.value = '';
+                }
+
+                // 启动倒计时
+                if (!isNaN(cdVal) && cdVal > 0 && !this.isTimerRunning) {
+                    this.startCountdown(cdVal);
+                    this.countdownInput.value = '';
+                }
+
+                // 只要有任一操作就进入触摸模式
+                if (!isNaN(numVal) || (!isNaN(cdVal) && cdVal > 0)) {
+                    this.startTouchMode();
+                    this.closePanel();
+                }
+            });
+
+            // 单独开始倒计时（不设置数字）
+            this.panelCountdownBtn.addEventListener('click', () => {
                 const val = parseInt(this.countdownInput.value, 10);
                 if (!isNaN(val) && val > 0 && !this.isTimerRunning) {
                     this.startCountdown(val);
                     this.countdownInput.value = '';
+                    this.startTouchMode();
+                    this.closePanel();
                 }
             });
 
-            // 支持滑动手势（如安卓自带浏览器支持）
+            // 左边触摸减
+            this.leftZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.updateNumber(this.currentNumber - this.getIncrement());
+            });
+
+            // 右边触摸加
+            this.rightZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.updateNumber(this.currentNumber + this.getIncrement());
+            });
+
+            // 鼠标滚轮支持
             document.addEventListener('wheel', (event) => {
-                const inc = this.getIncrement();
-                if (event.deltaY < 0) {
-                    this.updateNumber(this.currentNumber + inc);
-                } else {
-                    this.updateNumber(this.currentNumber - inc);
+                if (this.numberDisplay.classList.contains('active')) {
+                    const inc = this.getIncrement();
+                    if (event.deltaY < 0) {
+                        this.updateNumber(this.currentNumber + inc);
+                    } else {
+                        this.updateNumber(this.currentNumber - inc);
+                    }
                 }
             });
         }
