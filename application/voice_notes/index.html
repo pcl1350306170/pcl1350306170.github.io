@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f3f4f6">
+<title>语音速记（离线版）</title>
+<style>
+:root {
+  --bg: #f3f4f6; --card-bg: #fff; --text: #1f2937; --muted: #6b7280;
+  --border: #e5e7eb; --accent: #2563eb; --accent-active: #1d4ed8;
+  --btn-ghost: #f3f4f6; --btn-ghost-text: #374151;
+  --edit: #2563eb; --del: #dc2626; --overlay: rgba(0,0,0,0.45);
+  --input-bg: #fff; --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --toast-bg: rgba(17,24,39,0.9); --toast-text: #fff;
+}
+[data-theme="dark"] {
+  --bg: #111827; --card-bg: #1f2937; --text: #f3f4f6; --muted: #9ca3af;
+  --border: #374151; --accent: #3b82f6; --accent-active: #2563eb;
+  --btn-ghost: #374151; --btn-ghost-text: #e5e7eb;
+  --edit: #60a5fa; --del: #f87171; --overlay: rgba(0,0,0,0.6);
+  --input-bg: #111827; --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  --toast-bg: rgba(243,244,246,0.92); --toast-text: #111827;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei","PingFang SC",sans-serif;
+  background:var(--bg); color:var(--text); min-height:100vh; transition:background .25s,color .25s; }
+header { position:sticky; top:0; z-index:10; background:var(--card-bg); border-bottom:1px solid var(--border);
+  padding:14px 16px; display:flex; align-items:center; justify-content:space-between; }
+header h1 { font-size:18px; font-weight:700; }
+#count { font-size:13px; color:var(--muted); margin-right:8px; }
+#themeBtn { border:none; background:var(--btn-ghost); color:var(--text); font-size:18px;
+  width:38px; height:38px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+#catBar { position:sticky; top:67px; z-index:9; display:flex; gap:8px; overflow-x:auto;
+  padding:10px 16px; background:var(--bg); white-space:nowrap; }
+.chip { flex:0 0 auto; border:1px solid var(--border); background:var(--card-bg); color:var(--text);
+  font-size:13px; border-radius:16px; padding:6px 14px; cursor:pointer; }
+.chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.chip-add { border-style:dashed; color:var(--muted); }
+#addBtn { position:fixed; right:20px; bottom:calc(24px + env(safe-area-inset-bottom));
+  width:60px; height:60px; border-radius:50%; font-size:32px; font-weight:700; color:#fff;
+  background:var(--accent); border:none; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.28);
+  display:flex; align-items:center; justify-content:center; z-index:15; }
+#list { list-style:none; padding:8px 16px 110px; }
+.card { background:var(--card-bg); border-radius:12px; padding:14px; margin-bottom:12px; box-shadow:var(--shadow); }
+.card .time { font-size:12px; color:var(--muted); margin-bottom:6px; display:flex; align-items:center; flex-wrap:wrap; }
+.card .content { font-size:15px; line-height:1.7; white-space:pre-wrap; word-break:break-word; cursor:pointer; }
+.card .ops { display:flex; gap:14px; margin-top:10px; }
+.card .ops button { border:none; background:none; font-size:13px; cursor:pointer; padding:6px 2px; }
+.btn-edit { color:var(--edit); } .btn-del { color:var(--del); } .btn-copy { color:var(--muted); }
+#empty { text-align:center; color:var(--muted); font-size:14px; padding:60px 20px; }
+.hidden { display:none !important; }
+#overlay, #catOverlay, #syncOverlay { position:fixed; inset:0; background:var(--overlay); z-index:20;
+  display:flex; align-items:flex-end; justify-content:center; }
+.sheet { width:100%; max-width:640px; background:var(--card-bg); color:var(--text);
+  border-radius:16px 16px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); }
+.sheet-title { font-size:15px; font-weight:700; margin-bottom:12px; text-align:center; }
+#contentInput { width:100%; min-height:120px; font-size:16px; line-height:1.7;
+  border:1px solid var(--border); border-radius:12px; padding:12px; resize:vertical;
+  outline:none; font-family:inherit; background:var(--input-bg); color:var(--text); }
+#contentInput:focus { border-color:var(--accent); }
+#catSelect { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.selchip { border:1px solid var(--border); background:var(--btn-ghost); color:var(--text);
+  font-size:13px; border-radius:16px; padding:6px 14px; cursor:pointer; }
+.selchip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.actions { display:flex; gap:12px; margin-top:14px; }
+.actions button { flex:1; padding:13px; font-size:16px; border:none; border-radius:12px; cursor:pointer; }
+#cancelBtn { background:var(--btn-ghost); color:var(--btn-ghost-text); }
+#saveBtn { background:var(--accent); color:#fff; font-weight:700; }
+.cat-add-row { display:flex; gap:10px; margin-bottom:14px; }
+#newCatInput { flex:1; font-size:15px; padding:10px 12px; border:1px solid var(--border);
+  border-radius:10px; background:var(--input-bg); color:var(--text); outline:none; }
+#addCatBtn { padding:0 18px; font-size:15px; border:none; border-radius:10px; background:var(--accent); color:#fff; cursor:pointer; }
+#catList { list-style:none; margin-bottom:14px; }
+.cat-item { display:flex; align-items:center; justify-content:space-between; padding:10px 4px;
+  border-bottom:1px solid var(--border); font-size:14px; }
+.cat-item .cat-num { color:var(--muted); font-size:12px; margin-left:8px; }
+.cat-del { border:none; background:none; color:var(--del); font-size:13px; cursor:pointer; padding:4px 8px; }
+#catCloseBtn { width:100%; padding:13px; font-size:16px; border:none; border-radius:12px;
+  background:var(--btn-ghost); color:var(--btn-ghost-text); cursor:pointer; }
+/* 同步弹层 */
+#syncArea { width:100%; min-height:200px; font-size:13px; font-family:monospace; line-height:1.5;
+  border:1px solid var(--border); border-radius:12px; padding:12px; resize:vertical;
+  background:var(--input-bg); color:var(--text); outline:none; }
+.sync-actions { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+.sync-actions button { flex:1; min-width:100px; padding:11px; font-size:14px; border:none;
+  border-radius:10px; cursor:pointer; }
+#btnExport { background:var(--accent); color:#fff; }
+#btnImport { background:#059669; color:#fff; }
+#btnSyncClose { background:var(--btn-ghost); color:var(--btn-ghost-text); }
+.cat-badge { font-size:11px; border-radius:8px; padding:2px 8px; margin-left:8px; font-weight:700; }
+#syncBtn { position:fixed; left:20px; bottom:calc(24px + env(safe-area-inset-bottom));
+  width:44px; height:44px; border-radius:50%; font-size:20px; color:#fff;
+  background:#059669; border:none; cursor:pointer; display:flex; align-items:center;
+  justify-content:center; box-shadow:0 3px 10px rgba(0,0,0,0.2); z-index:15; }
+#toast { position:fixed; left:50%; bottom:60px; transform:translateX(-50%) translateY(20px);
+  background:var(--toast-bg); color:var(--toast-text); font-size:14px; padding:10px 18px;
+  border-radius:10px; z-index:30; opacity:0; pointer-events:none; transition:opacity .2s,transform .2s;
+  max-width:80%; text-align:center; }
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+@media (min-width:768px) { #list { max-width:640px; margin:0 auto; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🗒 语音速记（离线）</h1>
+  <div style="display:flex;align-items:center;">
+    <span id="count"></span>
+    <button id="themeBtn" title="切换明暗模式">🌙</button>
+  </div>
+</header>
+<div id="catBar"></div>
+<ul id="list"></ul>
+<div id="empty">还没有记录，点「＋」开始</div>
+<button id="addBtn" title="新增记录">＋</button>
+<button id="syncBtn" title="数据同步">📋</button>
+
+<div id="overlay" class="hidden">
+  <div class="sheet">
+    <div class="sheet-title" id="sheetTitle">新增记录</div>
+    <textarea id="contentInput" placeholder="点这里输入文字…"></textarea>
+    <div id="catSelect"></div>
+    <div class="actions"><button id="cancelBtn">取消</button><button id="saveBtn">保存</button></div>
+  </div>
+</div>
+
+<div id="catOverlay" class="hidden">
+  <div class="sheet">
+    <div class="sheet-title">分类管理</div>
+    <div class="cat-add-row">
+      <input id="newCatInput" placeholder="输入新分类名" maxlength="20">
+      <button id="addCatBtn">添加</button>
+    </div>
+    <ul id="catList"></ul>
+    <button id="catCloseBtn">关闭</button>
+  </div>
+</div>
+
+<div id="syncOverlay" class="hidden">
+  <div class="sheet">
+    <div class="sheet-title">数据同步</div>
+    <textarea id="syncArea" placeholder="点「导出」生成 JSON，或粘贴 JSON 后点「导入」"></textarea>
+    <div class="sync-actions">
+      <button id="btnExport">导出全部</button>
+      <button id="btnImport">粘贴导入</button>
+      <button id="btnSyncClose">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function () {
+  var LS_NOTES = 'vn_offline_notes';
+  var LS_CATS = 'vn_offline_cats';
+  var DEFAULT_CATS = [
+    { id: 'cat_daily', name: '日常记录' },
+    { id: 'cat_xianjian4', name: '仙剑四游戏同人小说大纲' }
+  ];
+
+  // --- 数据层 ---
+  function loadNotes() { try { return JSON.parse(localStorage.getItem(LS_NOTES) || '[]'); } catch(e) { return []; } }
+  function saveNotes(n) { localStorage.setItem(LS_NOTES, JSON.stringify(n)); }
+  function loadCats() { try { var c = JSON.parse(localStorage.getItem(LS_CATS) || 'null'); return (c && c.length) ? c : DEFAULT_CATS.slice(); } catch(e) { return DEFAULT_CATS.slice(); } }
+  function saveCats(c) { localStorage.setItem(LS_CATS, JSON.stringify(c)); }
+
+  var notes = loadNotes();
+  var categories = loadCats();
+  var currentCat = '';
+  var catSelection = '';
+  var editing = null;
+
+  // --- DOM ---
+  var listEl = document.getElementById('list'), emptyEl = document.getElementById('empty');
+  var countEl = document.getElementById('count'), overlay = document.getElementById('overlay');
+  var input = document.getElementById('contentInput'), saveBtn = document.getElementById('saveBtn');
+  var sheetTitle = document.getElementById('sheetTitle'), themeBtn = document.getElementById('themeBtn');
+  var toastEl = document.getElementById('toast'), catBarEl = document.getElementById('catBar');
+  var catSelectEl = document.getElementById('catSelect'), catOverlay = document.getElementById('catOverlay');
+  var newCatInput = document.getElementById('newCatInput'), catListEl = document.getElementById('catList');
+  var syncOverlay = document.getElementById('syncOverlay'), syncArea = document.getElementById('syncArea');
+
+  // --- 工具 ---
+  function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function now() { var d = new Date(); function p(n) { return (n<10?'0':'')+n; }
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+  function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('show');
+    clearTimeout(toast._t); toast._t = setTimeout(function() { toastEl.classList.remove('show'); }, 2000); }
+
+  var PALETTE = [['#1d4ed8','#dbeafe'],['#047857','#d1fae5'],['#b45309','#fef3c7'],
+    ['#7c3aed','#ede9fe'],['#be185d','#fce7f3'],['#0369a1','#e0f2fe'],['#15803d','#dcfce7'],['#c2410c','#ffedd5']];
+  function catColor(id) { var h=0; for(var i=0;i<id.length;i++) h=(h*31+id.charCodeAt(i))>>>0; return PALETTE[h%PALETTE.length]; }
+  function catName(id) { for(var i=0;i<categories.length;i++) if(categories[i].id===id) return categories[i].name; return ''; }
+
+  // --- 主题 ---
+  function applyTheme(t) { document.documentElement.setAttribute('data-theme',t);
+    themeBtn.textContent = t==='dark'?'☀️':'🌙'; }
+  function getTheme() { var s=localStorage.getItem('vn_theme');
+    return (s==='dark'||s==='light')?s:(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); }
+  applyTheme(getTheme());
+  themeBtn.addEventListener('click', function() { var n=getTheme()==='dark'?'light':'dark';
+    localStorage.setItem('vn_theme',n); applyTheme(n); });
+
+  // --- 分类筛选 ---
+  function catMatch(n) { if(currentCat==='') return true; if(currentCat==='__none__') return !n.category_id; return n.category_id===currentCat; }
+
+  function renderCatBar() {
+    catBarEl.innerHTML = '';
+    function addChip(id, name, cls) { var b=document.createElement('button');
+      b.className='chip'+(currentCat===id?' active':'')+(cls||''); b.textContent=name;
+      b.addEventListener('click',function(){currentCat=id;renderCatBar();render();}); catBarEl.appendChild(b); }
+    addChip('','全部'); categories.forEach(function(c){addChip(c.id,c.name,'');});
+    if(notes.some(function(n){return !n.category_id;})) addChip('__none__','未分类','');
+    var ab=document.createElement('button'); ab.className='chip chip-add'; ab.textContent='＋ 分类';
+    ab.addEventListener('click',openCatManager); catBarEl.appendChild(ab);
+  }
+
+  // --- 渲染列表 ---
+  function render() {
+    var filtered = notes.filter(catMatch).sort(function(a,b){return (b.created_at||'').localeCompare(a.created_at||'');});
+    listEl.innerHTML=''; if(filtered.length) emptyEl.classList.add('hidden'); else emptyEl.classList.remove('hidden');
+    countEl.textContent = notes.length ? notes.length+' 条' : '';
+    filtered.forEach(function(n) {
+      var li=document.createElement('li'); li.className='card';
+      var time=document.createElement('div'); time.className='time'; time.textContent=n.created_at;
+      var cname=catName(n.category_id||'');
+      if(cname){var col=catColor(n.category_id);var cb=document.createElement('span');cb.className='cat-badge';cb.textContent=cname;cb.style.color=col[0];cb.style.background=col[1];time.appendChild(cb);}
+      if(n.copy_count){var ci=document.createElement('span');ci.style.cssText='color:var(--muted);margin-left:6px';ci.textContent='· 复制 '+n.copy_count+' 次';if(n.last_copied_at)ci.title='最近复制：'+n.last_copied_at;time.appendChild(ci);}
+      li.appendChild(time);
+      var content=document.createElement('div'); content.className='content'; content.textContent=n.content;
+      content.addEventListener('click',function(){doCopy(n);}); li.appendChild(content);
+      var ops=document.createElement('div'); ops.className='ops';
+      var btnC=document.createElement('button'); btnC.className='btn-copy'; btnC.textContent='复制';
+      btnC.addEventListener('click',function(){doCopy(n);}); ops.appendChild(btnC);
+      var btnE=document.createElement('button'); btnE.className='btn-edit'; btnE.textContent='编辑';
+      btnE.addEventListener('click',function(){openEdit(n);}); ops.appendChild(btnE);
+      var btnD=document.createElement('button'); btnD.className='btn-del'; btnD.textContent='删除';
+      btnD.addEventListener('click',function(){delNote(n);}); ops.appendChild(btnD);
+      li.appendChild(ops); listEl.appendChild(li);
+    });
+  }
+
+  function doCopy(n) {
+    var ta=document.createElement('textarea'); ta.value=n.content; ta.style.cssText='position:fixed;top:-9999px';
+    document.body.appendChild(ta); ta.select();
+    try{document.execCommand('copy');toast('已复制');}catch(e){toast('复制失败');}
+    document.body.removeChild(ta);
+    n.copy_count = (n.copy_count||0)+1; n.last_copied_at = now();
+    saveNotes(notes); render();
+  }
+
+  // --- 分类选择 ---
+  function renderCatSelect(selected) {
+    catSelectEl.innerHTML='';
+    function addSel(id,name){var b=document.createElement('button');b.className='selchip'+(selected===id?' active':'');
+      b.textContent=name; b.addEventListener('click',function(){
+        catSelectEl.querySelectorAll('.selchip').forEach(function(x){x.classList.remove('active');});
+        b.classList.add('active'); catSelection=id;}); catSelectEl.appendChild(b);}
+    addSel('','未分类'); categories.forEach(function(c){addSel(c.id,c.name);});
+  }
+
+  // --- 分类管理 ---
+  function openCatManager(){catOverlay.classList.remove('hidden');newCatInput.value='';renderCatManager();setTimeout(function(){newCatInput.focus();},100);}
+  function renderCatManager(){catListEl.innerHTML='';categories.forEach(function(c){var li=document.createElement('li');li.className='cat-item';
+    var sp=document.createElement('span');sp.textContent=c.name;var cnt=notes.filter(function(n){return n.category_id===c.id;}).length;
+    var num=document.createElement('span');num.className='cat-num';num.textContent=cnt+' 条';sp.appendChild(num);li.appendChild(sp);
+    var del=document.createElement('button');del.className='cat-del';del.textContent='删除';
+    del.addEventListener('click',function(){if(!confirm('删除分类「'+c.name+'」？记录将变为未分类。'))return;
+      categories=categories.filter(function(x){return x.id!==c.id;});saveCats(categories);
+      notes.forEach(function(n){if(n.category_id===c.id)n.category_id='';});saveNotes(notes);renderCatManager();renderCatBar();render();});
+    li.appendChild(del);catListEl.appendChild(li);});}
+  document.getElementById('addCatBtn').addEventListener('click',function(){var name=newCatInput.value.trim();
+    if(!name)return;if(name.length>20){alert('最长20字');return;}
+    if(categories.some(function(c){return c.name===name;})){alert('已存在');return;}
+    categories.push({id:genId(),name:name});saveCats(categories);newCatInput.value='';renderCatManager();renderCatBar();});
+  document.getElementById('catCloseBtn').addEventListener('click',function(){catOverlay.classList.add('hidden');});
+
+  // --- 新增/编辑 ---
+  document.getElementById('addBtn').addEventListener('click',function(){
+    editing=null; sheetTitle.textContent='新增记录'; input.value='';
+    catSelection=(currentCat&&currentCat!=='__none__')?currentCat:'';
+    renderCatSelect(catSelection); overlay.classList.remove('hidden'); setTimeout(function(){input.focus();},100);
+  });
+  function openEdit(n){editing={id:n.id};sheetTitle.textContent='编辑记录';input.value=n.content;
+    catSelection=n.category_id||'';renderCatSelect(catSelection);overlay.classList.remove('hidden');setTimeout(function(){input.focus();},100);}
+  document.getElementById('cancelBtn').addEventListener('click',function(){overlay.classList.add('hidden');input.value='';editing=null;});
+  saveBtn.addEventListener('click',function(){
+    var content=input.value.trim(); if(!content){input.focus();return;}
+    if(editing){
+      for(var i=0;i<notes.length;i++){if(notes[i].id===editing.id){notes[i].content=content;notes[i].category_id=catSelection;notes[i].updated_at=now();break;}}
+      saveNotes(notes); overlay.classList.add('hidden'); input.value=''; editing=null; render();
+    } else {
+      var note={id:genId(),content:content,created_at:now(),updated_at:'',category_id:catSelection,copy_count:0,last_copied_at:''};
+      notes.unshift(note); saveNotes(notes); input.value=''; input.focus(); render(); renderCatBar();
+    }
+  });
+  function delNote(n){if(!confirm('确定删除？'))return;notes=notes.filter(function(x){return x.id!==n.id;});saveNotes(notes);render();renderCatBar();}
+
+  // --- 数据同步（导出/导入） ---
+  document.getElementById('syncBtn').addEventListener('click',function(){syncOverlay.classList.remove('hidden');syncArea.value='';});
+  document.getElementById('btnSyncClose').addEventListener('click',function(){syncOverlay.classList.add('hidden');});
+  document.getElementById('btnExport').addEventListener('click',function(){
+    var data={version:1,exported_at:now(),categories:categories,notes:notes};
+    syncArea.value=JSON.stringify(data,null,2); syncArea.select();
+    try{document.execCommand('copy');toast('已复制到剪贴板');}catch(e){toast('请手动 Ctrl+A → Ctrl+C');}
+  });
+  document.getElementById('btnImport').addEventListener('click',function(){
+    var text=syncArea.value.trim(); if(!text){toast('请先粘贴 JSON');return;}
+    var data; try{data=JSON.parse(text);}catch(e){alert('JSON 格式错误：'+e.message);return;}
+    if(!data.notes||!data.notes.length){alert('没有可导入的记录');return;}
+    var existing={}; notes.forEach(function(n){existing[n.id||n.client_id||'']=1;});
+    var added=0;
+    data.notes.forEach(function(n){
+      var key=n.id||n.client_id||'';
+      if(key&&existing[key])return;
+      if(key)existing[key]=1;
+      var cid=n.category_id||'';
+      var catNameVal=''; for(var i=0;i<(data.categories||[]).length;i++){if(data.categories[i].id===cid){catNameVal=data.categories[i].name;break;}}
+      var mappedId=''; if(catNameVal){for(var j=0;j<categories.length;j++){if(categories[j].name===catNameVal){mappedId=categories[j].id;break;}}}
+      notes.push({id:n.id||genId(),content:n.content||'',created_at:n.created_at||now(),updated_at:n.updated_at||'',category_id:mappedId,copy_count:n.copy_count||0,last_copied_at:n.last_copied_at||''});
+      added++;
+    });
+    saveNotes(notes); render(); renderCatBar();
+    syncOverlay.classList.add('hidden');
+    toast('导入成功，新增 '+added+' 条');
+  });
+
+  // --- 初始化 ---
+  renderCatBar(); render();
+})();
+</script>
+</body>
+</html>
