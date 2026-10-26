@@ -80,15 +80,24 @@ header h1 { font-size:7.5vw; font-weight:700; }
 #catCloseBtn { width:100%; padding:5vw; font-size:5.5vw; border:none; border-radius:4vw;
   background:var(--btn-ghost); color:var(--btn-ghost-text); cursor:pointer; }
 /* 同步弹层 */
-#syncArea { width:100%; min-height:60vw; font-size:4.2vw; font-family:monospace; line-height:1.6;
+.sync-main { display:flex; gap:3vw; margin-bottom:5vw; }
+.sync-main button { flex:1; padding:5.5vw 3vw; font-size:5.5vw; border:none; border-radius:4vw; cursor:pointer; font-weight:700; }
+#btnUpload { background:#059669; color:#fff; }
+#btnUpload:active { background:#047857; }
+#btnDownload { background:var(--accent); color:#fff; }
+#btnDownload:active { background:var(--accent-active); }
+.sync-divider { display:flex; align-items:center; gap:3vw; margin:4vw 0; color:var(--muted); font-size:4vw; }
+.sync-divider::before, .sync-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+#syncArea { width:100%; min-height:50vw; font-size:4.2vw; font-family:monospace; line-height:1.6;
   border:1px solid var(--border); border-radius:3.5vw; padding:4vw; resize:vertical;
   background:var(--input-bg); color:var(--text); outline:none; }
-.sync-actions { display:flex; gap:3vw; margin-top:4vw; flex-wrap:wrap; }
-.sync-actions button { flex:1; min-width:28vw; padding:4.5vw; font-size:5.2vw; border:none;
+.sync-manual { display:flex; gap:3vw; margin-top:3.5vw; flex-wrap:wrap; }
+.sync-manual button { flex:1; min-width:28vw; padding:4vw; font-size:4.8vw; border:none;
   border-radius:3.5vw; cursor:pointer; }
-#btnExport { background:var(--accent); color:#fff; }
-#btnImport { background:#059669; color:#fff; }
-#btnSyncClose { background:var(--btn-ghost); color:var(--btn-ghost-text); }
+#btnExport { background:var(--btn-ghost); color:var(--btn-ghost-text); border:1px solid var(--border); }
+#btnImport { background:var(--btn-ghost); color:var(--btn-ghost-text); border:1px solid var(--border); }
+#btnSyncClose { width:100%; margin-top:3.5vw; padding:4.5vw; font-size:5.2vw; border:none;
+  border-radius:4vw; background:var(--btn-ghost); color:var(--btn-ghost-text); cursor:pointer; }
 .cat-badge { font-size:3.8vw; border-radius:3vw; padding:1.2vw 3vw; margin-left:2.5vw; font-weight:700; }
 #syncBtn { position:fixed; left:5vw; bottom:calc(9vw + env(safe-area-inset-bottom));
   width:14vw; height:14vw; border-radius:50%; font-size:7.5vw; color:#fff;
@@ -139,12 +148,17 @@ header h1 { font-size:7.5vw; font-weight:700; }
 <div id="syncOverlay" class="hidden">
   <div class="sheet">
     <div class="sheet-title">数据同步</div>
+    <div class="sync-main">
+      <button id="btnUpload">⬆ 上传数据</button>
+      <button id="btnDownload">⬇ 下载数据</button>
+    </div>
+    <div class="sync-divider">或手动导出/导入</div>
     <textarea id="syncArea" placeholder="点「导出」生成 JSON，或粘贴 JSON 后点「导入」"></textarea>
-    <div class="sync-actions">
+    <div class="sync-manual">
       <button id="btnExport">导出全部</button>
       <button id="btnImport">粘贴导入</button>
-      <button id="btnSyncClose">关闭</button>
     </div>
+    <button id="btnSyncClose">关闭</button>
   </div>
 </div>
 
@@ -297,14 +311,90 @@ header h1 { font-size:7.5vw; font-weight:700; }
   });
   function delNote(n){if(!confirm('确定删除？'))return;notes=notes.filter(function(x){return x.id!==n.id;});saveNotes(notes);render();renderCatBar();}
 
-  // --- 数据同步（导出/导入） ---
+  // --- 数据同步（局域网 API + 手动导出/导入） ---
+  var SYNC_API = 'http://192.168.3.88:8010';
+
   document.getElementById('syncBtn').addEventListener('click',function(){syncOverlay.classList.remove('hidden');syncArea.value='';});
   document.getElementById('btnSyncClose').addEventListener('click',function(){syncOverlay.classList.add('hidden');});
+
+  // 上传数据：本地 → 服务端
+  document.getElementById('btnUpload').addEventListener('click',function(){
+    if(!notes.length && !categories.length){ toast('没有可上传的数据'); return; }
+    var btn = this; btn.disabled = true; btn.textContent = '上传中…';
+    var payload = {
+      categories: categories.map(function(c){ return {id:c.id, name:c.name}; }),
+      notes: notes.map(function(n){ return {id:n.id, content:n.content, created_at:n.created_at, updated_at:n.updated_at||'', category_id:n.category_id||'', copy_count:n.copy_count||0, last_copied_at:n.last_copied_at||'', client_id:n.client_id||n.id}; })
+    };
+    fetch(SYNC_API + '/api/sync/upload', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(data){
+      btn.disabled = false; btn.textContent = '⬆ 上传数据';
+      if(data.ok) toast('上传成功：新增 ' + data.added_notes + ' 条记录' + (data.added_categories ? '，' + data.added_categories + ' 个分类' : ''));
+      else toast('上传失败');
+    }).catch(function(e){
+      btn.disabled = false; btn.textContent = '⬆ 上传数据';
+      toast('无法连接本地服务，请确认在同一局域网');
+    });
+  });
+
+  // 下载数据：服务端 → 本地
+  document.getElementById('btnDownload').addEventListener('click',function(){
+    var btn = this; btn.disabled = true; btn.textContent = '下载中…';
+    fetch(SYNC_API + '/api/sync/download').then(function(r){ return r.json(); }).then(function(data){
+      btn.disabled = false; btn.textContent = '⬇ 下载数据';
+      if(!data.notes && !data.categories){ toast('服务端无数据'); return; }
+
+      // 合并分类（按名称去重）
+      var serverCats = data.categories || [];
+      var catNameToId = {};
+      categories.forEach(function(c){ catNameToId[c.name] = c.id; });
+      var oldToNewCatId = {};
+      serverCats.forEach(function(sc){
+        var name = (sc.name||'').trim();
+        if(!name) return;
+        if(catNameToId[name]){
+          oldToNewCatId[sc.id] = catNameToId[name];
+        } else {
+          var newId = genId();
+          categories.push({id:newId, name:name});
+          catNameToId[name] = newId;
+          oldToNewCatId[sc.id] = newId;
+        }
+      });
+      saveCats(categories);
+
+      // 合并记录（按 client_id 或 id 去重）
+      var existing = {};
+      notes.forEach(function(n){ existing[n.client_id||n.id] = 1; });
+      var added = 0;
+      (data.notes || []).forEach(function(sn){
+        var key = sn.client_id || sn.id || '';
+        if(key && existing[key]) return;
+        if(key) existing[key] = 1;
+        var localCatId = oldToNewCatId[sn.category_id||''] || '';
+        notes.push({
+          id: sn.id || genId(), client_id: sn.client_id || sn.id || genId(),
+          content: sn.content||'', created_at: sn.created_at||now(), updated_at: sn.updated_at||'',
+          category_id: localCatId, copy_count: sn.copy_count||0, last_copied_at: sn.last_copied_at||''
+        });
+        added++;
+      });
+      saveNotes(notes);
+      renderCatBar(); render();
+      toast('下载成功：新增 ' + added + ' 条记录');
+    }).catch(function(e){
+      btn.disabled = false; btn.textContent = '⬇ 下载数据';
+      toast('无法连接本地服务，请确认在同一局域网');
+    });
+  });
+
+  // 手动导出
   document.getElementById('btnExport').addEventListener('click',function(){
     var data={version:1,exported_at:now(),categories:categories,notes:notes};
     syncArea.value=JSON.stringify(data,null,2); syncArea.select();
     try{document.execCommand('copy');toast('已复制到剪贴板');}catch(e){toast('请手动 Ctrl+A → Ctrl+C');}
   });
+  // 手动导入
   document.getElementById('btnImport').addEventListener('click',function(){
     var text=syncArea.value.trim(); if(!text){toast('请先粘贴 JSON');return;}
     var data; try{data=JSON.parse(text);}catch(e){alert('JSON 格式错误：'+e.message);return;}
