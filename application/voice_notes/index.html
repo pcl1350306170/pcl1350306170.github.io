@@ -46,6 +46,8 @@ header h1 { font-size:7.5vw; font-weight:700; }
 .card { background:var(--card-bg); border-radius:4vw; padding:5.5vw; margin-bottom:4vw; box-shadow:var(--shadow); }
 .card .time { font-size:4.2vw; color:var(--muted); margin-bottom:2.5vw; display:flex; align-items:center; flex-wrap:wrap; }
 .card .content { font-size:5.5vw; line-height:1.8; white-space:pre-wrap; word-break:break-word; cursor:pointer; padding:1.5vw 0; }
+.card .content-truncated { display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
+.expand-btn { font-size:4vw; color:var(--accent); background:none; border:none; cursor:pointer; padding:2vw 0; margin-top:1vw; }
 .card .ops { display:flex; gap:5vw; margin-top:3.5vw; }
 .card .ops button { border:none; background:none; font-size:5vw; cursor:pointer; padding:3vw 1.5vw; }
 .btn-edit { color:var(--edit); } .btn-del { color:var(--del); } .btn-copy { color:var(--muted); }
@@ -223,6 +225,33 @@ header h1 { font-size:7.5vw; font-weight:700; }
   function catColor(id) { var h=0; for(var i=0;i<id.length;i++) h=(h*31+id.charCodeAt(i))>>>0; return PALETTE[h%PALETTE.length]; }
   function catName(id) { for(var i=0;i<categories.length;i++) if(categories[i].id===id) return categories[i].name; return ''; }
 
+  // --- Markdown 过滤（仅显示时过滤，不修改原始数据） ---
+  function stripMarkdown(text) {
+    if (!text) return '';
+    var s = text;
+    // 图片：![alt](url) → 删除
+    s = s.replace(/!\[([^\]]*)\]\([^)]+\)/g, '');
+    // 链接：[text](url) → 保留文字
+    s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    // 标题：# 文本 → 文本
+    s = s.replace(/^#{1,6}\s+/gm, '');
+    // 粗体/斜体：**text**、*text*、__text__、_text_
+    s = s.replace(/\*\*(.+?)\*\*/g, '$1');
+    s = s.replace(/__(.+?)__/g, '$1');
+    s = s.replace(/\*(.+?)\*/g, '$1');
+    s = s.replace(/_(.+?)_/g, '$1');
+    // 代码：`code` → code
+    s = s.replace(/`([^`]+)`/g, '$1');
+    // 列表符号：- 、* 、1. 
+    s = s.replace(/^[\s]*[-*+]\s+/gm, '');
+    s = s.replace(/^[\s]*\d+\.\s+/gm, '');
+    // 引用：> 
+    s = s.replace(/^>\s?/gm, '');
+    // 分隔线：---、***
+    s = s.replace(/^[-*_]{3,}$/gm, '');
+    return s.trim();
+  }
+
   // --- 主题 ---
   function applyTheme(t) { document.documentElement.setAttribute('data-theme',t);
     themeBtn.textContent = t==='dark'?'☀️':'🌙'; }
@@ -258,8 +287,30 @@ header h1 { font-size:7.5vw; font-weight:700; }
       if(cname){var col=catColor(n.category_id);var cb=document.createElement('span');cb.className='cat-badge';cb.textContent=cname;cb.style.color=col[0];cb.style.background=col[1];time.appendChild(cb);}
       if(n.copy_count){var ci=document.createElement('span');ci.style.cssText='color:var(--muted);margin-left:6px';ci.textContent='· 复制 '+n.copy_count+' 次';if(n.last_copied_at)ci.title='最近复制：'+n.last_copied_at;time.appendChild(ci);}
       li.appendChild(time);
-      var content=document.createElement('div'); content.className='content'; content.textContent=n.content;
+      // 内容区：过滤 markdown，截断显示
+      var content=document.createElement('div'); content.className='content content-truncated';
+      content.textContent=stripMarkdown(n.content);
       content.addEventListener('click',function(){doCopy(n);}); li.appendChild(content);
+      // 展开/收起按钮
+      var expandBtn=document.createElement('button'); expandBtn.className='expand-btn'; expandBtn.textContent='展开全文';
+      expandBtn.style.display='none';
+      expandBtn.addEventListener('click',function(e){
+        e.stopPropagation();
+        if(content.classList.contains('content-truncated')){
+          content.classList.remove('content-truncated');
+          expandBtn.textContent='收起';
+        } else {
+          content.classList.add('content-truncated');
+          expandBtn.textContent='展开全文';
+        }
+      });
+      li.appendChild(expandBtn);
+      // 渲染后检测是否需要展开按钮
+      setTimeout(function(){
+        if(content.scrollHeight > content.clientHeight + 2){
+          expandBtn.style.display='block';
+        }
+      },0);
       var ops=document.createElement('div'); ops.className='ops';
       var btnC=document.createElement('button'); btnC.className='btn-copy'; btnC.textContent='复制';
       btnC.addEventListener('click',function(){doCopy(n);}); ops.appendChild(btnC);
