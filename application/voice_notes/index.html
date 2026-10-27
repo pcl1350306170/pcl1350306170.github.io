@@ -529,21 +529,40 @@ header h1 { font-size:7.5vw; font-weight:700; }
     var text=syncArea.value.trim(); if(!text){toast('请先粘贴 JSON');return;}
     var data; try{data=JSON.parse(text);}catch(e){alert('JSON 格式错误：'+e.message);return;}
     if(!data.notes||!data.notes.length){alert('没有可导入的记录');return;}
-    var existing={}; notes.forEach(function(n){existing[n.id||n.client_id||'']=1;});
+
+    // 先合并分类（按名称去重，不存在的创建）
+    var catNameToId = {};
+    categories.forEach(function(c){ catNameToId[c.name] = c.id; });
+    var oldToNewCatId = {};
+    var catsAdded = 0;
+    (data.categories||[]).forEach(function(sc){
+      var name = (sc.name||'').trim(); if(!name) return;
+      if(catNameToId[name]){
+        oldToNewCatId[sc.id] = catNameToId[name];
+      } else {
+        var newId = genId();
+        categories.push({id:newId, name:name});
+        catNameToId[name] = newId;
+        oldToNewCatId[sc.id] = newId;
+        catsAdded++;
+      }
+    });
+    if(catsAdded) saveCats(categories);
+
+    // 再合并记录
+    var existing={}; notes.forEach(function(n){existing[n.client_id||n.id||'']=1;});
     var added=0;
     data.notes.forEach(function(n){
-      var key=n.id||n.client_id||'';
+      var key=n.client_id||n.id||'';
       if(key&&existing[key])return;
       if(key)existing[key]=1;
-      var cid=n.category_id||'';
-      var catNameVal=''; for(var i=0;i<(data.categories||[]).length;i++){if(data.categories[i].id===cid){catNameVal=data.categories[i].name;break;}}
-      var mappedId=''; if(catNameVal){for(var j=0;j<categories.length;j++){if(categories[j].name===catNameVal){mappedId=categories[j].id;break;}}}
-      notes.push({id:n.id||genId(),content:n.content||'',created_at:n.created_at||now(),updated_at:n.updated_at||'',category_id:mappedId,copy_count:n.copy_count||0,last_copied_at:n.last_copied_at||''});
+      var localCatId = oldToNewCatId[n.category_id||''] || '';
+      notes.push({id:n.id||genId(),client_id:n.client_id||n.id||genId(),content:n.content||'',created_at:n.created_at||now(),updated_at:n.updated_at||'',category_id:localCatId,copy_count:n.copy_count||0,last_copied_at:n.last_copied_at||'',synced:false});
       added++;
     });
-    saveNotes(notes); render(); renderCatBar();
+    saveNotes(notes); renderCatBar(); render(); updateSyncStatus();
     syncOverlay.classList.add('hidden');
-    toast('导入成功，新增 '+added+' 条');
+    toast('导入成功：新增 '+added+' 条记录'+(catsAdded?'，'+catsAdded+' 个分类':''));
   });
 
   // --- 初始化 ---
