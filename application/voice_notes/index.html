@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#f3f4f6">
 <title>语音速记</title>
+<link rel="icon" type="image/jpeg" href="https://raw.githubusercontent.com/pcl1350306170/test-data-backup/refs/heads/main/img/T/%E6%A8%AA%E5%B1%8F-%E8%92%82%E6%B3%95%E9%AB%98%E6%B8%85-yw9z7s.jpg">
 <style>
 :root {
   --bg: #f3f4f6; --card-bg: #fff; --text: #1f2937; --muted: #6b7280;
@@ -96,16 +97,9 @@ header h1 { font-size:7.5vw; font-weight:700; }
 .sync-main button { flex:1; padding:5.5vw 3vw; font-size:5.5vw; border:none; border-radius:4vw; cursor:pointer; font-weight:700; }
 .sync-divider { display:flex; align-items:center; gap:3vw; margin:4vw 0; color:var(--muted); font-size:4vw; }
 .sync-divider::before, .sync-divider::after { content:''; flex:1; height:1px; background:var(--border); }
-#syncArea { width:100%; min-height:50vw; font-size:4.2vw; font-family:monospace; line-height:1.6;
-  border:1px solid var(--border); border-radius:3.5vw; padding:4vw; resize:vertical;
-  background:var(--input-bg); color:var(--text); outline:none; }
 .sync-manual { display:flex; gap:3vw; margin-top:3.5vw; flex-wrap:wrap; }
 .sync-manual button { flex:1; min-width:28vw; padding:4vw; font-size:4.8vw; border:none;
   border-radius:3.5vw; cursor:pointer; }
-#btnExport { background:var(--btn-ghost); color:var(--btn-ghost-text); border:1px solid var(--border); }
-#btnImport { background:var(--btn-ghost); color:var(--btn-ghost-text); border:1px solid var(--border); }
-#btnExportPending { background:#d97706; color:#fff; font-weight:700; }
-#btnExportPending:active { background:#b45309; }
 /* GitHub 同步 */
 #btnGhSync { background:linear-gradient(135deg,#24292f,#0969da); color:#fff; }
 #btnGhSync:active { opacity:0.85; }
@@ -171,7 +165,6 @@ header h1 { font-size:7.5vw; font-weight:700; }
   .sync-main { gap:10px; margin-bottom:10px; }
   .sync-main button { padding:12px 14px; font-size:15px; border-radius:8px; }
   .sync-divider { margin:12px 0; font-size:12px; gap:10px; }
-  #syncArea { min-height:200px; font-size:12px; border-radius:8px; padding:10px; }
   .sync-manual { gap:10px; margin-top:10px; }
   .sync-manual button { min-width:0; padding:10px; font-size:13px; border-radius:8px; }
   #ghInfo { font-size:12px; }
@@ -225,13 +218,6 @@ header h1 { font-size:7.5vw; font-weight:700; }
     </div>
     <p id="ghInfo"></p>
     <div class="sync-manual"><button id="btnGhSettings">⚙️ GitHub 设置</button></div>
-    <div class="sync-divider">或手动导出/导入</div>
-    <textarea id="syncArea" placeholder="点「导出」生成 JSON，或粘贴 JSON 后点「导入」"></textarea>
-    <div class="sync-manual">
-      <button id="btnExportPending">复制待同步</button>
-      <button id="btnExport">导出全部</button>
-      <button id="btnImport">粘贴导入</button>
-    </div>
     <button id="btnSyncClose">关闭</button>
   </div>
 </div>
@@ -280,7 +266,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
   var toastEl = document.getElementById('toast'), catBarEl = document.getElementById('catBar');
   var catSelectEl = document.getElementById('catSelect'), catOverlay = document.getElementById('catOverlay');
   var newCatInput = document.getElementById('newCatInput'), catListEl = document.getElementById('catList');
-  var syncOverlay = document.getElementById('syncOverlay'), syncArea = document.getElementById('syncArea');
+  var syncOverlay = document.getElementById('syncOverlay');
 
   // --- 工具 ---
   function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -463,84 +449,10 @@ header h1 { font-size:7.5vw; font-weight:700; }
 
   // 弹层按钮
   document.getElementById('syncBtn').addEventListener('click',function(){
-    syncOverlay.classList.remove('hidden'); syncArea.value='';
+    syncOverlay.classList.remove('hidden');
     updateSyncStatus();
   });
   document.getElementById('btnSyncClose').addEventListener('click',function(){ syncOverlay.classList.add('hidden'); });
-
-  // 复制待同步：只导出 synced=false 的增量记录 + 关联分类名称映射，复制成功后标记已同步
-  document.getElementById('btnExportPending').addEventListener('click', function(){
-    var pending = notes.filter(function(n){ return !n.synced; });
-    if (!pending.length) { toast('没有待同步记录'); return; }
-    var usedCatIds = {};
-    pending.forEach(function(n){ if (n.category_id) usedCatIds[n.category_id] = 1; });
-    var cats = categories.filter(function(c){ return usedCatIds[c.id]; })
-      .map(function(c){ return { id: c.id, name: c.name }; });
-    var data = {
-      version: 1,
-      exported_at: now(),
-      pending: true,
-      categories: cats,
-      notes: pending.map(function(n){ return {
-        id: n.id, client_id: n.client_id || n.id, content: n.content,
-        created_at: n.created_at, updated_at: n.updated_at || '',
-        category_id: n.category_id || '', copy_count: n.copy_count || 0,
-        last_copied_at: n.last_copied_at || ''
-      }; })
-    };
-    syncArea.value = JSON.stringify(data, null, 2); syncArea.select();
-    try { document.execCommand('copy'); } catch(e) {}
-    // 复制成功即视为已导出，标记后再次复制只含新增内容
-    pending.forEach(function(p){ p.synced = true; });
-    saveNotes(notes); updateSyncStatus();
-    toast('已复制 ' + pending.length + ' 条待同步记录');
-  });
-  // 手动导出
-  document.getElementById('btnExport').addEventListener('click', function(){
-    var data={version:1,exported_at:now(),categories:categories,notes:notes};
-    syncArea.value=JSON.stringify(data,null,2); syncArea.select();
-    try{document.execCommand('copy');toast('已复制到剪贴板');}catch(e){toast('请手动 Ctrl+A → Ctrl+C');}
-  });
-  // 手动导入
-  document.getElementById('btnImport').addEventListener('click',function(){
-    var text=syncArea.value.trim(); if(!text){toast('请先粘贴 JSON');return;}
-    var data; try{data=JSON.parse(text);}catch(e){alert('JSON 格式错误：'+e.message);return;}
-    if(!data.notes||!data.notes.length){alert('没有可导入的记录');return;}
-
-    // 先合并分类（按名称去重，不存在的创建）
-    var catNameToId = {};
-    categories.forEach(function(c){ catNameToId[c.name] = c.id; });
-    var oldToNewCatId = {};
-    var catsAdded = 0;
-    (data.categories||[]).forEach(function(sc){
-      var name = (sc.name||'').trim(); if(!name) return;
-      if(catNameToId[name]){
-        oldToNewCatId[sc.id] = catNameToId[name];
-      } else {
-        var newId = genId();
-        categories.push({id:newId, name:name});
-        catNameToId[name] = newId;
-        oldToNewCatId[sc.id] = newId;
-        catsAdded++;
-      }
-    });
-    if(catsAdded) saveCats(categories);
-
-    // 再合并记录
-    var existing={}; notes.forEach(function(n){existing[n.client_id||n.id||'']=1;});
-    var added=0;
-    data.notes.forEach(function(n){
-      var key=n.client_id||n.id||'';
-      if(key&&existing[key])return;
-      if(key)existing[key]=1;
-      var localCatId = oldToNewCatId[n.category_id||''] || '';
-      notes.push({id:n.id||genId(),client_id:n.client_id||n.id||genId(),content:n.content||'',created_at:n.created_at||now(),updated_at:n.updated_at||'',category_id:localCatId,copy_count:n.copy_count||0,last_copied_at:n.last_copied_at||'',synced:false});
-      added++;
-    });
-    saveNotes(notes); renderCatBar(); render(); updateSyncStatus();
-    syncOverlay.classList.add('hidden');
-    toast('导入成功：新增 '+added+' 条记录'+(catsAdded?'，'+catsAdded+' 个分类':''));
-  });
 
   /* ---------------- GitHub 仓库同步（完全手动，无自动触发） ---------------- */
   var LS_GH = 'vn_gh_sync';
