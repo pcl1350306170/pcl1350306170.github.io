@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#f3f4f6">
-<title>语音速记（离线版）</title>
+<title>语音速记</title>
 <style>
 :root {
   --bg: #f3f4f6; --card-bg: #fff; --text: #1f2937; --muted: #6b7280;
@@ -29,10 +29,12 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei","PingFang 
 header { position:sticky; top:0; z-index:10; background:var(--card-bg); border-bottom:1px solid var(--border);
   padding:5vw 5vw; display:flex; align-items:center; justify-content:space-between; }
 header h1 { font-size:7.5vw; font-weight:700; }
+#syncStatus { position:sticky; top:0; z-index:9; font-size:3.8vw; color:var(--muted); padding:2vw 5vw;
+  display:flex; align-items:center; gap:2vw; background:var(--card-bg); border-bottom:1px solid var(--border); }
 #count { font-size:5vw; color:var(--muted); margin-right:3vw; }
 #themeBtn { border:none; background:var(--btn-ghost); color:var(--text); font-size:6.5vw;
   width:13vw; height:13vw; border-radius:3.5vw; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-#catBar { position:sticky; top:28vw; z-index:9; display:flex; gap:3vw; overflow-x:auto;
+#catBar { position:sticky; top:16vw; z-index:8; display:flex; gap:3vw; overflow-x:auto;
   padding:4vw 5vw; background:var(--bg); white-space:nowrap; }
 .chip { flex:0 0 auto; border:1px solid var(--border); background:var(--card-bg); color:var(--text);
   font-size:4.8vw; border-radius:6.5vw; padding:3.2vw 5.5vw; cursor:pointer; }
@@ -53,7 +55,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
 .btn-edit { color:var(--edit); } .btn-del { color:var(--del); } .btn-copy { color:var(--muted); }
 #empty { text-align:center; color:var(--muted); font-size:5.5vw; padding:25vh 6vw; }
 .hidden { display:none !important; }
-#overlay, #catOverlay, #syncOverlay { position:fixed; inset:0; background:var(--overlay); z-index:20;
+#overlay, #catOverlay, #syncOverlay, #ghOverlay { position:fixed; inset:0; background:var(--overlay); z-index:20;
   display:flex; align-items:flex-end; justify-content:center; }
 .sheet { width:100%; background:var(--card-bg); color:var(--text);
   border-radius:6vw 6vw 0 0; padding:6vw 5vw calc(6vw + env(safe-area-inset-bottom)); }
@@ -92,14 +94,6 @@ header h1 { font-size:7.5vw; font-weight:700; }
 /* 同步弹层 */
 .sync-main { display:flex; gap:3vw; margin-bottom:3vw; }
 .sync-main button { flex:1; padding:5.5vw 3vw; font-size:5.5vw; border:none; border-radius:4vw; cursor:pointer; font-weight:700; }
-#btnSyncAll { background:linear-gradient(135deg,#059669,#2563eb); color:#fff; }
-#btnSyncAll:active { opacity:0.85; }
-.sync-secondary { display:flex; gap:3vw; margin-bottom:4vw; }
-.sync-secondary button { flex:1; padding:4.5vw 2vw; font-size:4.8vw; border:none; border-radius:4vw; cursor:pointer; font-weight:700; }
-#btnUpload { background:#059669; color:#fff; }
-#btnUpload:active { background:#047857; }
-#btnDownload { background:var(--accent); color:#fff; }
-#btnDownload:active { background:var(--accent-active); }
 .sync-divider { display:flex; align-items:center; gap:3vw; margin:4vw 0; color:var(--muted); font-size:4vw; }
 .sync-divider::before, .sync-divider::after { content:''; flex:1; height:1px; background:var(--border); }
 #syncArea { width:100%; min-height:50vw; font-size:4.2vw; font-family:monospace; line-height:1.6;
@@ -110,6 +104,16 @@ header h1 { font-size:7.5vw; font-weight:700; }
   border-radius:3.5vw; cursor:pointer; }
 #btnExport { background:var(--btn-ghost); color:var(--btn-ghost-text); border:1px solid var(--border); }
 #btnImport { background:var(--btn-ghost); color:var(--btn-ghost-text); border:1px solid var(--border); }
+#btnExportPending { background:#d97706; color:#fff; font-weight:700; }
+#btnExportPending:active { background:#b45309; }
+/* GitHub 同步 */
+#btnGhSync { background:linear-gradient(135deg,#24292f,#0969da); color:#fff; }
+#btnGhSync:active { opacity:0.85; }
+#ghInfo { font-size:3.8vw; color:var(--muted); margin:2vw 0 0; }
+.gh-row { display:flex; gap:3vw; margin-bottom:3vw; }
+.gh-input { flex:1; font-size:4.8vw; padding:3.5vw; border:1px solid var(--border);
+  border-radius:3.5vw; background:var(--input-bg); color:var(--text); outline:none; }
+.gh-label { font-size:4.2vw; color:var(--muted); margin:3vw 0 1.5vw; }
 #btnSyncClose { width:100%; margin-top:3.5vw; padding:4.5vw; font-size:5.2vw; border:none;
   border-radius:4vw; background:var(--btn-ghost); color:var(--btn-ghost-text); cursor:pointer; }
 .cat-badge { font-size:3.8vw; border-radius:3vw; padding:1.2vw 3vw; margin-left:2.5vw; font-weight:700; }
@@ -126,13 +130,13 @@ header h1 { font-size:7.5vw; font-weight:700; }
 </head>
 <body>
 <header>
-  <h1>🗒 语音速记（离线）</h1>
+  <h1>🗒 语音速记</h1>
   <div style="display:flex;align-items:center;">
     <span id="count"></span>
     <button id="themeBtn" title="切换明暗模式">🌙</button>
   </div>
 </header>
-<div id="syncStatus"><span class="dot dot-offline" id="syncDot"></span><span id="syncInfo">检测连接中…</span></div>
+<div id="syncStatus"><span id="syncInfo">初始化…</span></div>
 <div id="catBar"></div>
 <ul id="list"></ul>
 <div id="empty">还没有记录，点「＋」开始</div>
@@ -163,20 +167,32 @@ header h1 { font-size:7.5vw; font-weight:700; }
 <div id="syncOverlay" class="hidden">
   <div class="sheet">
     <div class="sheet-title">数据同步</div>
-    <div class="sync-main">
-      <button id="btnSyncAll">🔄 一键同步</button>
+    <div class="sync-main" style="margin-bottom:3vw;">
+      <button id="btnGhSync">☁️ 同步到 GitHub</button>
     </div>
-    <div class="sync-secondary">
-      <button id="btnUpload">⬆ 上传</button>
-      <button id="btnDownload">⬇ 下载</button>
-    </div>
+    <p id="ghInfo"></p>
+    <div class="sync-manual"><button id="btnGhSettings">⚙️ GitHub 设置</button></div>
     <div class="sync-divider">或手动导出/导入</div>
     <textarea id="syncArea" placeholder="点「导出」生成 JSON，或粘贴 JSON 后点「导入」"></textarea>
     <div class="sync-manual">
+      <button id="btnExportPending">复制待同步</button>
       <button id="btnExport">导出全部</button>
       <button id="btnImport">粘贴导入</button>
     </div>
     <button id="btnSyncClose">关闭</button>
+  </div>
+</div>
+
+<div id="ghOverlay" class="hidden">
+  <div class="sheet">
+    <div class="sheet-title">GitHub 设置</div>
+    <input type="password" id="ghToken" class="gh-input" placeholder="Fine-grained PAT（仅 Contents: RW 权限）">
+    <div class="gh-label">仓库（owner/repo）</div>
+    <input type="text" id="ghRepo" class="gh-input" placeholder="pcl1350306170/pcl1350306170.github.io">
+    <div class="gh-label">数据文件路径（JSON，md 归档自动生成在同目录）</div>
+    <input type="text" id="ghPath" class="gh-input" placeholder="application/voice_notes/data/notes.json">
+    <div class="sync-manual"><button id="btnGhSave">保存并验证</button><button id="btnGhClose">关闭</button></div>
+    <p id="ghSettingsHint" class="gh-label"></p>
   </div>
 </div>
 
@@ -327,8 +343,8 @@ header h1 { font-size:7.5vw; font-weight:700; }
     document.body.appendChild(ta); ta.select();
     try{document.execCommand('copy');toast('已复制');}catch(e){toast('复制失败');}
     document.body.removeChild(ta);
-    n.copy_count = (n.copy_count||0)+1; n.last_copied_at = now();
-    saveNotes(notes); render();
+    n.copy_count = (n.copy_count||0)+1; n.last_copied_at = now(); n.synced = false;
+    saveNotes(notes); render(); updateSyncStatus();
   }
 
   // --- 分类选择 ---
@@ -371,183 +387,25 @@ header h1 { font-size:7.5vw; font-weight:700; }
     if(editing){
       for(var i=0;i<notes.length;i++){if(notes[i].id===editing.id){notes[i].content=content;notes[i].category_id=catSelection;notes[i].updated_at=now();notes[i].synced=false;break;}}
       saveNotes(notes); overlay.classList.add('hidden'); input.value=''; editing=null; render(); updateSyncStatus();
-      if(isOnline) doUpload(true); // 编辑后自动上传
     } else {
       var note={id:genId(),client_id:genId(),content:content,created_at:now(),updated_at:'',category_id:catSelection,copy_count:0,last_copied_at:'',synced:false};
       notes.unshift(note); saveNotes(notes); input.value=''; input.focus(); render(); renderCatBar(); updateSyncStatus();
-      if(isOnline) doUpload(true); // 新建后自动上传
     }
   });
   function delNote(n){if(!confirm('确定删除？'))return;notes=notes.filter(function(x){return x.id!==n.id;});saveNotes(notes);render();renderCatBar();}
 
-  // --- 数据同步（增量 + 冲突检测 + 自动同步） ---
-  var SYNC_API = 'http://192.168.3.88:8010';
-  var LS_SYNC = 'vn_last_sync';
-  var isOnline = false;
+  // --- 同步状态（单人使用：GitHub 唯一通道，synced 即"待推送到仓库"） ---
   var syncing = false;
-  var autoSyncTimer = null;
-  var syncDot = document.getElementById('syncDot');
   var syncInfo = document.getElementById('syncInfo');
 
-  function getLastSync() { return localStorage.getItem(LS_SYNC) || ''; }
-  function setLastSync(t) { localStorage.setItem(LS_SYNC, t); }
   function unsyncedCount() { return notes.filter(function(n){ return !n.synced; }).length; }
 
-  // 更新同步状态栏
   function updateSyncStatus() {
     var uc = unsyncedCount();
-    var ls = getLastSync();
-    syncDot.className = 'dot ' + (syncing ? 'dot-syncing' : (isOnline ? 'dot-online' : 'dot-offline'));
-    var txt = '';
-    if (!isOnline) { txt = '离线模式'; }
-    else if (syncing) { txt = '同步中…'; }
-    else { txt = '已连接'; }
-    if (ls) txt += ' · 上次同步 ' + ls.slice(5, 16);
+    var t = ghSettings().lastSyncAt;
+    var txt = syncing ? '同步中…' : (uc > 0 ? '⏳ ' + uc + ' 条待同步到 GitHub' : '✓ 已全部同步');
+    if (t) txt += ' · 上次 ' + t.slice(5, 16);
     syncInfo.textContent = txt;
-    // 未同步徽标
-    var old = document.getElementById('unsyncedBadge');
-    if (old) old.parentNode.removeChild(old);
-    if (uc > 0 && isOnline) {
-      var badge = document.createElement('span'); badge.id = 'unsyncedBadge';
-      badge.className = 'unsynced-badge'; badge.textContent = uc + ' 条未同步';
-      syncInfo.parentNode.appendChild(badge);
-    }
-  }
-
-  // 检测局域网连接
-  function checkConnection() {
-    fetch(SYNC_API + '/api/ping', { method:'GET', mode:'cors' }).then(function(r){ return r.json(); }).then(function(d){
-      var wasOffline = !isOnline;
-      isOnline = true;
-      updateSyncStatus();
-      if (wasOffline) { doSyncAll(true); } // 刚连上，自动同步
-    }).catch(function(){
-      isOnline = false;
-      updateSyncStatus();
-    });
-  }
-
-  // 启动/停止自动同步定时器
-  function startAutoSync() {
-    stopAutoSync();
-    autoSyncTimer = setInterval(function(){ if(isOnline && !syncing) doSyncAll(true); }, 5 * 60 * 1000);
-  }
-  function stopAutoSync() { if(autoSyncTimer){ clearInterval(autoSyncTimer); autoSyncTimer=null; } }
-
-  // 上传：只发送未同步的记录（增量）
-  function doUpload(silent) {
-    var unsynced = notes.filter(function(n){ return !n.synced; });
-    if (!unsynced.length && !silent) { toast('没有需要同步的记录'); return Promise.resolve(); }
-    syncing = true; updateSyncStatus();
-    var payload = {
-      categories: categories.map(function(c){ return {id:c.id, name:c.name}; }),
-      notes: unsynced.map(function(n){ return {
-        id:n.id, content:n.content, created_at:n.created_at, updated_at:n.updated_at||'',
-        category_id:n.category_id||'', copy_count:n.copy_count||0, last_copied_at:n.last_copied_at||'',
-        client_id:n.client_id||n.id
-      }; })
-    };
-    return fetch(SYNC_API + '/api/sync/upload', {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
-    }).then(function(r){ return r.json(); }).then(function(data){
-      syncing = false;
-      if (data.ok) {
-        // 标记已同步
-        unsynced.forEach(function(un){
-          for(var i=0;i<notes.length;i++){
-            if((notes[i].client_id||notes[i].id)===(un.client_id||un.id)){
-              notes[i].synced = true; break;
-            }
-          }
-        });
-        saveNotes(notes);
-        var t = now(); setLastSync(t);
-        updateSyncStatus(); render();
-        if (!silent) toast('上传成功：新增 ' + data.added_notes + ' 条' + (data.updated_notes ? '，更新 ' + data.updated_notes + ' 条' : ''));
-      } else { if(!silent) toast('上传失败'); }
-    }).catch(function(){
-      syncing = false; updateSyncStatus();
-      if(!silent) toast('无法连接本地服务');
-    });
-  }
-
-  // 下载：合并服务端数据（冲突检测：比较 updated_at）
-  function doDownload(silent) {
-    syncing = true; updateSyncStatus();
-    return fetch(SYNC_API + '/api/sync/download').then(function(r){ return r.json(); }).then(function(data){
-      syncing = false;
-      if (!data.notes && !data.categories) { updateSyncStatus(); if(!silent) toast('服务端无数据'); return; }
-
-      // 合并分类（按名称去重）
-      var serverCats = data.categories || [];
-      var catNameToId = {};
-      categories.forEach(function(c){ catNameToId[c.name] = c.id; });
-      var oldToNewCatId = {};
-      serverCats.forEach(function(sc){
-        var name = (sc.name||'').trim(); if(!name) return;
-        if(catNameToId[name]){ oldToNewCatId[sc.id] = catNameToId[name]; }
-        else { var newId=genId(); categories.push({id:newId,name:name}); catNameToId[name]=newId; oldToNewCatId[sc.id]=newId; }
-      });
-      saveCats(categories);
-
-      // 合并记录（冲突检测）
-      var added = 0, updated = 0;
-      (data.notes || []).forEach(function(sn){
-        var key = sn.client_id || sn.id || '';
-        if (!key) return;
-        var localCatId = oldToNewCatId[sn.category_id||''] || '';
-        // 查找本地是否已有
-        var found = -1;
-        for(var i=0;i<notes.length;i++){ if((notes[i].client_id||notes[i].id)===key){ found=i; break; } }
-        if (found === -1) {
-          // 新记录
-          notes.push({
-            id:sn.id||genId(), client_id:sn.client_id||sn.id||genId(),
-            content:sn.content||'', created_at:sn.created_at||now(), updated_at:sn.updated_at||'',
-            category_id:localCatId, copy_count:sn.copy_count||0, last_copied_at:sn.last_copied_at||'', synced:true
-          });
-          added++;
-        } else {
-          // 冲突检测：比较 updated_at
-          var local = notes[found];
-          var serverUp = sn.updated_at || '';
-          var localUp = local.updated_at || '';
-          if (local.synced) {
-            // 本地已同步，取服务端版本（可能其他设备更新过）
-            if (serverUp && serverUp > localUp) {
-              local.content = sn.content; local.updated_at = serverUp;
-              local.category_id = localCatId; local.copy_count = sn.copy_count||local.copy_count;
-              local.last_copied_at = sn.last_copied_at||local.last_copied_at;
-              local.synced = true;
-              updated++;
-            }
-          } else {
-            // 本地未同步，比较时间戳，新的胜出
-            if (serverUp > localUp) {
-              local.content = sn.content; local.updated_at = serverUp;
-              local.category_id = localCatId; local.synced = true;
-              updated++;
-            } else {
-              // 本地更新，保留本地，但标记已同步（服务端已有旧版本）
-              local.synced = true;
-            }
-          }
-        }
-      });
-      saveNotes(notes);
-      var t = now(); setLastSync(t);
-      updateSyncStatus(); renderCatBar(); render();
-      if (!silent) toast('下载成功：新增 ' + added + ' 条' + (updated ? '，更新 ' + updated + ' 条' : ''));
-    }).catch(function(){
-      syncing = false; updateSyncStatus();
-      if(!silent) toast('无法连接本地服务');
-    });
-  }
-
-  // 一键同步：先下载再上传
-  function doSyncAll(silent) {
-    if (syncing) return Promise.resolve();
-    return doDownload(true).then(function(){ return doUpload(silent); });
   }
 
   // 弹层按钮
@@ -556,21 +414,36 @@ header h1 { font-size:7.5vw; font-weight:700; }
     updateSyncStatus();
   });
   document.getElementById('btnSyncClose').addEventListener('click',function(){ syncOverlay.classList.add('hidden'); });
-  document.getElementById('btnSyncAll').addEventListener('click',function(){
-    var btn=this; btn.disabled=true; btn.textContent='同步中…';
-    doSyncAll(false).then(function(){ btn.disabled=false; btn.textContent='🔄 一键同步'; });
-  });
-  document.getElementById('btnUpload').addEventListener('click',function(){
-    var btn=this; btn.disabled=true; btn.textContent='上传中…';
-    doUpload(false).then(function(){ btn.disabled=false; btn.textContent='⬆ 上传'; });
-  });
-  document.getElementById('btnDownload').addEventListener('click',function(){
-    var btn=this; btn.disabled=true; btn.textContent='下载中…';
-    doDownload(false).then(function(){ btn.disabled=false; btn.textContent='⬇ 下载'; });
-  });
 
+  // 复制待同步：只导出 synced=false 的增量记录 + 关联分类名称映射，复制成功后标记已同步
+  document.getElementById('btnExportPending').addEventListener('click', function(){
+    var pending = notes.filter(function(n){ return !n.synced; });
+    if (!pending.length) { toast('没有待同步记录'); return; }
+    var usedCatIds = {};
+    pending.forEach(function(n){ if (n.category_id) usedCatIds[n.category_id] = 1; });
+    var cats = categories.filter(function(c){ return usedCatIds[c.id]; })
+      .map(function(c){ return { id: c.id, name: c.name }; });
+    var data = {
+      version: 1,
+      exported_at: now(),
+      pending: true,
+      categories: cats,
+      notes: pending.map(function(n){ return {
+        id: n.id, client_id: n.client_id || n.id, content: n.content,
+        created_at: n.created_at, updated_at: n.updated_at || '',
+        category_id: n.category_id || '', copy_count: n.copy_count || 0,
+        last_copied_at: n.last_copied_at || ''
+      }; })
+    };
+    syncArea.value = JSON.stringify(data, null, 2); syncArea.select();
+    try { document.execCommand('copy'); } catch(e) {}
+    // 复制成功即视为已导出，标记后再次复制只含新增内容
+    pending.forEach(function(p){ p.synced = true; });
+    saveNotes(notes); updateSyncStatus();
+    toast('已复制 ' + pending.length + ' 条待同步记录');
+  });
   // 手动导出
-  document.getElementById('btnExport').addEventListener('click',function(){
+  document.getElementById('btnExport').addEventListener('click', function(){
     var data={version:1,exported_at:now(),categories:categories,notes:notes};
     syncArea.value=JSON.stringify(data,null,2); syncArea.select();
     try{document.execCommand('copy');toast('已复制到剪贴板');}catch(e){toast('请手动 Ctrl+A → Ctrl+C');}
@@ -616,15 +489,243 @@ header h1 { font-size:7.5vw; font-weight:700; }
     toast('导入成功：新增 '+added+' 条记录'+(catsAdded?'，'+catsAdded+' 个分类':''));
   });
 
+  /* ---------------- GitHub 仓库同步（完全手动，无自动触发） ---------------- */
+  var LS_GH = 'vn_gh_sync';
+  var GH_API = 'https://api.github.com';
+  var GH_DEFAULTS = {
+    token: '',
+    repo: 'pcl1350306170/pcl1350306170.github.io',
+    path: 'application/voice_notes/data/notes.json',
+    lastSyncAt: ''
+  };
+  function ghSettings() { try { return Object.assign({}, GH_DEFAULTS, JSON.parse(localStorage.getItem(LS_GH) || '{}')); } catch(e) { return Object.assign({}, GH_DEFAULTS); } }
+  function ghSaveSettings(s) { localStorage.setItem(LS_GH, JSON.stringify(s)); }
+  function ghMDPath(p) { return p.replace(/\/[^\/]*$/, '') + '/notes-export.md'; }
+  function ghFetch(url, opts) { // 带令牌的 fetch，附带 GitHub API 必需头
+    opts = opts || {}; opts.headers = opts.headers || {};
+    opts.headers['Authorization'] = 'Bearer ' + ghSettings().token;
+    opts.headers['Accept'] = 'application/vnd.github+json';
+    opts.headers['X-GitHub-Api-Version'] = '2022-11-28';
+    return fetch(url, opts);
+  }
+  function utf8ToB64(str) { // 中文安全：先 UTF-8 编码再 base64
+    var bytes = new TextEncoder().encode(str), bin = '';
+    bytes.forEach(function(b){ bin += String.fromCharCode(b); });
+    return btoa(bin);
+  }
+  function b64ToUtf8(s) {
+    var bin = atob((s || '').replace(/\s/g, '')), u = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(u);
+  }
+
+  function ghBuildPayload() {
+    return {
+      version: 1,
+      exported_at: now(),
+      categories: categories.map(function(c){ return { id: c.id, name: c.name }; }),
+      notes: notes.map(function(n){ return {
+        id: n.id, client_id: n.client_id || n.id, content: n.content,
+        created_at: n.created_at, updated_at: n.updated_at || '',
+        category_id: n.category_id || '', copy_count: n.copy_count || 0,
+        last_copied_at: n.last_copied_at || ''
+      }; })
+    };
+  }
+
+  function ghBuildMD(data) {
+    var lines = ['# 语音速记导出', '', '> 由 GitHub 同步自动生成，请勿手动编辑（会被下次同步覆盖）', '> 最近同步：' + now() + ' · 共 ' + data.notes.length + ' 条', ''];
+    function one(n) {
+      lines.push('## ' + (n.created_at || ''));
+      lines.push('');
+      lines.push(n.content);
+      lines.push('');
+      var meta = [];
+      if (n.updated_at) meta.push('编辑 ' + n.updated_at);
+      if (n.copy_count) meta.push('复制 ' + n.copy_count + ' 次');
+      if (meta.length) { lines.push('*(' + meta.join(' · ') + ')*'); lines.push(''); }
+    }
+    data.categories.forEach(function(c) {
+      var arr = data.notes.filter(function(n){ return n.category_id === c.id; })
+        .sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
+      if (!arr.length) return;
+      lines.push('# ' + c.name + '（' + arr.length + '）'); lines.push('');
+      arr.forEach(one);
+    });
+    var none = data.notes.filter(function(n){ return !n.category_id || !data.categories.some(function(c){ return c.id === n.category_id; }); })
+      .sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
+    if (none.length) { lines.push('# 未分类（' + none.length + '）'); lines.push(''); none.forEach(one); }
+    return lines.join('\n');
+  }
+
+  // 合并远端数据到本地：本地未同步（待推送）记录始终胜出；已同步的按 updated_at 新者胜
+  function ghMergeRemote(data) {
+    var added = 0, updated = 0;
+    var catNameToId = {};
+    categories.forEach(function(c){ catNameToId[c.name] = c.id; });
+    ((data && data.categories) || []).forEach(function(rc) {
+      var name = (rc.name || '').trim(); if (!name) return;
+      if (!catNameToId[name]) { var nid = genId(); categories.push({ id: nid, name: name }); catNameToId[name] = nid; }
+    });
+    saveCats(categories);
+    var keyOf = function(n){ return n.client_id || n.id || ''; };
+    var rcats = (data && data.categories) || [];
+    var idx = {}; notes.forEach(function(n,i){ idx[keyOf(n)] = i; });
+    ((data && data.notes) || []).forEach(function(rn) {
+      var key = keyOf(rn); if (!key) return;
+      var content = (rn.content || '').trim(); if (!content) return;
+      var localCatId = ghMapCat(rn.category_id, rcats, catNameToId);
+      if (idx[key] === undefined) {
+        notes.push({ id: rn.id || genId(), client_id: key, content: content,
+          created_at: rn.created_at || now(), updated_at: rn.updated_at || '',
+          category_id: localCatId, copy_count: rn.copy_count || 0,
+          last_copied_at: rn.last_copied_at || '', synced: true });
+        idx[key] = notes.length - 1; added++;
+      } else {
+        var local = notes[idx[key]], ru = rn.updated_at || '', lu = local.updated_at || '';
+        if (local.synced) {
+          if (ru && ru > lu) { local.content = content; local.updated_at = ru; local.category_id = localCatId || local.category_id;
+            local.copy_count = rn.copy_count || local.copy_count; local.last_copied_at = rn.last_copied_at || local.last_copied_at; updated++; }
+        } else if (ru > lu) { // 远端更新且本地未同步：取远端并视为已同步（本地更旧无需再推）
+          local.content = content; local.updated_at = ru; local.category_id = localCatId || local.category_id; local.synced = true; updated++;
+        }
+      }
+    });
+    saveNotes(notes); renderCatBar(); render(); updateSyncStatus();
+    return { added: added, updated: updated };
+  }
+  function catNameOf(catId, rcats) {
+    for (var i = 0; i < rcats.length; i++) if (rcats[i].id === catId) return rcats[i].name;
+    return '';
+  }
+  // 远端分类ID → 本地分类ID：单人使用两端分类同源，直接按名称映射
+  function ghMapCat(catId, rcats, catNameToId) {
+    if (!catId) return '';
+    var name = catNameOf(catId, rcats);
+    return (name && catNameToId[name]) || '';
+  }
+
+  function ghEnsureSettings() {
+    var s = ghSettings();
+    if (!s.token) { toast('请先在「⚙️ GitHub 设置」填写令牌'); return null; }
+    return s;
+  }
+
+  function ghRepoEnc() { return ghSettings().repo; }
+  function ghDataUrl(path) { return GH_API + '/repos/' + ghRepoEnc() + '/contents/' + path; }
+
+  // 一键同步：拉取合并 → 全量提交（JSON + 自动生成的 md 归档，同一 commit）；409 冲突自动重读 SHA 重试一次
+  function ghSyncAll() {
+    var s = ghEnsureSettings(); if (!s) return Promise.resolve();
+    syncing = true; updateSyncStatus();
+    var btn = document.getElementById('btnGhSync'); btn.disabled = true; btn.textContent = '同步中…';
+    function done() { syncing = false; btn.disabled = false; btn.textContent = '☁️ 同步到 GitHub'; updateSyncStatus(); }
+    function readRemoteJson() {
+      return ghFetch(ghDataUrl(s.path), { method: 'GET' }).then(function(r) {
+        if (r.ok) return r.json().then(function(d) {
+          var remote = null;
+          try { remote = JSON.parse(b64ToUtf8(d.content)); } catch(e) { remote = null; }
+          if (remote) ghMergeRemote(remote);
+          return d.sha;
+        });
+        if (r.status === 404) return null; // 首次创建
+        throw new Error('读取远端失败 HTTP ' + r.status);
+      });
+    }
+    function commit(jsonSha) {
+      var data = ghBuildPayload();
+      var jsonB64 = utf8ToB64(JSON.stringify(data, null, 2));
+      var mdB64 = utf8ToB64(ghBuildMD(data));
+      var mdPath = ghMDPath(s.path);
+      var files = [{ path: s.path, content: jsonB64 }];
+      if (jsonSha) files[0].sha = jsonSha;
+      files.push({ path: mdPath, content: mdB64 });
+      var dirUrl = GH_API + '/repos/' + ghRepoEnc() + '/contents/' + s.path.replace(/\/[^\/]*$/, '');
+      return ghFetch(dirUrl, { method: 'GET' }).then(function(r) {
+        if (!r.ok) return null; // 目录不存在（首次），md 直接创建
+        return r.json().then(function(d) {
+          if (Array.isArray(d)) {
+            for (var i = 0; i < d.length; i++)
+              if (d[i].name === 'notes-export.md') { files[1].sha = d[i].sha; break; }
+          }
+          return null;
+        });
+      }).then(function() {
+        return ghFetch(ghDataUrl(''), { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'voice_notes: sync ' + now() + ' (' + data.notes.length + ' notes)', branch: 'main', files: files })
+        });
+      });
+    }
+    function onSuccess() {
+      done();
+      notes.forEach(function(n){ n.synced = true; }); saveNotes(notes); updateSyncStatus();
+      var st = ghSettings(); st.lastSyncAt = now(); ghSaveSettings(st);
+      toast('已同步到 GitHub（' + notes.length + ' 条全部上传）');
+    }
+    function onFailure(r) {
+      done();
+      if (r && r.status === 401) toast('令牌无效或已过期，请更新「GitHub 设置」');
+      else if (r && r.status === 403) toast('被 GitHub 限流或拒绝，请稍后再试');
+      else if (r && r.status === 422) toast('提交被拒：路径或分支有误，请检查「GitHub 设置」');
+      else toast('同步失败：HTTP ' + (r ? r.status : '?'));
+    }
+    return readRemoteJson().then(function(jsonSha) {
+      return commit(jsonSha).then(function(r) {
+        if (r.status === 201) { onSuccess(); return; }
+        if (r.status === 409) { // 罕见：提交瞬间其他端刚写过，自动重读重试一次
+          toast('检测到并发提交，自动重试…');
+          return readRemoteJson().then(function(sha2) {
+            return commit(sha2).then(function(r2) { if (r2.status === 201) onSuccess(); else onFailure(r2); });
+          });
+        }
+        onFailure(r);
+      });
+    }).catch(function(e){ done(); toast('同步失败：' + e.message); });
+  }
+
+  // --- GitHub 设置弹层 ---
+  var ghOverlayEl = document.getElementById('ghOverlay');
+  var ghTokenEl = document.getElementById('ghToken');
+  var ghRepoEl = document.getElementById('ghRepo');
+  var ghPathEl = document.getElementById('ghPath');
+  var ghSettingsHint = document.getElementById('ghSettingsHint');
+  var ghInfoEl = document.getElementById('ghInfo');
+  function ghRenderInfo() {
+    var st = ghSettings();
+    ghInfoEl.textContent = (st.token ? '✓ 令牌已配置 · ' : '⚠ 尚未配置令牌 · ') + st.repo + ' / ' + st.path +
+      (st.lastSyncAt ? ' · 上次同步 ' + st.lastSyncAt : '');
+  }
+  document.getElementById('btnGhSettings').addEventListener('click', function() {
+    var st = ghSettings();
+    ghTokenEl.value = st.token; ghRepoEl.value = st.repo; ghPathEl.value = st.path;
+    ghSettingsHint.textContent = st.token ? '令牌已保存：' + st.token.slice(0, 7) + '…' : '尚未保存令牌';
+    ghOverlayEl.classList.remove('hidden');
+  });
+  document.getElementById('btnGhClose').addEventListener('click', function(){ ghOverlayEl.classList.add('hidden'); });
+  document.getElementById('btnGhSave').addEventListener('click', function() {
+    var st = ghSettings();
+    st.token = ghTokenEl.value.trim(); st.repo = ghRepoEl.value.trim() || GH_DEFAULTS.repo; st.path = ghPathEl.value.trim() || GH_DEFAULTS.path;
+    if (!/^https?:\/\//.test(st.path)) st.path = st.path.replace(/^\/+/, '');
+    if (!st.token) { ghSettingsHint.textContent = '令牌不能为空'; return; }
+    ghSaveSettings(st);
+    ghSettingsHint.textContent = '已保存，正在验证…';
+    ghFetch(GH_API + '/repos/' + st.repo + '/contents/' + st.path, { method: 'GET' }).then(function(r) {
+      if (r.ok) ghSettingsHint.textContent = '✓ 验证成功，可读写目标路径';
+      else if (r.status === 404) ghSettingsHint.textContent = '✓ 令牌可用，路径暂不存在（首次同步会自动创建）';
+      else if (r.status === 401) ghSettingsHint.textContent = '✗ 令牌无效或无此仓库权限';
+      else ghSettingsHint.textContent = '✗ 验证失败：HTTP ' + r.status;
+      ghRenderInfo();
+    }).catch(function(e){ ghSettingsHint.textContent = '✗ 无法连接 GitHub：' + e.message; });
+  });
+  document.getElementById('btnGhSync').addEventListener('click', ghSyncAll);
+  ghRenderInfo();
+
   // --- 初始化 ---
   // 迁移旧数据：给没有 client_id 的记录补上
   var migrated = false;
   notes.forEach(function(n){ if(!n.client_id){ n.client_id = n.id || genId(); migrated=true; } if(n.synced===undefined){ n.synced=true; migrated=true; } });
   if(migrated) saveNotes(notes);
   renderCatBar(); render(); updateSyncStatus();
-  checkConnection(); startAutoSync();
-  // 每 30 秒检测一次连接
-  setInterval(checkConnection, 30000);
 })();
 </script>
 </body>
