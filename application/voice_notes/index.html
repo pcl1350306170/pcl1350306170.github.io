@@ -126,6 +126,59 @@ header h1 { font-size:7.5vw; font-weight:700; }
   border-radius:3.5vw; z-index:30; opacity:0; pointer-events:none; transition:opacity .2s,transform .2s;
   max-width:85%; text-align:center; }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+/* ---------- PC 端（≥900px）：左右分区，手机端布局不受影响 ---------- */
+@media (min-width: 900px) {
+  body { font-size:15px; }
+  header { padding:14px 28px; }
+  header h1 { font-size:20px; }
+  #count { font-size:13px; margin-right:10px; }
+  #themeBtn { font-size:16px; width:38px; height:38px; border-radius:8px; }
+  #syncStatus { position:static; padding:6px 28px; font-size:12px; }
+  /* 左侧栏：分类竖排 */
+  #catBar { position:fixed; top:86px; left:0; bottom:0; z-index:9; width:240px;
+    flex-direction:column; align-items:stretch; overflow-y:auto; gap:6px;
+    padding:14px 12px; background:var(--card-bg); border-right:1px solid var(--border); }
+  .chip { width:100%; text-align:left; font-size:14px; border-radius:8px; padding:9px 12px; }
+  /* 右侧主区：记录列表 */
+  #list { margin-left:240px; max-width:1000px; padding:16px 28px 100px; }
+  #empty { margin-left:240px; font-size:15px; padding:120px 24px; }
+  .card { padding:16px 18px; border-radius:10px; margin-bottom:12px; }
+  .card .time { font-size:12px; margin-bottom:6px; }
+  .card .content { font-size:15px; padding:4px 0; }
+  .expand-btn { font-size:12px; }
+  .card .ops { margin-top:8px; gap:16px; }
+  .card .ops button { font-size:13px; padding:6px 2px; }
+  .cat-badge { font-size:11px; border-radius:6px; padding:2px 8px; margin-left:8px; }
+  /* 悬浮按钮：桌面尺寸 */
+  #addBtn { width:56px; height:56px; font-size:26px; right:28px; bottom:28px; }
+  #syncBtn { width:44px; height:44px; font-size:20px; right:28px; bottom:96px; }
+  /* 弹层：底部抽屉改居中模态框 */
+  #overlay, #catOverlay, #syncOverlay, #ghOverlay { align-items:center; }
+  .sheet { width:min(640px, 92%); border-radius:12px; padding:24px; max-height:86vh; overflow:auto; }
+  .sheet-title { font-size:17px; margin-bottom:14px; }
+  #contentInput { min-height:180px; font-size:15px; border-radius:8px; padding:12px; }
+  #catSelect { gap:8px; margin:12px 0; }
+  .selchip { font-size:13px; border-radius:8px; padding:7px 12px; }
+  .actions { margin-top:16px; gap:12px; }
+  .actions button { padding:11px; font-size:15px; border-radius:8px; }
+  .cat-add-row { gap:10px; margin-bottom:14px; }
+  #newCatInput { font-size:14px; padding:10px 12px; border-radius:8px; }
+  #addCatBtn { padding:0 20px; font-size:14px; border-radius:8px; }
+  .cat-item { font-size:14px; padding:10px 4px; }
+  .cat-item .cat-num { font-size:12px; margin-left:8px; }
+  .cat-del { font-size:13px; padding:6px 10px; }
+  #catCloseBtn, #btnSyncClose { padding:11px; font-size:14px; border-radius:8px; }
+  .sync-main { gap:10px; margin-bottom:10px; }
+  .sync-main button { padding:12px 14px; font-size:15px; border-radius:8px; }
+  .sync-divider { margin:12px 0; font-size:12px; gap:10px; }
+  #syncArea { min-height:200px; font-size:12px; border-radius:8px; padding:10px; }
+  .sync-manual { gap:10px; margin-top:10px; }
+  .sync-manual button { min-width:0; padding:10px; font-size:13px; border-radius:8px; }
+  #ghInfo { font-size:12px; }
+  .gh-input { font-size:14px; padding:10px 12px; border-radius:8px; }
+  .gh-label { font-size:12px; margin:10px 0 6px; }
+  #toast { font-size:14px; bottom:40px; padding:10px 20px; border-radius:8px; max-width:420px; }
+}
 </style>
 </head>
 <body>
