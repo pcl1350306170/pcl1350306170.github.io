@@ -632,28 +632,24 @@ header h1 { font-size:7.5vw; font-weight:700; }
         return r.json().then(function(d){ throw new Error('读取远端失败：' + ((d && d.message) || ('HTTP ' + r.status))); });
       });
     }
+    function putFile(path, contentB64, sha, msg) { // 单文件提交：完整路径 PUT（已实测可用）
+      var body = { message: msg, content: contentB64, branch: 'main' };
+      if (sha) body.sha = sha;
+      return ghFetch(ghDataUrl(path), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }
     function commit(jsonSha) {
       var data = ghBuildPayload();
       var jsonB64 = utf8ToB64(JSON.stringify(data, null, 2));
       var mdB64 = utf8ToB64(ghBuildMD(data));
       var mdPath = ghMDPath(s.path);
-      var files = [{ path: s.path, content: jsonB64 }];
-      if (jsonSha) files[0].sha = jsonSha;
-      files.push({ path: mdPath, content: mdB64 });
-      var dirUrl = GH_API + '/repos/' + ghRepoEnc() + '/contents/' + s.path.replace(/\/[^\/]*$/, '');
-      return ghFetch(dirUrl, { method: 'GET' }).then(function(r) {
-        if (!r.ok) return null; // 目录不存在（首次），md 直接创建
-        return r.json().then(function(d) {
-          if (Array.isArray(d)) {
-            for (var i = 0; i < d.length; i++)
-              if (d[i].name === 'notes-export.md') { files[1].sha = d[i].sha; break; }
-          }
-          return null;
-        });
-      }).then(function() {
-        return ghFetch(ghDataUrl(''), { method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: 'voice_notes: sync ' + now() + ' (' + data.notes.length + ' notes)', branch: 'main', files: files })
-        });
+      return putFile(s.path, jsonB64, jsonSha, 'voice_notes: sync ' + now() + ' (' + data.notes.length + ' notes)').then(function(r) {
+        if (r.status !== 200 && r.status !== 201) return r; // 失败/冲突交给外层处理
+        // md 归档尽力而为：失败不影响主同步
+        return ghFetch(ghDataUrl(mdPath), { method: 'GET' }).then(function(m) {
+          return m.ok ? m.json() : {};
+        }).catch(function(){ return {}; }).then(function(md) {
+          return putFile(mdPath, mdB64, md.sha, 'voice_notes: refresh md export').catch(function(){ return null; });
+        }).then(function(){ return r; });
       });
     }
     function onSuccess() {
@@ -662,6 +658,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
       var st = ghSettings(); st.lastSyncAt = now(); ghSaveSettings(st);
       toast('已同步到 GitHub（' + notes.length + ' 条全部上传）');
     }
+    function isOkCreate(r) { return r && (r.status === 201 || r.status === 200); } // 201=新建 200=更新
     function onFailure(r) {
       done();
       if (r && r.status === 401) toast('令牌无效或已过期，请更新「GitHub 设置」');
@@ -677,11 +674,11 @@ header h1 { font-size:7.5vw; font-weight:700; }
       return commit(jsonSha).then(function(r) {
         return readErr(r).then(function(detail) {
           r._detail = detail;
-          if (r.status === 201) { onSuccess(); return; }
+          if (isOkCreate(r)) { onSuccess(); return; }
           if (r.status === 409) { // 罕见：提交瞬间其他端刚写过，自动重读重试一次
             toast('检测到并发提交，自动重试…');
             return readRemoteJson().then(function(sha2) {
-              return commit(sha2).then(function(r2) { return readErr(r2).then(function(d2){ r2._detail = d2; if (r2.status === 201) onSuccess(); else onFailure(r2); }); });
+              return commit(sha2).then(function(r2) { return readErr(r2).then(function(d2){ r2._detail = d2; if (isOkCreate(r2)) onSuccess(); else onFailure(r2); }); });
             });
           }
           onFailure(r);
