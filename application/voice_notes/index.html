@@ -629,7 +629,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
           return d.sha;
         });
         if (r.status === 404) return null; // 首次创建
-        throw new Error('读取远端失败 HTTP ' + r.status);
+        return r.json().then(function(d){ throw new Error('读取远端失败：' + ((d && d.message) || ('HTTP ' + r.status))); });
       });
     }
     function commit(jsonSha) {
@@ -667,18 +667,25 @@ header h1 { font-size:7.5vw; font-weight:700; }
       if (r && r.status === 401) toast('令牌无效或已过期，请更新「GitHub 设置」');
       else if (r && r.status === 403) toast('被 GitHub 限流或拒绝，请稍后再试');
       else if (r && r.status === 422) toast('提交被拒：路径或分支有误，请检查「GitHub 设置」');
-      else toast('同步失败：HTTP ' + (r ? r.status : '?'));
+      else toast('同步失败：HTTP ' + (r ? r.status : '?') + (r && r._detail ? r._detail : ''));
+    }
+    function readErr(r) { // 提取 GitHub 返回的原始错误信息，便于定位问题
+      try { return r.clone().json().then(function(d){ return (d && d.message) ? ('：' + d.message) : ''; }); }
+      catch(e) { return Promise.resolve(''); }
     }
     return readRemoteJson().then(function(jsonSha) {
       return commit(jsonSha).then(function(r) {
-        if (r.status === 201) { onSuccess(); return; }
-        if (r.status === 409) { // 罕见：提交瞬间其他端刚写过，自动重读重试一次
-          toast('检测到并发提交，自动重试…');
-          return readRemoteJson().then(function(sha2) {
-            return commit(sha2).then(function(r2) { if (r2.status === 201) onSuccess(); else onFailure(r2); });
-          });
-        }
-        onFailure(r);
+        return readErr(r).then(function(detail) {
+          r._detail = detail;
+          if (r.status === 201) { onSuccess(); return; }
+          if (r.status === 409) { // 罕见：提交瞬间其他端刚写过，自动重读重试一次
+            toast('检测到并发提交，自动重试…');
+            return readRemoteJson().then(function(sha2) {
+              return commit(sha2).then(function(r2) { return readErr(r2).then(function(d2){ r2._detail = d2; if (r2.status === 201) onSuccess(); else onFailure(r2); }); });
+            });
+          }
+          onFailure(r);
+        });
       });
     }).catch(function(e){ done(); toast('同步失败：' + e.message); });
   }
