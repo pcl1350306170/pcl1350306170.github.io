@@ -35,6 +35,13 @@ header h1 { font-size:7.5vw; font-weight:700; }
 #count { font-size:5vw; color:var(--muted); margin-right:3vw; }
 #themeBtn { border:none; background:var(--btn-ghost); color:var(--text); font-size:6.5vw;
   width:13vw; height:13vw; border-radius:3.5vw; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+/* 头部动作按钮：手机纯图标，PC图标+文字 */
+.hbtn { border:none; background:var(--btn-ghost); color:var(--btn-ghost-text);
+  height:13vw; border-radius:3.5vw; cursor:pointer; margin-right:3vw; padding:0 3.2vw;
+  display:flex; align-items:center; justify-content:center; gap:1.5vw; }
+.hbtn .hbtn-ico { font-size:6.5vw; }
+.hbtn .hbtn-txt { display:none; }
+.hbtn:disabled { opacity:.45; }
 #catBar { position:sticky; top:16vw; z-index:8; display:flex; gap:3vw; overflow-x:auto;
   padding:4vw 5vw; background:var(--bg); white-space:nowrap; }
 .chip { flex:0 0 auto; border:1px solid var(--border); background:var(--card-bg); color:var(--text);
@@ -56,7 +63,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
 .btn-edit { color:var(--edit); } .btn-del { color:var(--del); } .btn-copy { color:var(--muted); }
 #empty { text-align:center; color:var(--muted); font-size:5.5vw; padding:25vh 6vw; }
 .hidden { display:none !important; }
-#overlay, #catOverlay, #syncOverlay, #ghOverlay { position:fixed; inset:0; background:var(--overlay); z-index:20;
+#overlay, #catOverlay, #ghOverlay { position:fixed; inset:0; background:var(--overlay); z-index:20;
   display:flex; align-items:flex-end; justify-content:center; }
 .sheet { width:100%; background:var(--card-bg); color:var(--text);
   border-radius:6vw 6vw 0 0; padding:6vw 5vw calc(6vw + env(safe-area-inset-bottom)); }
@@ -92,29 +99,16 @@ header h1 { font-size:7.5vw; font-weight:700; }
 .dot-syncing { background:#f59e0b; animation:pulse 1s infinite; }
 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 .unsynced-badge { background:#ef4444; color:#fff; font-size:3vw; border-radius:2vw; padding:0.5vw 2vw; margin-left:1vw; font-weight:700; }
-/* 同步弹层 */
-.sync-main { display:flex; gap:3vw; margin-bottom:3vw; }
-.sync-main button { flex:1; padding:5.5vw 3vw; font-size:5.5vw; border:none; border-radius:4vw; cursor:pointer; font-weight:700; }
-.sync-divider { display:flex; align-items:center; gap:3vw; margin:4vw 0; color:var(--muted); font-size:4vw; }
-.sync-divider::before, .sync-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+/* GitHub 设置弹层 */
 .sync-manual { display:flex; gap:3vw; margin-top:3.5vw; flex-wrap:wrap; }
 .sync-manual button { flex:1; min-width:28vw; padding:4vw; font-size:4.8vw; border:none;
   border-radius:3.5vw; cursor:pointer; }
-/* GitHub 同步 */
-#btnGhSync { background:linear-gradient(135deg,#24292f,#0969da); color:#fff; }
-#btnGhSync:active { opacity:0.85; }
-#ghInfo { font-size:3.8vw; color:var(--muted); margin:2vw 0 0; }
+#ghInfo { font-size:3.8vw; color:var(--muted); margin:0 0 3vw; }
 .gh-row { display:flex; gap:3vw; margin-bottom:3vw; }
 .gh-input { flex:1; font-size:4.8vw; padding:3.5vw; border:1px solid var(--border);
   border-radius:3.5vw; background:var(--input-bg); color:var(--text); outline:none; }
 .gh-label { font-size:4.2vw; color:var(--muted); margin:3vw 0 1.5vw; }
-#btnSyncClose { width:100%; margin-top:3.5vw; padding:4.5vw; font-size:5.2vw; border:none;
-  border-radius:4vw; background:var(--btn-ghost); color:var(--btn-ghost-text); cursor:pointer; }
 .cat-badge { font-size:3.8vw; border-radius:3vw; padding:1.2vw 3vw; margin-left:2.5vw; font-weight:700; }
-#syncBtn { position:fixed; left:5vw; bottom:calc(9vw + env(safe-area-inset-bottom));
-  width:14vw; height:14vw; border-radius:50%; font-size:7.5vw; color:#fff;
-  background:#059669; border:none; cursor:pointer; display:flex; align-items:center;
-  justify-content:center; box-shadow:0 1vw 3.5vw rgba(0,0,0,0.25); z-index:15; }
 #toast { position:fixed; left:50%; bottom:22vw; transform:translateX(-50%) translateY(5vw);
   background:var(--toast-bg); color:var(--toast-text); font-size:5vw; padding:4vw 6vw;
   border-radius:3.5vw; z-index:30; opacity:0; pointer-events:none; transition:opacity .2s,transform .2s;
@@ -127,6 +121,9 @@ header h1 { font-size:7.5vw; font-weight:700; }
   header h1 { font-size:20px; }
   #count { font-size:13px; margin-right:10px; }
   #themeBtn { font-size:16px; width:38px; height:38px; border-radius:8px; }
+  .hbtn { height:38px; border-radius:8px; padding:0 12px; margin-right:8px; gap:6px; }
+  .hbtn .hbtn-ico { font-size:16px; }
+  .hbtn .hbtn-txt { display:inline; font-size:14px; }
   #syncStatus { position:static; padding:6px 28px; font-size:12px; }
   /* 左侧栏：分类竖排 */
   #catBar { position:fixed; top:86px; left:0; bottom:0; z-index:9; width:240px;
@@ -145,9 +142,8 @@ header h1 { font-size:7.5vw; font-weight:700; }
   .cat-badge { font-size:11px; border-radius:6px; padding:2px 8px; margin-left:8px; }
   /* 悬浮按钮：桌面尺寸 */
   #addBtn { width:56px; height:56px; font-size:26px; right:28px; bottom:28px; }
-  #syncBtn { width:44px; height:44px; font-size:20px; right:28px; bottom:96px; }
   /* 弹层：底部抽屉改居中模态框 */
-  #overlay, #catOverlay, #syncOverlay, #ghOverlay { align-items:center; }
+  #overlay, #catOverlay, #ghOverlay { align-items:center; }
   .sheet { width:min(640px, 92%); border-radius:12px; padding:24px; max-height:86vh; overflow:auto; }
   .sheet-title { font-size:17px; margin-bottom:14px; }
   #contentInput { min-height:180px; font-size:15px; border-radius:8px; padding:12px; }
@@ -161,10 +157,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
   .cat-item { font-size:14px; padding:10px 4px; }
   .cat-item .cat-num { font-size:12px; margin-left:8px; }
   .cat-del { font-size:13px; padding:6px 10px; }
-  #catCloseBtn, #btnSyncClose { padding:11px; font-size:14px; border-radius:8px; }
-  .sync-main { gap:10px; margin-bottom:10px; }
-  .sync-main button { padding:12px 14px; font-size:15px; border-radius:8px; }
-  .sync-divider { margin:12px 0; font-size:12px; gap:10px; }
+  #catCloseBtn { padding:11px; font-size:14px; border-radius:8px; }
   .sync-manual { gap:10px; margin-top:10px; }
   .sync-manual button { min-width:0; padding:10px; font-size:13px; border-radius:8px; }
   #ghInfo { font-size:12px; }
@@ -179,6 +172,8 @@ header h1 { font-size:7.5vw; font-weight:700; }
   <h1>🗒 语音速记</h1>
   <div style="display:flex;align-items:center;">
     <span id="count"></span>
+    <button id="headerSyncBtn" class="hbtn" title="同步到 GitHub"><span class="hbtn-ico">☁️</span><span class="hbtn-txt">同步</span></button>
+    <button id="headerGhBtn" class="hbtn" title="GitHub 设置"><span class="hbtn-ico">⚙️</span><span class="hbtn-txt">设置</span></button>
     <button id="themeBtn" title="切换明暗模式">🌙</button>
   </div>
 </header>
@@ -187,7 +182,6 @@ header h1 { font-size:7.5vw; font-weight:700; }
 <ul id="list"></ul>
 <div id="empty">还没有记录，点「＋」开始</div>
 <button id="addBtn" title="新增记录">＋</button>
-<button id="syncBtn" title="数据同步">📋</button>
 
 <div id="overlay" class="hidden">
   <div class="sheet">
@@ -210,21 +204,10 @@ header h1 { font-size:7.5vw; font-weight:700; }
   </div>
 </div>
 
-<div id="syncOverlay" class="hidden">
-  <div class="sheet">
-    <div class="sheet-title">数据同步</div>
-    <div class="sync-main" style="margin-bottom:3vw;">
-      <button id="btnGhSync">☁️ 同步到 GitHub</button>
-    </div>
-    <p id="ghInfo"></p>
-    <div class="sync-manual"><button id="btnGhSettings">⚙️ GitHub 设置</button></div>
-    <button id="btnSyncClose">关闭</button>
-  </div>
-</div>
-
 <div id="ghOverlay" class="hidden">
   <div class="sheet">
     <div class="sheet-title">GitHub 设置</div>
+    <p id="ghInfo"></p>
     <input type="password" id="ghToken" class="gh-input" placeholder="Fine-grained PAT（仅 Contents: RW 权限）">
     <div class="gh-label">仓库（owner/repo）</div>
     <input type="text" id="ghRepo" class="gh-input" placeholder="pcl1350306170/pcl1350306170.github.io">
@@ -266,7 +249,6 @@ header h1 { font-size:7.5vw; font-weight:700; }
   var toastEl = document.getElementById('toast'), catBarEl = document.getElementById('catBar');
   var catSelectEl = document.getElementById('catSelect'), catOverlay = document.getElementById('catOverlay');
   var newCatInput = document.getElementById('newCatInput'), catListEl = document.getElementById('catList');
-  var syncOverlay = document.getElementById('syncOverlay');
 
   // --- 工具 ---
   function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -447,12 +429,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
     syncInfo.textContent = txt;
   }
 
-  // 弹层按钮
-  document.getElementById('syncBtn').addEventListener('click',function(){
-    syncOverlay.classList.remove('hidden');
-    updateSyncStatus();
-  });
-  document.getElementById('btnSyncClose').addEventListener('click',function(){ syncOverlay.classList.add('hidden'); });
+  // 头部「☁️ 同步 / ⚙️ 设置」按钮在下方 GitHub 区块统一绑定（方案A：同步直接执行、设置直接开弹层）
 
   /* ---------------- GitHub 仓库同步（完全手动，无自动触发） ---------------- */
   var LS_GH = 'vn_gh_sync';
@@ -583,8 +560,8 @@ header h1 { font-size:7.5vw; font-weight:700; }
   function ghSyncAll() {
     var s = ghEnsureSettings(); if (!s) return Promise.resolve();
     syncing = true; updateSyncStatus();
-    var btn = document.getElementById('btnGhSync'); btn.disabled = true; btn.textContent = '同步中…';
-    function done() { syncing = false; btn.disabled = false; btn.textContent = '☁️ 同步到 GitHub'; updateSyncStatus(); }
+    var btn = document.getElementById('headerSyncBtn'); if (btn) btn.disabled = true;
+    function done() { syncing = false; if (btn) btn.disabled = false; updateSyncStatus(); }
     function readRemoteJson() {
       return ghFetch(ghDataUrl(s.path), { method: 'GET' }).then(function(r) {
         if (r.ok) return r.json().then(function(d) {
@@ -664,12 +641,13 @@ header h1 { font-size:7.5vw; font-weight:700; }
     ghInfoEl.textContent = (st.token ? '✓ 令牌已配置 · ' : '⚠ 尚未配置令牌 · ') + st.repo + ' / ' + st.path +
       (st.lastSyncAt ? ' · 上次同步 ' + st.lastSyncAt : '');
   }
-  document.getElementById('btnGhSettings').addEventListener('click', function() {
+  function openGhSettings() {
     var st = ghSettings();
     ghTokenEl.value = st.token; ghRepoEl.value = st.repo; ghPathEl.value = st.path;
     ghSettingsHint.textContent = st.token ? '令牌已保存：' + st.token.slice(0, 7) + '…' : '尚未保存令牌';
     ghOverlayEl.classList.remove('hidden');
-  });
+  }
+  document.getElementById('headerGhBtn').addEventListener('click', openGhSettings);
   document.getElementById('btnGhClose').addEventListener('click', function(){ ghOverlayEl.classList.add('hidden'); });
   document.getElementById('btnGhSave').addEventListener('click', function() {
     var st = ghSettings();
@@ -686,7 +664,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
       ghRenderInfo();
     }).catch(function(e){ ghSettingsHint.textContent = '✗ 无法连接 GitHub：' + e.message; });
   });
-  document.getElementById('btnGhSync').addEventListener('click', ghSyncAll);
+  document.getElementById('headerSyncBtn').addEventListener('click', ghSyncAll);
   ghRenderInfo();
 
   // --- 初始化 ---
