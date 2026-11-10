@@ -114,8 +114,9 @@ header h1 { font-size:7.5vw; font-weight:700; }
   border-radius:3.5vw; z-index:30; opacity:0; pointer-events:none; transition:opacity .2s,transform .2s;
   max-width:85%; text-align:center; }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-/* ---------- PC 端（≥900px）：左右分区，手机端布局不受影响 ---------- */
-@media (min-width: 900px) {
+/* ---------- PC 端（宽≥高，即横屏/桌面）：左右分区，竖向手机布局不受影响 ---------- */
+/* 不按像素宽度判断：手机竖屏哪怕像素很宽也仍是手机端；只要高比宽大就走手机布局 */
+@media (min-aspect-ratio: 1/1) {
   body { font-size:15px; }
   header { padding:14px 28px; }
   header h1 { font-size:20px; }
