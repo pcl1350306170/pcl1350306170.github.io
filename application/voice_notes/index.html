@@ -211,8 +211,10 @@ header h1 { font-size:7.5vw; font-weight:700; }
     <input type="password" id="ghToken" class="gh-input" placeholder="Fine-grained PAT（仅 Contents: RW 权限）">
     <div class="gh-label">仓库（owner/repo）</div>
     <input type="text" id="ghRepo" class="gh-input" placeholder="pcl1350306170/pcl1350306170.github.io">
-    <div class="gh-label">数据文件路径（JSON，md 归档自动生成在同目录）</div>
+    <div class="gh-label">数据文件路径（JSON，加密后写入；md 密文归档自动生成在同目录）</div>
     <input type="text" id="ghPath" class="gh-input" placeholder="application/voice_notes/data/notes.json">
+    <div class="gh-label">加密口令（忘口令 = 数据永久解不开；每台设备各配一次）</div>
+    <input type="password" id="ghPassword" class="gh-input" placeholder="用于解密/加密 GitHub 上的数据，留空则同步时现场询问">
     <div class="sync-manual"><button id="btnGhSave">保存并验证</button><button id="btnGhClose">关闭</button></div>
     <p id="ghSettingsHint" class="gh-label"></p>
   </div>
@@ -438,6 +440,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
     token: '',
     repo: 'pcl1350306170/pcl1350306170.github.io',
     path: 'application/voice_notes/data/notes.json',
+    password: '',
     lastSyncAt: ''
   };
   function ghSettings() { try { return Object.assign({}, GH_DEFAULTS, JSON.parse(localStorage.getItem(LS_GH) || '{}')); } catch(e) { return Object.assign({}, GH_DEFAULTS); } }
@@ -556,7 +559,40 @@ header h1 { font-size:7.5vw; font-weight:700; }
   function ghRepoEnc() { return ghSettings().repo; }
   function ghDataUrl(path) { return GH_API + '/repos/' + ghRepoEnc() + '/contents/' + path; }
 
-  // 一键同步：拉取合并 → 全量提交（JSON + 自动生成的 md 归档，同一 commit）；409 冲突自动重读 SHA 重试一次
+  /* ---------------- 端到端加密（Web Crypto：AES-GCM 256 + PBKDF2 派生口令，纯前端） ---------------- */
+  var ENC_ALG = 'AES-GCM', PBKDF2_ITER = 150000;
+  function te(s) { return new TextEncoder().encode(s); }
+  function b64enc(buf) { var bin = '', u = new Uint8Array(buf);
+    for (var i = 0; i < u.length; i++) bin += String.fromCharCode(u[i]); return btoa(bin); }
+  function b64dec(s) { var bin = atob((s || '').replace(/\s/g, '')), u = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+  function ghDeriveKey(pw, salt) {
+    return crypto.subtle.importKey('raw', te(pw), 'PBKDF2', false, ['deriveKey'])
+      .then(function(km) { return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: PBKDF2_ITER, hash: 'SHA-256' }, km, { name: ENC_ALG, length: 256 }, false, ['encrypt', 'decrypt']); });
+  }
+  function ghEncrypt(obj, pw) {
+    var salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    return ghDeriveKey(pw, salt).then(function(key) {
+      return crypto.subtle.encrypt({ name: ENC_ALG, iv: iv }, key, te(JSON.stringify(obj))).then(function(ct) {
+        return { enc: 'v1', alg: ENC_ALG, iterations: PBKDF2_ITER, salt: b64enc(salt), iv: b64enc(iv), data: b64enc(ct) };
+      });
+    });
+  }
+  function ghDecrypt(env, pw) {
+    var salt = b64dec(env.salt), iv = b64dec(env.iv);
+    return ghDeriveKey(pw, salt).then(function(key) {
+      return crypto.subtle.decrypt({ name: ENC_ALG, iv: iv }, key, b64dec(env.data));
+    }).then(function(pt) { return JSON.parse(new TextDecoder().decode(pt)); })
+      .catch(function(e) { var err = new Error('口令错误或密文已损坏，无法解密'); err.name = 'WrongPassword'; throw err; });
+  }
+  function ghAskPassword(msg, cb) { // 口令缺失/不对时现场输入；选“取消”返回 null
+    var pw = prompt(msg || '请输入数据加密口令（同步时用于解密/加密 GitHub 上的数据）');
+    if (pw === null) return cb(null);
+    pw = pw.trim(); if (!pw) return cb(null);
+    cb(pw);
+  }
+
+  // 一键同步：拉取合并 → 全量提交（加密，JSON + md 归档均为密文）；409 冲突自动重读 SHA 重试一次
   function ghSyncAll() {
     var s = ghEnsureSettings(); if (!s) return Promise.resolve();
     syncing = true; updateSyncStatus();
@@ -564,12 +600,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
     function done() { syncing = false; if (btn) btn.disabled = false; updateSyncStatus(); }
     function readRemoteJson() {
       return ghFetch(ghDataUrl(s.path), { method: 'GET' }).then(function(r) {
-        if (r.ok) return r.json().then(function(d) {
-          var remote = null;
-          try { remote = JSON.parse(b64ToUtf8(d.content)); } catch(e) { remote = null; }
-          if (remote) ghMergeRemote(remote);
-          return d.sha;
-        });
+        if (r.ok) return r.json().then(function(d) { return { sha: d.sha, raw: d.content ? JSON.parse(b64ToUtf8(d.content)) : null }; });
         if (r.status === 404) return null; // 首次创建
         return r.json().then(function(d){ throw new Error('读取远端失败：' + ((d && d.message) || ('HTTP ' + r.status))); });
       });
@@ -579,19 +610,30 @@ header h1 { font-size:7.5vw; font-weight:700; }
       if (sha) body.sha = sha;
       return ghFetch(ghDataUrl(path), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     }
-    function commit(jsonSha) {
+    function resolvePw() { // 推送需要口令：已保存直接用，否则现场输入
+      return new Promise(function(res, rej) {
+        var saved = ghSettings().password;
+        if (saved) return res(saved);
+        ghAskPassword('首次加密同步：请设置数据加密口令（将保存在本设备，之后自动使用；忘口令则数据无法解密）', function(pw) {
+          if (!pw) return rej(new Error('未输入口令，已取消同步'));
+          var st = ghSettings(); st.password = pw; ghSaveSettings(st); res(pw);
+        });
+      });
+    }
+    function commit(info) { // info: {sha, raw}；raw 兼容旧版明文（自动迁移为密文）
       var data = ghBuildPayload();
-      var jsonB64 = utf8ToB64(JSON.stringify(data, null, 2));
-      var mdB64 = utf8ToB64(ghBuildMD(data));
+      var mdStr = ghBuildMD(data);
       var mdPath = ghMDPath(s.path);
-      return putFile(s.path, jsonB64, jsonSha, 'voice_notes: sync ' + now() + ' (' + data.notes.length + ' notes)').then(function(r) {
-        if (r.status !== 200 && r.status !== 201) return r; // 失败/冲突交给外层处理
-        // md 归档尽力而为：失败不影响主同步
-        return ghFetch(ghDataUrl(mdPath), { method: 'GET' }).then(function(m) {
-          return m.ok ? m.json() : {};
-        }).catch(function(){ return {}; }).then(function(md) {
-          return putFile(mdPath, mdB64, md.sha, 'voice_notes: refresh md export').catch(function(){ return null; });
-        }).then(function(){ return r; });
+      return resolvePw().then(function(pw) {
+        return ghEncrypt(data, pw).then(function(env) {
+          return putFile(s.path, utf8ToB64(JSON.stringify(env, null, 2)), info && info.sha, 'voice_notes: encrypted sync ' + now() + ' (' + data.notes.length + ' notes)').then(function(r) {
+            if (r.status !== 200 && r.status !== 201) return r; // 失败/冲突交给外层处理
+            // md 归档同样加密，尽力而为：失败不影响主同步
+            return ghEncrypt({ enc: 'v1', markdown: mdStr }, pw).then(function(envMd) {
+              return putFile(mdPath, utf8ToB64(JSON.stringify(envMd, null, 2)), null, 'voice_notes: refresh encrypted md export').catch(function(){ return null; });
+            }).then(function(){ return r; });
+          });
+        });
       });
     }
     function onSuccess() {
@@ -612,19 +654,41 @@ header h1 { font-size:7.5vw; font-weight:700; }
       try { return r.clone().json().then(function(d){ return (d && d.message) ? ('：' + d.message) : ''; }); }
       catch(e) { return Promise.resolve(''); }
     }
-    return readRemoteJson().then(function(jsonSha) {
-      return commit(jsonSha).then(function(r) {
-        return readErr(r).then(function(detail) {
-          r._detail = detail;
-          if (isOkCreate(r)) { onSuccess(); return; }
-          if (r.status === 409) { // 罕见：提交瞬间其他端刚写过，自动重读重试一次
-            toast('检测到并发提交，自动重试…');
-            return readRemoteJson().then(function(sha2) {
-              return commit(sha2).then(function(r2) { return readErr(r2).then(function(d2){ r2._detail = d2; if (isOkCreate(r2)) onSuccess(); else onFailure(r2); }); });
+    return readRemoteJson().then(function(info) {
+      var raw = info && info.raw;
+      if (raw && raw.enc === 'v1') { // 远端为密文：先用已存口令解密并合并
+        var pw = ghSettings().password;
+        if (!pw) return new Promise(function(res, rej) {
+          ghAskPassword('远端数据已加密，请输入加密口令：', function(p) {
+            if (!p) return rej(new Error('未输入口令，已取消同步'));
+            var st = ghSettings(); st.password = p; ghSaveSettings(st); res(p);
+          });
+        }).then(function(p2) { return ghDecrypt(raw, p2).then(mergeRemote); });
+        return ghDecrypt(raw, pw).then(mergeRemote).catch(function(e) {
+          if (e && e.name !== 'WrongPassword') throw e;
+          return new Promise(function(res, rej) {
+            ghAskPassword('已存口令无法解密远端数据，请重新输入正确口令：', function(p) {
+              if (!p) return rej(new Error('未输入口令，已取消同步'));
+              var st = ghSettings(); st.password = p; ghSaveSettings(st);
+              res(ghDecrypt(raw, p).then(mergeRemote));
             });
-          }
-          onFailure(r);
+          });
         });
+      }
+      return mergeRemote(raw); // 不存在（首次）或旧版明文：明文会被合并后由 commit 自动迁移为密文
+      function mergeRemote(remote) { if (remote) ghMergeRemote(remote); return commit(info); }
+    }).then(function(r) { // 提交结果处理（含口令错误短路时 r 为 undefined）
+      if (!r) return;
+      return readErr(r).then(function(detail) {
+        r._detail = detail;
+        if (isOkCreate(r)) { onSuccess(); return; }
+        if (r.status === 409) { // 罕见：提交瞬间其他端刚写过，自动重读重试一次
+          toast('检测到并发提交，自动重试…');
+          return readRemoteJson().then(function(i2) {
+            return commit(i2).then(function(r2) { return readErr(r2).then(function(d2){ r2._detail = d2; if (isOkCreate(r2)) onSuccess(); else onFailure(r2); }); });
+          });
+        }
+        onFailure(r);
       });
     }).catch(function(e){ done(); toast('同步失败：' + e.message); });
   }
@@ -634,6 +698,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
   var ghTokenEl = document.getElementById('ghToken');
   var ghRepoEl = document.getElementById('ghRepo');
   var ghPathEl = document.getElementById('ghPath');
+  var ghPasswordEl = document.getElementById('ghPassword');
   var ghSettingsHint = document.getElementById('ghSettingsHint');
   var ghInfoEl = document.getElementById('ghInfo');
   function ghRenderInfo() {
@@ -643,7 +708,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
   }
   function openGhSettings() {
     var st = ghSettings();
-    ghTokenEl.value = st.token; ghRepoEl.value = st.repo; ghPathEl.value = st.path;
+    ghTokenEl.value = st.token; ghRepoEl.value = st.repo; ghPathEl.value = st.path; ghPasswordEl.value = st.password || '';
     ghSettingsHint.textContent = st.token ? '令牌已保存：' + st.token.slice(0, 7) + '…' : '尚未保存令牌';
     ghOverlayEl.classList.remove('hidden');
   }
@@ -652,6 +717,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
   document.getElementById('btnGhSave').addEventListener('click', function() {
     var st = ghSettings();
     st.token = ghTokenEl.value.trim(); st.repo = ghRepoEl.value.trim() || GH_DEFAULTS.repo; st.path = ghPathEl.value.trim() || GH_DEFAULTS.path;
+    st.password = ghPasswordEl.value.trim();
     if (!/^https?:\/\//.test(st.path)) st.path = st.path.replace(/^\/+/, '');
     if (!st.token) { ghSettingsHint.textContent = '令牌不能为空'; return; }
     ghSaveSettings(st);
