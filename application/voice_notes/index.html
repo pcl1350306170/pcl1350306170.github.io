@@ -103,6 +103,8 @@ header h1 { font-size:7.5vw; font-weight:700; }
 .sync-manual { display:flex; gap:3vw; margin-top:3.5vw; flex-wrap:wrap; }
 .sync-manual button { flex:1; min-width:28vw; padding:4vw; font-size:4.8vw; border:none;
   border-radius:3.5vw; cursor:pointer; }
+/* 视图模式三档按钮：选中态高亮 */
+#viewModeRow button.active { background:var(--accent); color:#fff; font-weight:700; }
 #ghInfo { font-size:3.8vw; color:var(--muted); margin:0 0 3vw; }
 .gh-row { display:flex; gap:3vw; margin-bottom:3vw; }
 .gh-input { flex:1; font-size:4.8vw; padding:3.5vw; border:1px solid var(--border);
@@ -114,8 +116,11 @@ header h1 { font-size:7.5vw; font-weight:700; }
   border-radius:3.5vw; z-index:30; opacity:0; pointer-events:none; transition:opacity .2s,transform .2s;
   max-width:85%; text-align:center; }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-/* ---------- PC 端（宽≥高，即横屏/桌面）：左右分区，竖向手机布局不受影响 ---------- */
-/* 不按像素宽度判断：手机竖屏哪怕像素很宽也仍是手机端；只要高比宽大就走手机布局 */
+/* ---------- PC 布局规则（左右分区 + px 固定字号） ----------
+   生效时机：
+   1. 自动模式：宽高比 ≥ 1（宽≥高，即横屏/桌面）时自动判定，像素宽度不参与判断
+   2. 设置里手动选「PC 布局」：html.force-pc 无视屏幕比例强制 PC
+   强制手机模式由文件末尾的 html.force-mobile 块把属性覆盖回基础（手机）值 */
 @media (min-aspect-ratio: 1/1) {
   body { font-size:15px; }
   header { padding:14px 28px; }
@@ -166,6 +171,96 @@ header h1 { font-size:7.5vw; font-weight:700; }
   .gh-label { font-size:12px; margin:10px 0 6px; }
   #toast { font-size:14px; bottom:40px; padding:10px 20px; border-radius:8px; max-width:420px; }
 }
+/* 手动选 PC：无视宽高比套用同一套 PC 规则（选择器特异性高于基础样式） */
+html.force-pc body { font-size:15px; }
+html.force-pc header { padding:14px 28px; }
+html.force-pc header h1 { font-size:20px; }
+html.force-pc #count { font-size:13px; margin-right:10px; }
+html.force-pc #themeBtn { font-size:16px; width:38px; height:38px; border-radius:8px; }
+html.force-pc .hbtn { height:38px; border-radius:8px; padding:0 12px; margin-right:8px; gap:6px; }
+html.force-pc .hbtn .hbtn-ico { font-size:16px; }
+html.force-pc .hbtn .hbtn-txt { display:inline; font-size:14px; }
+html.force-pc #syncStatus { position:static; padding:6px 28px; font-size:12px; }
+html.force-pc #catBar { position:fixed; top:86px; left:0; bottom:0; z-index:9; width:240px;
+  flex-direction:column; align-items:stretch; overflow-y:auto; gap:6px;
+  padding:14px 12px; background:var(--card-bg); border-right:1px solid var(--border); }
+html.force-pc .chip { width:100%; text-align:left; font-size:14px; border-radius:8px; padding:9px 12px; }
+html.force-pc #list { margin-left:240px; max-width:1000px; padding:16px 28px 100px; }
+html.force-pc #empty { margin-left:240px; font-size:15px; padding:120px 24px; }
+html.force-pc .card { padding:16px 18px; border-radius:10px; margin-bottom:12px; }
+html.force-pc .card .time { font-size:12px; margin-bottom:6px; }
+html.force-pc .card .content { font-size:15px; padding:4px 0; }
+html.force-pc .expand-btn { font-size:12px; }
+html.force-pc .card .ops { margin-top:8px; gap:16px; }
+html.force-pc .card .ops button { font-size:13px; padding:6px 2px; }
+html.force-pc .cat-badge { font-size:11px; border-radius:6px; padding:2px 8px; margin-left:8px; }
+html.force-pc #addBtn { width:56px; height:56px; font-size:26px; right:28px; bottom:28px; }
+html.force-pc #overlay, html.force-pc #catOverlay, html.force-pc #ghOverlay { align-items:center; }
+html.force-pc .sheet { width:min(640px, 92%); border-radius:12px; padding:24px; max-height:86vh; overflow:auto; }
+html.force-pc .sheet-title { font-size:17px; margin-bottom:14px; }
+html.force-pc #contentInput { min-height:180px; font-size:15px; border-radius:8px; padding:12px; }
+html.force-pc #catSelect { gap:8px; margin:12px 0; }
+html.force-pc .selchip { font-size:13px; border-radius:8px; padding:7px 12px; }
+html.force-pc .actions { margin-top:16px; gap:12px; }
+html.force-pc .actions button { padding:11px; font-size:15px; border-radius:8px; }
+html.force-pc .cat-add-row { gap:10px; margin-bottom:14px; }
+html.force-pc #newCatInput { font-size:14px; padding:10px 12px; border-radius:8px; }
+html.force-pc #addCatBtn { padding:0 20px; font-size:14px; border-radius:8px; }
+html.force-pc .cat-item { font-size:14px; padding:10px 4px; }
+html.force-pc .cat-item .cat-num { font-size:12px; margin-left:8px; }
+html.force-pc .cat-del { font-size:13px; padding:6px 10px; }
+html.force-pc #catCloseBtn { padding:11px; font-size:14px; border-radius:8px; }
+html.force-pc .sync-manual { gap:10px; margin-top:10px; }
+html.force-pc .sync-manual button { min-width:0; padding:10px; font-size:13px; border-radius:8px; }
+html.force-pc #ghInfo { font-size:12px; }
+html.force-pc .gh-input { font-size:14px; padding:10px 12px; border-radius:8px; }
+html.force-pc .gh-label { font-size:12px; margin:10px 0 6px; }
+html.force-pc #toast { font-size:14px; bottom:40px; padding:10px 20px; border-radius:8px; max-width:420px; }
+/* 手动选手机：逐条把上面 PC 属性覆盖回基础（手机）值；位置在媒体查询之后，同特异性后者胜 */
+html.force-mobile body { font-size:5.5vw; }
+html.force-mobile header { padding:5vw 5vw; }
+html.force-mobile header h1 { font-size:7.5vw; }
+html.force-mobile #count { font-size:5vw; margin-right:3vw; }
+html.force-mobile #themeBtn { font-size:6.5vw; width:13vw; height:13vw; border-radius:3.5vw; }
+html.force-mobile .hbtn { height:13vw; border-radius:3.5vw; padding:0 3.2vw; margin-right:3vw; gap:1.5vw; }
+html.force-mobile .hbtn .hbtn-ico { font-size:6.5vw; }
+html.force-mobile .hbtn .hbtn-txt { display:none; }
+html.force-mobile #syncStatus { position:sticky; top:0; padding:2vw 5vw; font-size:3.8vw; }
+html.force-mobile #catBar { position:sticky; top:16vw; left:auto; bottom:auto; z-index:8; width:auto;
+  flex-direction:row; align-items:center; overflow:visible; overflow-x:auto; gap:3vw;
+  padding:4vw 5vw; background:var(--bg); border-right:none; }
+html.force-mobile .chip { width:auto; text-align:center; font-size:4.8vw; border-radius:6.5vw; padding:3.2vw 5.5vw; }
+html.force-mobile #list { margin-left:0; max-width:none; padding:4vw 5vw 36vw; }
+html.force-mobile #empty { margin-left:0; font-size:5.5vw; padding:25vh 6vw; }
+html.force-mobile .card { padding:5.5vw; border-radius:4vw; margin-bottom:4vw; }
+html.force-mobile .card .time { font-size:4.2vw; margin-bottom:2.5vw; }
+html.force-mobile .card .content { font-size:5.5vw; padding:1.5vw 0; }
+html.force-mobile .expand-btn { font-size:4vw; }
+html.force-mobile .card .ops { margin-top:3.5vw; gap:5vw; }
+html.force-mobile .card .ops button { font-size:5vw; padding:3vw 1.5vw; }
+html.force-mobile .cat-badge { font-size:3.8vw; border-radius:3vw; padding:1.2vw 3vw; margin-left:2.5vw; }
+html.force-mobile #addBtn { width:18vw; height:18vw; font-size:10vw; right:5vw; bottom:calc(9vw + env(safe-area-inset-bottom)); }
+html.force-mobile #overlay, html.force-mobile #catOverlay, html.force-mobile #ghOverlay { align-items:flex-end; }
+html.force-mobile .sheet { width:100%; border-radius:6vw 6vw 0 0; padding:6vw 5vw calc(6vw + env(safe-area-inset-bottom)); max-height:none; overflow:visible; }
+html.force-mobile .sheet-title { font-size:6.5vw; margin-bottom:4vw; }
+html.force-mobile #contentInput { min-height:40vw; font-size:5.5vw; border-radius:4vw; padding:4.5vw; }
+html.force-mobile #catSelect { gap:3vw; margin:4vw 0; }
+html.force-mobile .selchip { font-size:4.8vw; border-radius:6.5vw; padding:3.2vw 5.5vw; }
+html.force-mobile .actions { margin-top:5vw; gap:3.5vw; }
+html.force-mobile .actions button { padding:5vw; font-size:5.5vw; border-radius:4vw; }
+html.force-mobile .cat-add-row { gap:3vw; margin-bottom:5vw; }
+html.force-mobile #newCatInput { font-size:5.2vw; padding:4.2vw 3.5vw; border-radius:3.5vw; }
+html.force-mobile #addCatBtn { padding:0 6vw; font-size:5.2vw; border-radius:3.5vw; }
+html.force-mobile .cat-item { font-size:5vw; padding:4.2vw 1.5vw; }
+html.force-mobile .cat-item .cat-num { font-size:4.2vw; margin-left:2.5vw; }
+html.force-mobile .cat-del { font-size:4.8vw; padding:2.5vw 3.5vw; }
+html.force-mobile #catCloseBtn { padding:5vw; font-size:5.5vw; border-radius:4vw; }
+html.force-mobile .sync-manual { gap:3vw; margin-top:3.5vw; }
+html.force-mobile .sync-manual button { min-width:28vw; padding:4vw; font-size:4.8vw; border-radius:3.5vw; }
+html.force-mobile #ghInfo { font-size:3.8vw; }
+html.force-mobile .gh-input { font-size:4.8vw; padding:3.5vw; border-radius:3.5vw; }
+html.force-mobile .gh-label { font-size:4.2vw; margin:3vw 0 1.5vw; }
+html.force-mobile #toast { font-size:5vw; bottom:22vw; padding:4vw 6vw; border-radius:3.5vw; max-width:85%; }
 </style>
 </head>
 <body>
@@ -216,6 +311,10 @@ header h1 { font-size:7.5vw; font-weight:700; }
     <input type="text" id="ghPath" class="gh-input" placeholder="application/voice_notes/data/notes.json">
     <div class="gh-label">加密口令（忘口令 = 数据永久解不开；每台设备各配一次）</div>
     <input type="password" id="ghPassword" class="gh-input" placeholder="用于解密/加密 GitHub 上的数据，留空则同步时现场询问">
+    <div class="gh-label">视图模式（默认按屏幕宽高自动判断：宽≥高才算 PC；像素宽度不参与判断）</div>
+    <div class="sync-manual" id="viewModeRow">
+      <button type="button" data-mode="">自动</button><button type="button" data-mode="pc">PC 布局</button><button type="button" data-mode="mobile">手机布局</button>
+    </div>
     <div class="sync-manual"><button id="btnGhSave">保存并验证</button><button id="btnGhClose">关闭</button></div>
     <p id="ghSettingsHint" class="gh-label"></p>
   </div>
@@ -300,6 +399,26 @@ header h1 { font-size:7.5vw; font-weight:700; }
   applyTheme(getTheme());
   themeBtn.addEventListener('click', function() { var n=getTheme()==='dark'?'light':'dark';
     localStorage.setItem('vn_theme',n); applyTheme(n); });
+
+  // --- 视图模式：自动（按宽高比）/ 强制 PC / 强制手机，存 localStorage，设置弹层里切换 ---
+  var LS_VIEW = 'vn_view_mode';
+  function applyViewMode(m) {
+    var cl = document.documentElement.classList;
+    cl.toggle('force-pc', m === 'pc'); cl.toggle('force-mobile', m === 'mobile');
+  }
+  function getViewMode() { var s = localStorage.getItem(LS_VIEW);
+    return (s === 'pc' || s === 'mobile') ? s : ''; }
+  applyViewMode(getViewMode());
+  function refreshViewRow() { var m = getViewMode();
+    document.querySelectorAll('#viewModeRow button').forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute('data-mode') === m); }); }
+  document.getElementById('viewModeRow').addEventListener('click', function(e) {
+    var b = e.target.closest('button'); if (!b) return;
+    var m = b.getAttribute('data-mode');
+    if (m) localStorage.setItem(LS_VIEW, m); else localStorage.removeItem(LS_VIEW);
+    applyViewMode(m); refreshViewRow();
+    toast(m ? '已切换：' + b.textContent : '已恢复自动判断');
+  });
 
   // --- 分类筛选 ---
   function catMatch(n) { if(currentCat==='') return true; if(currentCat==='__none__') return !n.category_id; return n.category_id===currentCat; }
@@ -711,6 +830,7 @@ header h1 { font-size:7.5vw; font-weight:700; }
     var st = ghSettings();
     ghTokenEl.value = st.token; ghRepoEl.value = st.repo; ghPathEl.value = st.path; ghPasswordEl.value = st.password || '';
     ghSettingsHint.textContent = st.token ? '令牌已保存：' + st.token.slice(0, 7) + '…' : '尚未保存令牌';
+    refreshViewRow();
     ghOverlayEl.classList.remove('hidden');
   }
   document.getElementById('headerGhBtn').addEventListener('click', openGhSettings);
