@@ -1,866 +1,1991 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#f3f4f6">
-<title>语音速记</title>
-<link rel="icon" type="image/jpeg" href="https://raw.githubusercontent.com/pcl1350306170/test-data-backup/refs/heads/main/img/T/%E6%A8%AA%E5%B1%8F-%E8%92%82%E6%B3%95%E9%AB%98%E6%B8%85-yw9z7s.jpg">
-<style>
-:root {
-  --bg: #f3f4f6; --card-bg: #fff; --text: #1f2937; --muted: #6b7280;
-  --border: #e5e7eb; --accent: #2563eb; --accent-active: #1d4ed8;
-  --btn-ghost: #f3f4f6; --btn-ghost-text: #374151;
-  --edit: #2563eb; --del: #dc2626; --overlay: rgba(0,0,0,0.45);
-  --input-bg: #fff; --shadow: 0 1px 3px rgba(0,0,0,0.08);
-  --toast-bg: rgba(17,24,39,0.9); --toast-text: #fff;
-}
-[data-theme="dark"] {
-  --bg: #111827; --card-bg: #1f2937; --text: #f3f4f6; --muted: #9ca3af;
-  --border: #374151; --accent: #3b82f6; --accent-active: #2563eb;
-  --btn-ghost: #374151; --btn-ghost-text: #e5e7eb;
-  --edit: #60a5fa; --del: #f87171; --overlay: rgba(0,0,0,0.6);
-  --input-bg: #111827; --shadow: 0 1px 3px rgba(0,0,0,0.4);
-  --toast-bg: rgba(243,244,246,0.92); --toast-text: #111827;
-}
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-body { font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei","PingFang SC",sans-serif;
-  background:var(--bg); color:var(--text); min-height:100vh; transition:background .25s,color .25s;
-  font-size:5.5vw; }
-header { position:sticky; top:0; z-index:10; background:var(--card-bg); border-bottom:1px solid var(--border);
-  padding:5vw 5vw; display:flex; align-items:center; justify-content:space-between; }
-header h1 { font-size:7.5vw; font-weight:700; }
-#syncStatus { position:sticky; top:0; z-index:9; font-size:3.8vw; color:var(--muted); padding:2vw 5vw;
-  display:flex; align-items:center; gap:2vw; background:var(--card-bg); border-bottom:1px solid var(--border); }
-#count { font-size:5vw; color:var(--muted); margin-right:3vw; }
-#themeBtn { border:none; background:var(--btn-ghost); color:var(--text); font-size:6.5vw;
-  width:13vw; height:13vw; border-radius:3.5vw; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-/* 头部动作按钮：手机纯图标，PC图标+文字 */
-.hbtn { border:none; background:var(--btn-ghost); color:var(--btn-ghost-text);
-  height:13vw; border-radius:3.5vw; cursor:pointer; margin-right:3vw; padding:0 3.2vw;
-  display:flex; align-items:center; justify-content:center; gap:1.5vw; }
-.hbtn .hbtn-ico { font-size:6.5vw; }
-.hbtn .hbtn-txt { display:none; }
-.hbtn:disabled { opacity:.45; }
-#catBar { position:sticky; top:16vw; z-index:8; display:flex; gap:3vw; overflow-x:auto;
-  padding:4vw 5vw; background:var(--bg); white-space:nowrap; }
-.chip { flex:0 0 auto; border:1px solid var(--border); background:var(--card-bg); color:var(--text);
-  font-size:4.8vw; border-radius:6.5vw; padding:3.2vw 5.5vw; cursor:pointer; }
-.chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-.chip-add { border-style:dashed; color:var(--muted); }
-#addBtn { position:fixed; right:5vw; bottom:calc(9vw + env(safe-area-inset-bottom));
-  width:18vw; height:18vw; border-radius:50%; font-size:10vw; font-weight:700; color:#fff;
-  background:var(--accent); border:none; cursor:pointer; box-shadow:0 1.2vw 5vw rgba(0,0,0,0.3);
-  display:flex; align-items:center; justify-content:center; z-index:15; }
-#list { list-style:none; padding:4vw 5vw 36vw; }
-.card { background:var(--card-bg); border-radius:4vw; padding:5.5vw; margin-bottom:4vw; box-shadow:var(--shadow); }
-.card .time { font-size:4.2vw; color:var(--muted); margin-bottom:2.5vw; display:flex; align-items:center; flex-wrap:wrap; }
-.card .content { font-size:5.5vw; line-height:1.8; white-space:pre-wrap; word-break:break-word; cursor:pointer; padding:1.5vw 0; }
-.card .content-truncated { display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
-.expand-btn { font-size:4vw; color:var(--accent); background:none; border:none; cursor:pointer; padding:2vw 0; margin-top:1vw; }
-.card .ops { display:flex; gap:5vw; margin-top:3.5vw; }
-.card .ops button { border:none; background:none; font-size:5vw; cursor:pointer; padding:3vw 1.5vw; }
-.btn-edit { color:var(--edit); } .btn-del { color:var(--del); } .btn-copy { color:var(--muted); }
-#empty { text-align:center; color:var(--muted); font-size:5.5vw; padding:25vh 6vw; }
-.hidden { display:none !important; }
-#overlay, #catOverlay, #ghOverlay { position:fixed; inset:0; background:var(--overlay); z-index:20;
-  display:flex; align-items:flex-end; justify-content:center; }
-.sheet { width:100%; background:var(--card-bg); color:var(--text);
-  border-radius:6vw 6vw 0 0; padding:6vw 5vw calc(6vw + env(safe-area-inset-bottom)); }
-.sheet-title { font-size:6.5vw; font-weight:700; margin-bottom:4vw; text-align:center; }
-#contentInput { width:100%; min-height:40vw; font-size:5.5vw; line-height:1.8;
-  border:1px solid var(--border); border-radius:4vw; padding:4.5vw; resize:vertical;
-  outline:none; font-family:inherit; background:var(--input-bg); color:var(--text); }
-#contentInput:focus { border-color:var(--accent); }
-#catSelect { display:flex; flex-wrap:wrap; gap:3vw; margin:4vw 0; }
-.selchip { border:1px solid var(--border); background:var(--btn-ghost); color:var(--text);
-  font-size:4.8vw; border-radius:6.5vw; padding:3.2vw 5.5vw; cursor:pointer; }
-.selchip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-.actions { display:flex; gap:3.5vw; margin-top:5vw; }
-.actions button { flex:1; padding:5vw; font-size:5.5vw; border:none; border-radius:4vw; cursor:pointer; }
-#cancelBtn { background:var(--btn-ghost); color:var(--btn-ghost-text); }
-#saveBtn { background:var(--accent); color:#fff; font-weight:700; }
-.cat-add-row { display:flex; gap:3vw; margin-bottom:5vw; }
-#newCatInput { flex:1; font-size:5.2vw; padding:4.2vw 3.5vw; border:1px solid var(--border);
-  border-radius:3.5vw; background:var(--input-bg); color:var(--text); outline:none; }
-#addCatBtn { padding:0 6vw; font-size:5.2vw; border:none; border-radius:3.5vw; background:var(--accent); color:#fff; cursor:pointer; }
-#catList { list-style:none; margin-bottom:5vw; }
-.cat-item { display:flex; align-items:center; justify-content:space-between; padding:4.2vw 1.5vw;
-  border-bottom:1px solid var(--border); font-size:5vw; }
-.cat-item .cat-num { color:var(--muted); font-size:4.2vw; margin-left:2.5vw; }
-.cat-del { border:none; background:none; color:var(--del); font-size:4.8vw; cursor:pointer; padding:2.5vw 3.5vw; }
-#catCloseBtn { width:100%; padding:5vw; font-size:5.5vw; border:none; border-radius:4vw;
-  background:var(--btn-ghost); color:var(--btn-ghost-text); cursor:pointer; }
-/* 同步状态栏 */
-#syncStatus { font-size:3.8vw; color:var(--muted); padding:2vw 5vw; display:flex; align-items:center; gap:2vw; background:var(--card-bg); border-bottom:1px solid var(--border); }
-#syncStatus .dot { width:2.5vw; height:2.5vw; border-radius:50%; flex-shrink:0; }
-.dot-online { background:#10b981; }
-.dot-offline { background:#9ca3af; }
-.dot-syncing { background:#f59e0b; animation:pulse 1s infinite; }
-@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
-.unsynced-badge { background:#ef4444; color:#fff; font-size:3vw; border-radius:2vw; padding:0.5vw 2vw; margin-left:1vw; font-weight:700; }
-/* GitHub 设置弹层 */
-.sync-manual { display:flex; gap:3vw; margin-top:3.5vw; flex-wrap:wrap; }
-.sync-manual button { flex:1; min-width:28vw; padding:4vw; font-size:4.8vw; border:none;
-  border-radius:3.5vw; cursor:pointer; }
-/* 视图模式三档按钮：选中态高亮 */
-#viewModeRow button.active { background:var(--accent); color:#fff; font-weight:700; }
-#ghInfo { font-size:3.8vw; color:var(--muted); margin:0 0 3vw; }
-.gh-row { display:flex; gap:3vw; margin-bottom:3vw; }
-.gh-input { flex:1; font-size:4.8vw; padding:3.5vw; border:1px solid var(--border);
-  border-radius:3.5vw; background:var(--input-bg); color:var(--text); outline:none; }
-.gh-label { font-size:4.2vw; color:var(--muted); margin:3vw 0 1.5vw; }
-.cat-badge { font-size:3.8vw; border-radius:3vw; padding:1.2vw 3vw; margin-left:2.5vw; font-weight:700; }
-#toast { position:fixed; left:50%; bottom:22vw; transform:translateX(-50%) translateY(5vw);
-  background:var(--toast-bg); color:var(--toast-text); font-size:5vw; padding:4vw 6vw;
-  border-radius:3.5vw; z-index:30; opacity:0; pointer-events:none; transition:opacity .2s,transform .2s;
-  max-width:85%; text-align:center; }
-#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-/* ---------- PC 布局规则（左右分区 + px 固定字号） ----------
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f3f4f6">
+  <title>语音速记</title>
+  <link rel="icon" type="image/jpeg"
+    href="https://raw.githubusercontent.com/pcl1350306170/test-data-backup/refs/heads/main/img/T/%E6%A8%AA%E5%B1%8F-%E8%92%82%E6%B3%95%E9%AB%98%E6%B8%85-yw9z7s.jpg">
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card-bg: #fff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --accent-active: #1d4ed8;
+      --btn-ghost: #f3f4f6;
+      --btn-ghost-text: #374151;
+      --edit: #2563eb;
+      --del: #dc2626;
+      --overlay: rgba(0, 0, 0, 0.45);
+      --input-bg: #fff;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --toast-bg: rgba(17, 24, 39, 0.9);
+      --toast-text: #fff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #111827;
+      --card-bg: #1f2937;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --border: #374151;
+      --accent: #3b82f6;
+      --accent-active: #2563eb;
+      --btn-ghost: #374151;
+      --btn-ghost-text: #e5e7eb;
+      --edit: #60a5fa;
+      --del: #f87171;
+      --overlay: rgba(0, 0, 0, 0.6);
+      --input-bg: #111827;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      --toast-bg: rgba(243, 244, 246, 0.92);
+      --toast-text: #111827;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background .25s, color .25s;
+      font-size: 5.5vw;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 5vw 5vw;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      font-size: 7.5vw;
+      font-weight: 700;
+    }
+
+    #syncStatus {
+      position: sticky;
+      top: 0;
+      z-index: 9;
+      font-size: 3.8vw;
+      color: var(--muted);
+      padding: 2vw 5vw;
+      display: flex;
+      align-items: center;
+      gap: 2vw;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    #count {
+      font-size: 5vw;
+      color: var(--muted);
+      margin-right: 3vw;
+    }
+
+    #themeBtn {
+      border: none;
+      background: var(--btn-ghost);
+      color: var(--text);
+      font-size: 6.5vw;
+      width: 13vw;
+      height: 13vw;
+      border-radius: 3.5vw;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 头部动作按钮：手机纯图标，PC图标+文字 */
+    .hbtn {
+      border: none;
+      background: var(--btn-ghost);
+      color: var(--btn-ghost-text);
+      height: 13vw;
+      border-radius: 3.5vw;
+      cursor: pointer;
+      margin-right: 3vw;
+      padding: 0 3.2vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5vw;
+    }
+
+    .hbtn .hbtn-ico {
+      font-size: 6.5vw;
+    }
+
+    .hbtn .hbtn-txt {
+      display: none;
+    }
+
+    .hbtn:disabled {
+      opacity: .45;
+    }
+
+    #catBar {
+      position: sticky;
+      top: 16vw;
+      z-index: 8;
+      display: flex;
+      gap: 3vw;
+      overflow-x: auto;
+      padding: 4vw 5vw;
+      background: var(--bg);
+      white-space: nowrap;
+    }
+
+    .chip {
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
+      font-size: 4.8vw;
+      border-radius: 6.5vw;
+      padding: 3.2vw 5.5vw;
+      cursor: pointer;
+    }
+
+    .chip.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .chip-add {
+      border-style: dashed;
+      color: var(--muted);
+    }
+
+    #addBtn {
+      position: fixed;
+      right: 5vw;
+      bottom: calc(9vw + env(safe-area-inset-bottom));
+      width: 18vw;
+      height: 18vw;
+      border-radius: 50%;
+      font-size: 10vw;
+      font-weight: 700;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 1.2vw 5vw rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 15;
+    }
+
+    #list {
+      list-style: none;
+      padding: 4vw 5vw 36vw;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 4vw;
+      padding: 5.5vw;
+      margin-bottom: 4vw;
+      box-shadow: var(--shadow);
+    }
+
+    .card .time {
+      font-size: 4.2vw;
+      color: var(--muted);
+      margin-bottom: 2.5vw;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .card .content {
+      font-size: 5.5vw;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-word;
+      cursor: text;
+      padding: 1.5vw 0;
+    }
+
+    .card .content-truncated {
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .expand-btn {
+      font-size: 4vw;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2vw 0;
+      margin-top: 1vw;
+    }
+
+    .card .ops {
+      display: flex;
+      gap: 5vw;
+      margin-top: 3.5vw;
+    }
+
+    .card .ops button {
+      border: none;
+      background: none;
+      font-size: 5vw;
+      cursor: pointer;
+      padding: 3vw 1.5vw;
+    }
+
+    .btn-edit {
+      color: var(--edit);
+    }
+
+    .btn-del {
+      color: var(--del);
+    }
+
+    .btn-copy {
+      color: var(--muted);
+    }
+
+    #empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 5.5vw;
+      padding: 25vh 6vw;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    #overlay,
+    #catOverlay,
+    #ghOverlay {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      z-index: 20;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .sheet {
+      width: 100%;
+      background: var(--card-bg);
+      color: var(--text);
+      border-radius: 6vw 6vw 0 0;
+      padding: 6vw 5vw calc(6vw + env(safe-area-inset-bottom));
+    }
+
+    .sheet-title {
+      font-size: 6.5vw;
+      font-weight: 700;
+      margin-bottom: 4vw;
+      text-align: center;
+    }
+
+    #contentInput {
+      width: 100%;
+      min-height: 40vw;
+      font-size: 5.5vw;
+      line-height: 1.8;
+      border: 1px solid var(--border);
+      border-radius: 4vw;
+      padding: 4.5vw;
+      resize: vertical;
+      outline: none;
+      font-family: inherit;
+      background: var(--input-bg);
+      color: var(--text);
+    }
+
+    #contentInput:focus {
+      border-color: var(--accent);
+    }
+
+    #catSelect {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3vw;
+      margin: 4vw 0;
+    }
+
+    .selchip {
+      border: 1px solid var(--border);
+      background: var(--btn-ghost);
+      color: var(--text);
+      font-size: 4.8vw;
+      border-radius: 6.5vw;
+      padding: 3.2vw 5.5vw;
+      cursor: pointer;
+    }
+
+    .selchip.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .actions {
+      display: flex;
+      gap: 3.5vw;
+      margin-top: 5vw;
+    }
+
+    .actions button {
+      flex: 1;
+      padding: 5vw;
+      font-size: 5.5vw;
+      border: none;
+      border-radius: 4vw;
+      cursor: pointer;
+    }
+
+    #cancelBtn {
+      background: var(--btn-ghost);
+      color: var(--btn-ghost-text);
+    }
+
+    #saveBtn {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .cat-add-row {
+      display: flex;
+      gap: 3vw;
+      margin-bottom: 5vw;
+    }
+
+    #newCatInput {
+      flex: 1;
+      font-size: 5.2vw;
+      padding: 4.2vw 3.5vw;
+      border: 1px solid var(--border);
+      border-radius: 3.5vw;
+      background: var(--input-bg);
+      color: var(--text);
+      outline: none;
+    }
+
+    #addCatBtn {
+      padding: 0 6vw;
+      font-size: 5.2vw;
+      border: none;
+      border-radius: 3.5vw;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    #catList {
+      list-style: none;
+      margin-bottom: 5vw;
+    }
+
+    .cat-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4.2vw 1.5vw;
+      border-bottom: 1px solid var(--border);
+      font-size: 5vw;
+    }
+
+    .cat-item .cat-num {
+      color: var(--muted);
+      font-size: 4.2vw;
+      margin-left: 2.5vw;
+    }
+
+    .cat-del {
+      border: none;
+      background: none;
+      color: var(--del);
+      font-size: 4.8vw;
+      cursor: pointer;
+      padding: 2.5vw 3.5vw;
+    }
+
+    #catCloseBtn {
+      width: 100%;
+      padding: 5vw;
+      font-size: 5.5vw;
+      border: none;
+      border-radius: 4vw;
+      background: var(--btn-ghost);
+      color: var(--btn-ghost-text);
+      cursor: pointer;
+    }
+
+    /* 同步状态栏 */
+    #syncStatus {
+      font-size: 3.8vw;
+      color: var(--muted);
+      padding: 2vw 5vw;
+      display: flex;
+      align-items: center;
+      gap: 2vw;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    #syncStatus .dot {
+      width: 2.5vw;
+      height: 2.5vw;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-online {
+      background: #10b981;
+    }
+
+    .dot-offline {
+      background: #9ca3af;
+    }
+
+    .dot-syncing {
+      background: #f59e0b;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    .unsynced-badge {
+      background: #ef4444;
+      color: #fff;
+      font-size: 3vw;
+      border-radius: 2vw;
+      padding: 0.5vw 2vw;
+      margin-left: 1vw;
+      font-weight: 700;
+    }
+
+    /* GitHub 设置弹层 */
+    .sync-manual {
+      display: flex;
+      gap: 3vw;
+      margin-top: 3.5vw;
+      flex-wrap: wrap;
+    }
+
+    .sync-manual button {
+      flex: 1;
+      min-width: 28vw;
+      padding: 4vw;
+      font-size: 4.8vw;
+      border: none;
+      border-radius: 3.5vw;
+      cursor: pointer;
+    }
+
+    /* 视图模式三档按钮：选中态高亮 */
+    #viewModeRow button.active {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    #ghInfo {
+      font-size: 3.8vw;
+      color: var(--muted);
+      margin: 0 0 3vw;
+    }
+
+    .gh-row {
+      display: flex;
+      gap: 3vw;
+      margin-bottom: 3vw;
+    }
+
+    .gh-input {
+      flex: 1;
+      font-size: 4.8vw;
+      padding: 3.5vw;
+      border: 1px solid var(--border);
+      border-radius: 3.5vw;
+      background: var(--input-bg);
+      color: var(--text);
+      outline: none;
+    }
+
+    .gh-label {
+      font-size: 4.2vw;
+      color: var(--muted);
+      margin: 3vw 0 1.5vw;
+    }
+
+    .cat-badge {
+      font-size: 3.8vw;
+      border-radius: 3vw;
+      padding: 1.2vw 3vw;
+      margin-left: 2.5vw;
+      font-weight: 700;
+    }
+
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22vw;
+      transform: translateX(-50%) translateY(5vw);
+      background: var(--toast-bg);
+      color: var(--toast-text);
+      font-size: 5vw;
+      padding: 4vw 6vw;
+      border-radius: 3.5vw;
+      z-index: 30;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      max-width: 85%;
+      text-align: center;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ---------- PC 布局规则（左右分区 + px 固定字号） ----------
    生效时机：
    1. 自动模式：宽高比 ≥ 1（宽≥高，即横屏/桌面）时自动判定，像素宽度不参与判断
    2. 设置里手动选「PC 布局」：html.force-pc 无视屏幕比例强制 PC
    强制手机模式由文件末尾的 html.force-mobile 块把属性覆盖回基础（手机）值 */
-@media (min-aspect-ratio: 1/1) {
-  body { font-size:15px; }
-  header { padding:14px 28px; }
-  header h1 { font-size:20px; }
-  #count { font-size:13px; margin-right:10px; }
-  #themeBtn { font-size:16px; width:38px; height:38px; border-radius:8px; }
-  .hbtn { height:38px; border-radius:8px; padding:0 12px; margin-right:8px; gap:6px; }
-  .hbtn .hbtn-ico { font-size:16px; }
-  .hbtn .hbtn-txt { display:inline; font-size:14px; }
-  #syncStatus { position:static; padding:6px 28px; font-size:12px; }
-  /* 左侧栏：分类竖排 */
-  #catBar { position:fixed; top:86px; left:0; bottom:0; z-index:9; width:240px;
-    flex-direction:column; align-items:stretch; overflow-y:auto; gap:6px;
-    padding:14px 12px; background:var(--card-bg); border-right:1px solid var(--border); }
-  .chip { width:100%; text-align:left; font-size:14px; border-radius:8px; padding:9px 12px; }
-  /* 右侧主区：记录列表 */
-  #list { margin-left:240px; max-width:1000px; padding:16px 28px 100px; }
-  #empty { margin-left:240px; font-size:15px; padding:120px 24px; }
-  .card { padding:16px 18px; border-radius:10px; margin-bottom:12px; }
-  .card .time { font-size:12px; margin-bottom:6px; }
-  .card .content { font-size:15px; padding:4px 0; }
-  .expand-btn { font-size:12px; }
-  .card .ops { margin-top:8px; gap:16px; }
-  .card .ops button { font-size:13px; padding:6px 2px; }
-  .cat-badge { font-size:11px; border-radius:6px; padding:2px 8px; margin-left:8px; }
-  /* 悬浮按钮：桌面尺寸 */
-  #addBtn { width:56px; height:56px; font-size:26px; right:28px; bottom:28px; }
-  /* 弹层：底部抽屉改居中模态框 */
-  #overlay, #catOverlay, #ghOverlay { align-items:center; }
-  .sheet { width:min(640px, 92%); border-radius:12px; padding:24px; max-height:86vh; overflow:auto; }
-  .sheet-title { font-size:17px; margin-bottom:14px; }
-  #contentInput { min-height:180px; font-size:15px; border-radius:8px; padding:12px; }
-  #catSelect { gap:8px; margin:12px 0; }
-  .selchip { font-size:13px; border-radius:8px; padding:7px 12px; }
-  .actions { margin-top:16px; gap:12px; }
-  .actions button { padding:11px; font-size:15px; border-radius:8px; }
-  .cat-add-row { gap:10px; margin-bottom:14px; }
-  #newCatInput { font-size:14px; padding:10px 12px; border-radius:8px; }
-  #addCatBtn { padding:0 20px; font-size:14px; border-radius:8px; }
-  .cat-item { font-size:14px; padding:10px 4px; }
-  .cat-item .cat-num { font-size:12px; margin-left:8px; }
-  .cat-del { font-size:13px; padding:6px 10px; }
-  #catCloseBtn { padding:11px; font-size:14px; border-radius:8px; }
-  .sync-manual { gap:10px; margin-top:10px; }
-  .sync-manual button { min-width:0; padding:10px; font-size:13px; border-radius:8px; }
-  #ghInfo { font-size:12px; }
-  .gh-input { font-size:14px; padding:10px 12px; border-radius:8px; }
-  .gh-label { font-size:12px; margin:10px 0 6px; }
-  #toast { font-size:14px; bottom:40px; padding:10px 20px; border-radius:8px; max-width:420px; }
-}
-/* 手动选 PC：无视宽高比套用同一套 PC 规则（选择器特异性高于基础样式） */
-html.force-pc body { font-size:15px; }
-html.force-pc header { padding:14px 28px; }
-html.force-pc header h1 { font-size:20px; }
-html.force-pc #count { font-size:13px; margin-right:10px; }
-html.force-pc #themeBtn { font-size:16px; width:38px; height:38px; border-radius:8px; }
-html.force-pc .hbtn { height:38px; border-radius:8px; padding:0 12px; margin-right:8px; gap:6px; }
-html.force-pc .hbtn .hbtn-ico { font-size:16px; }
-html.force-pc .hbtn .hbtn-txt { display:inline; font-size:14px; }
-html.force-pc #syncStatus { position:static; padding:6px 28px; font-size:12px; }
-html.force-pc #catBar { position:fixed; top:86px; left:0; bottom:0; z-index:9; width:240px;
-  flex-direction:column; align-items:stretch; overflow-y:auto; gap:6px;
-  padding:14px 12px; background:var(--card-bg); border-right:1px solid var(--border); }
-html.force-pc .chip { width:100%; text-align:left; font-size:14px; border-radius:8px; padding:9px 12px; }
-html.force-pc #list { margin-left:240px; max-width:1000px; padding:16px 28px 100px; }
-html.force-pc #empty { margin-left:240px; font-size:15px; padding:120px 24px; }
-html.force-pc .card { padding:16px 18px; border-radius:10px; margin-bottom:12px; }
-html.force-pc .card .time { font-size:12px; margin-bottom:6px; }
-html.force-pc .card .content { font-size:15px; padding:4px 0; }
-html.force-pc .expand-btn { font-size:12px; }
-html.force-pc .card .ops { margin-top:8px; gap:16px; }
-html.force-pc .card .ops button { font-size:13px; padding:6px 2px; }
-html.force-pc .cat-badge { font-size:11px; border-radius:6px; padding:2px 8px; margin-left:8px; }
-html.force-pc #addBtn { width:56px; height:56px; font-size:26px; right:28px; bottom:28px; }
-html.force-pc #overlay, html.force-pc #catOverlay, html.force-pc #ghOverlay { align-items:center; }
-html.force-pc .sheet { width:min(640px, 92%); border-radius:12px; padding:24px; max-height:86vh; overflow:auto; }
-html.force-pc .sheet-title { font-size:17px; margin-bottom:14px; }
-html.force-pc #contentInput { min-height:180px; font-size:15px; border-radius:8px; padding:12px; }
-html.force-pc #catSelect { gap:8px; margin:12px 0; }
-html.force-pc .selchip { font-size:13px; border-radius:8px; padding:7px 12px; }
-html.force-pc .actions { margin-top:16px; gap:12px; }
-html.force-pc .actions button { padding:11px; font-size:15px; border-radius:8px; }
-html.force-pc .cat-add-row { gap:10px; margin-bottom:14px; }
-html.force-pc #newCatInput { font-size:14px; padding:10px 12px; border-radius:8px; }
-html.force-pc #addCatBtn { padding:0 20px; font-size:14px; border-radius:8px; }
-html.force-pc .cat-item { font-size:14px; padding:10px 4px; }
-html.force-pc .cat-item .cat-num { font-size:12px; margin-left:8px; }
-html.force-pc .cat-del { font-size:13px; padding:6px 10px; }
-html.force-pc #catCloseBtn { padding:11px; font-size:14px; border-radius:8px; }
-html.force-pc .sync-manual { gap:10px; margin-top:10px; }
-html.force-pc .sync-manual button { min-width:0; padding:10px; font-size:13px; border-radius:8px; }
-html.force-pc #ghInfo { font-size:12px; }
-html.force-pc .gh-input { font-size:14px; padding:10px 12px; border-radius:8px; }
-html.force-pc .gh-label { font-size:12px; margin:10px 0 6px; }
-html.force-pc #toast { font-size:14px; bottom:40px; padding:10px 20px; border-radius:8px; max-width:420px; }
-/* 手动选手机：逐条把上面 PC 属性覆盖回基础（手机）值；位置在媒体查询之后，同特异性后者胜 */
-html.force-mobile body { font-size:5.5vw; }
-html.force-mobile header { padding:5vw 5vw; }
-html.force-mobile header h1 { font-size:7.5vw; }
-html.force-mobile #count { font-size:5vw; margin-right:3vw; }
-html.force-mobile #themeBtn { font-size:6.5vw; width:13vw; height:13vw; border-radius:3.5vw; }
-html.force-mobile .hbtn { height:13vw; border-radius:3.5vw; padding:0 3.2vw; margin-right:3vw; gap:1.5vw; }
-html.force-mobile .hbtn .hbtn-ico { font-size:6.5vw; }
-html.force-mobile .hbtn .hbtn-txt { display:none; }
-html.force-mobile #syncStatus { position:sticky; top:0; padding:2vw 5vw; font-size:3.8vw; }
-html.force-mobile #catBar { position:sticky; top:16vw; left:auto; bottom:auto; z-index:8; width:auto;
-  flex-direction:row; align-items:center; overflow:visible; overflow-x:auto; gap:3vw;
-  padding:4vw 5vw; background:var(--bg); border-right:none; }
-html.force-mobile .chip { width:auto; text-align:center; font-size:4.8vw; border-radius:6.5vw; padding:3.2vw 5.5vw; }
-html.force-mobile #list { margin-left:0; max-width:none; padding:4vw 5vw 36vw; }
-html.force-mobile #empty { margin-left:0; font-size:5.5vw; padding:25vh 6vw; }
-html.force-mobile .card { padding:5.5vw; border-radius:4vw; margin-bottom:4vw; }
-html.force-mobile .card .time { font-size:4.2vw; margin-bottom:2.5vw; }
-html.force-mobile .card .content { font-size:5.5vw; padding:1.5vw 0; }
-html.force-mobile .expand-btn { font-size:4vw; }
-html.force-mobile .card .ops { margin-top:3.5vw; gap:5vw; }
-html.force-mobile .card .ops button { font-size:5vw; padding:3vw 1.5vw; }
-html.force-mobile .cat-badge { font-size:3.8vw; border-radius:3vw; padding:1.2vw 3vw; margin-left:2.5vw; }
-html.force-mobile #addBtn { width:18vw; height:18vw; font-size:10vw; right:5vw; bottom:calc(9vw + env(safe-area-inset-bottom)); }
-html.force-mobile #overlay, html.force-mobile #catOverlay, html.force-mobile #ghOverlay { align-items:flex-end; }
-html.force-mobile .sheet { width:100%; border-radius:6vw 6vw 0 0; padding:6vw 5vw calc(6vw + env(safe-area-inset-bottom)); max-height:none; overflow:visible; }
-html.force-mobile .sheet-title { font-size:6.5vw; margin-bottom:4vw; }
-html.force-mobile #contentInput { min-height:40vw; font-size:5.5vw; border-radius:4vw; padding:4.5vw; }
-html.force-mobile #catSelect { gap:3vw; margin:4vw 0; }
-html.force-mobile .selchip { font-size:4.8vw; border-radius:6.5vw; padding:3.2vw 5.5vw; }
-html.force-mobile .actions { margin-top:5vw; gap:3.5vw; }
-html.force-mobile .actions button { padding:5vw; font-size:5.5vw; border-radius:4vw; }
-html.force-mobile .cat-add-row { gap:3vw; margin-bottom:5vw; }
-html.force-mobile #newCatInput { font-size:5.2vw; padding:4.2vw 3.5vw; border-radius:3.5vw; }
-html.force-mobile #addCatBtn { padding:0 6vw; font-size:5.2vw; border-radius:3.5vw; }
-html.force-mobile .cat-item { font-size:5vw; padding:4.2vw 1.5vw; }
-html.force-mobile .cat-item .cat-num { font-size:4.2vw; margin-left:2.5vw; }
-html.force-mobile .cat-del { font-size:4.8vw; padding:2.5vw 3.5vw; }
-html.force-mobile #catCloseBtn { padding:5vw; font-size:5.5vw; border-radius:4vw; }
-html.force-mobile .sync-manual { gap:3vw; margin-top:3.5vw; }
-html.force-mobile .sync-manual button { min-width:28vw; padding:4vw; font-size:4.8vw; border-radius:3.5vw; }
-html.force-mobile #ghInfo { font-size:3.8vw; }
-html.force-mobile .gh-input { font-size:4.8vw; padding:3.5vw; border-radius:3.5vw; }
-html.force-mobile .gh-label { font-size:4.2vw; margin:3vw 0 1.5vw; }
-html.force-mobile #toast { font-size:5vw; bottom:22vw; padding:4vw 6vw; border-radius:3.5vw; max-width:85%; }
-</style>
-</head>
-<body>
-<header>
-  <h1>🗒 语音速记</h1>
-  <div style="display:flex;align-items:center;">
-    <span id="count"></span>
-    <button id="headerSyncBtn" class="hbtn" title="同步到 GitHub"><span class="hbtn-ico">☁️</span><span class="hbtn-txt">同步</span></button>
-    <button id="headerGhBtn" class="hbtn" title="GitHub 设置"><span class="hbtn-ico">⚙️</span><span class="hbtn-txt">设置</span></button>
-    <button id="themeBtn" title="切换明暗模式">🌙</button>
-  </div>
-</header>
-<div id="syncStatus"><span id="syncInfo">初始化…</span></div>
-<div id="catBar"></div>
-<ul id="list"></ul>
-<div id="empty">还没有记录，点「＋」开始</div>
-<button id="addBtn" title="新增记录">＋</button>
-
-<div id="overlay" class="hidden">
-  <div class="sheet">
-    <div class="sheet-title" id="sheetTitle">新增记录</div>
-    <textarea id="contentInput" placeholder="点这里输入文字…"></textarea>
-    <div id="catSelect"></div>
-    <div class="actions"><button id="cancelBtn">取消</button><button id="saveBtn">保存</button></div>
-  </div>
-</div>
-
-<div id="catOverlay" class="hidden">
-  <div class="sheet">
-    <div class="sheet-title">分类管理</div>
-    <div class="cat-add-row">
-      <input id="newCatInput" placeholder="输入新分类名" maxlength="20">
-      <button id="addCatBtn">添加</button>
-    </div>
-    <ul id="catList"></ul>
-    <button id="catCloseBtn">关闭</button>
-  </div>
-</div>
-
-<div id="ghOverlay" class="hidden">
-  <div class="sheet">
-    <div class="sheet-title">GitHub 设置</div>
-    <p id="ghInfo"></p>
-    <input type="password" id="ghToken" class="gh-input" placeholder="Fine-grained PAT（仅 Contents: RW 权限）">
-    <div class="gh-label">仓库（owner/repo）</div>
-    <input type="text" id="ghRepo" class="gh-input" placeholder="pcl1350306170/pcl1350306170.github.io">
-    <div class="gh-label">数据文件路径（JSON，加密后写入；md 密文归档自动生成在同目录）</div>
-    <input type="text" id="ghPath" class="gh-input" placeholder="application/voice_notes/data/notes.json">
-    <div class="gh-label">加密口令（忘口令 = 数据永久解不开；每台设备各配一次）</div>
-    <input type="password" id="ghPassword" class="gh-input" placeholder="用于解密/加密 GitHub 上的数据，留空则同步时现场询问">
-    <div class="gh-label">视图模式（默认按屏幕宽高自动判断：宽≥高才算 PC；像素宽度不参与判断）</div>
-    <div class="sync-manual" id="viewModeRow">
-      <button type="button" data-mode="">自动</button><button type="button" data-mode="pc">PC 布局</button><button type="button" data-mode="mobile">手机布局</button>
-    </div>
-    <div class="sync-manual"><button id="btnGhSave">保存并验证</button><button id="btnGhClose">关闭</button></div>
-    <p id="ghSettingsHint" class="gh-label"></p>
-  </div>
-</div>
-
-<div id="toast"></div>
-
-<script>
-(function () {
-  var LS_NOTES = 'vn_offline_notes';
-  var LS_CATS = 'vn_offline_cats';
-  var DEFAULT_CATS = [
-    { id: 'cat_daily', name: '日常记录' },
-    { id: 'cat_xianjian4', name: '仙剑四游戏同人小说大纲' }
-  ];
-
-  // --- 数据层 ---
-  function loadNotes() { try { return JSON.parse(localStorage.getItem(LS_NOTES) || '[]'); } catch(e) { return []; } }
-  function saveNotes(n) { localStorage.setItem(LS_NOTES, JSON.stringify(n)); }
-  function loadCats() { try { var c = JSON.parse(localStorage.getItem(LS_CATS) || 'null'); return (c && c.length) ? c : DEFAULT_CATS.slice(); } catch(e) { return DEFAULT_CATS.slice(); } }
-  function saveCats(c) { localStorage.setItem(LS_CATS, JSON.stringify(c)); }
-
-  var notes = loadNotes();
-  var categories = loadCats();
-  var currentCat = '';
-  var catSelection = '';
-  var editing = null;
-
-  // --- DOM ---
-  var listEl = document.getElementById('list'), emptyEl = document.getElementById('empty');
-  var countEl = document.getElementById('count'), overlay = document.getElementById('overlay');
-  var input = document.getElementById('contentInput'), saveBtn = document.getElementById('saveBtn');
-  var sheetTitle = document.getElementById('sheetTitle'), themeBtn = document.getElementById('themeBtn');
-  var toastEl = document.getElementById('toast'), catBarEl = document.getElementById('catBar');
-  var catSelectEl = document.getElementById('catSelect'), catOverlay = document.getElementById('catOverlay');
-  var newCatInput = document.getElementById('newCatInput'), catListEl = document.getElementById('catList');
-
-  // --- 工具 ---
-  function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
-  function now() { var d = new Date(); function p(n) { return (n<10?'0':'')+n; }
-    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
-  function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('show');
-    clearTimeout(toast._t); toast._t = setTimeout(function() { toastEl.classList.remove('show'); }, 2000); }
-
-  var PALETTE = [['#1d4ed8','#dbeafe'],['#047857','#d1fae5'],['#b45309','#fef3c7'],
-    ['#7c3aed','#ede9fe'],['#be185d','#fce7f3'],['#0369a1','#e0f2fe'],['#15803d','#dcfce7'],['#c2410c','#ffedd5']];
-  function catColor(id) { var h=0; for(var i=0;i<id.length;i++) h=(h*31+id.charCodeAt(i))>>>0; return PALETTE[h%PALETTE.length]; }
-  function catName(id) { for(var i=0;i<categories.length;i++) if(categories[i].id===id) return categories[i].name; return ''; }
-
-  // --- Markdown 过滤（仅显示时过滤，不修改原始数据） ---
-  function stripMarkdown(text) {
-    if (!text) return '';
-    var s = text;
-    // 图片：![alt](url) → 删除
-    s = s.replace(/!\[([^\]]*)\]\([^)]+\)/g, '');
-    // 链接：[text](url) → 保留文字
-    s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-    // 标题：# 文本 → 文本
-    s = s.replace(/^#{1,6}\s+/gm, '');
-    // 粗体/斜体：**text**、*text*、__text__、_text_
-    s = s.replace(/\*\*(.+?)\*\*/g, '$1');
-    s = s.replace(/__(.+?)__/g, '$1');
-    s = s.replace(/\*(.+?)\*/g, '$1');
-    s = s.replace(/_(.+?)_/g, '$1');
-    // 代码：`code` → code
-    s = s.replace(/`([^`]+)`/g, '$1');
-    // 列表符号：- 、* 、1. 
-    s = s.replace(/^[\s]*[-*+]\s+/gm, '');
-    s = s.replace(/^[\s]*\d+\.\s+/gm, '');
-    // 引用：> 
-    s = s.replace(/^>\s?/gm, '');
-    // 分隔线：---、***
-    s = s.replace(/^[-*_]{3,}$/gm, '');
-    return s.trim();
-  }
-
-  // --- 主题 ---
-  function applyTheme(t) { document.documentElement.setAttribute('data-theme',t);
-    themeBtn.textContent = t==='dark'?'☀️':'🌙'; }
-  function getTheme() { var s=localStorage.getItem('vn_theme');
-    return (s==='dark'||s==='light')?s:(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); }
-  applyTheme(getTheme());
-  themeBtn.addEventListener('click', function() { var n=getTheme()==='dark'?'light':'dark';
-    localStorage.setItem('vn_theme',n); applyTheme(n); });
-
-  // --- 视图模式：自动（按宽高比）/ 强制 PC / 强制手机，存 localStorage，设置弹层里切换 ---
-  var LS_VIEW = 'vn_view_mode';
-  function applyViewMode(m) {
-    var cl = document.documentElement.classList;
-    cl.toggle('force-pc', m === 'pc'); cl.toggle('force-mobile', m === 'mobile');
-  }
-  function getViewMode() { var s = localStorage.getItem(LS_VIEW);
-    return (s === 'pc' || s === 'mobile') ? s : ''; }
-  applyViewMode(getViewMode());
-  function refreshViewRow() { var m = getViewMode();
-    document.querySelectorAll('#viewModeRow button').forEach(function(b) {
-      b.classList.toggle('active', b.getAttribute('data-mode') === m); }); }
-  document.getElementById('viewModeRow').addEventListener('click', function(e) {
-    var b = e.target.closest('button'); if (!b) return;
-    var m = b.getAttribute('data-mode');
-    if (m) localStorage.setItem(LS_VIEW, m); else localStorage.removeItem(LS_VIEW);
-    applyViewMode(m); refreshViewRow();
-    toast(m ? '已切换：' + b.textContent : '已恢复自动判断');
-  });
-
-  // --- 分类筛选 ---
-  function catMatch(n) { if(currentCat==='') return true; if(currentCat==='__none__') return !n.category_id; return n.category_id===currentCat; }
-
-  function renderCatBar() {
-    catBarEl.innerHTML = '';
-    function addChip(id, name, cls) { var b=document.createElement('button');
-      b.className='chip'+(currentCat===id?' active':'')+(cls||''); b.textContent=name;
-      b.addEventListener('click',function(){currentCat=id;renderCatBar();render();}); catBarEl.appendChild(b); }
-    addChip('','全部'); categories.forEach(function(c){addChip(c.id,c.name,'');});
-    if(notes.some(function(n){return !n.category_id;})) addChip('__none__','未分类','');
-    var ab=document.createElement('button'); ab.className='chip chip-add'; ab.textContent='＋ 分类';
-    ab.addEventListener('click',openCatManager); catBarEl.appendChild(ab);
-  }
-
-  // --- 渲染列表 ---
-  function render() {
-    var filtered = notes.filter(catMatch).sort(function(a,b){return (b.created_at||'').localeCompare(a.created_at||'');});
-    listEl.innerHTML=''; if(filtered.length) emptyEl.classList.add('hidden'); else emptyEl.classList.remove('hidden');
-    countEl.textContent = notes.length ? notes.length+' 条' : '';
-    filtered.forEach(function(n) {
-      var li=document.createElement('li'); li.className='card';
-      var time=document.createElement('div'); time.className='time'; time.textContent=n.created_at;
-      var cname=catName(n.category_id||'');
-      if(cname){var col=catColor(n.category_id);var cb=document.createElement('span');cb.className='cat-badge';cb.textContent=cname;cb.style.color=col[0];cb.style.background=col[1];time.appendChild(cb);}
-      if(n.copy_count){var ci=document.createElement('span');ci.style.cssText='color:var(--muted);margin-left:6px';ci.textContent='· 复制 '+n.copy_count+' 次';if(n.last_copied_at)ci.title='最近复制：'+n.last_copied_at;time.appendChild(ci);}
-      li.appendChild(time);
-      // 内容区：过滤 markdown，截断显示
-      var content=document.createElement('div'); content.className='content content-truncated';
-      content.textContent=stripMarkdown(n.content);
-      content.addEventListener('click',function(){doCopy(n);}); li.appendChild(content);
-      // 展开/收起按钮
-      var expandBtn=document.createElement('button'); expandBtn.className='expand-btn'; expandBtn.textContent='展开全文';
-      expandBtn.style.display='none';
-      expandBtn.addEventListener('click',function(e){
-        e.stopPropagation();
-        if(content.classList.contains('content-truncated')){
-          content.classList.remove('content-truncated');
-          expandBtn.textContent='收起';
-        } else {
-          content.classList.add('content-truncated');
-          expandBtn.textContent='展开全文';
-        }
-      });
-      li.appendChild(expandBtn);
-      // 渲染后检测是否需要展开按钮
-      setTimeout(function(){
-        if(content.scrollHeight > content.clientHeight + 2){
-          expandBtn.style.display='block';
-        }
-      },0);
-      var ops=document.createElement('div'); ops.className='ops';
-      var btnC=document.createElement('button'); btnC.className='btn-copy'; btnC.textContent='复制';
-      btnC.addEventListener('click',function(){doCopy(n);}); ops.appendChild(btnC);
-      var btnE=document.createElement('button'); btnE.className='btn-edit'; btnE.textContent='编辑';
-      btnE.addEventListener('click',function(){openEdit(n);}); ops.appendChild(btnE);
-      var btnD=document.createElement('button'); btnD.className='btn-del'; btnD.textContent='删除';
-      btnD.addEventListener('click',function(){delNote(n);}); ops.appendChild(btnD);
-      li.appendChild(ops); listEl.appendChild(li);
-    });
-  }
-
-  function doCopy(n) {
-    var ta=document.createElement('textarea'); ta.value=n.content; ta.style.cssText='position:fixed;top:-9999px';
-    document.body.appendChild(ta); ta.select();
-    try{document.execCommand('copy');toast('已复制');}catch(e){toast('复制失败');}
-    document.body.removeChild(ta);
-    n.copy_count = (n.copy_count||0)+1; n.last_copied_at = now(); n.synced = false;
-    saveNotes(notes); render(); updateSyncStatus();
-  }
-
-  // --- 分类选择 ---
-  function renderCatSelect(selected) {
-    catSelectEl.innerHTML='';
-    function addSel(id,name){var b=document.createElement('button');b.className='selchip'+(selected===id?' active':'');
-      b.textContent=name; b.addEventListener('click',function(){
-        catSelectEl.querySelectorAll('.selchip').forEach(function(x){x.classList.remove('active');});
-        b.classList.add('active'); catSelection=id;}); catSelectEl.appendChild(b);}
-    addSel('','未分类'); categories.forEach(function(c){addSel(c.id,c.name);});
-  }
-
-  // --- 分类管理 ---
-  function openCatManager(){catOverlay.classList.remove('hidden');newCatInput.value='';renderCatManager();setTimeout(function(){newCatInput.focus();},100);}
-  function renderCatManager(){catListEl.innerHTML='';categories.forEach(function(c){var li=document.createElement('li');li.className='cat-item';
-    var sp=document.createElement('span');sp.textContent=c.name;var cnt=notes.filter(function(n){return n.category_id===c.id;}).length;
-    var num=document.createElement('span');num.className='cat-num';num.textContent=cnt+' 条';sp.appendChild(num);li.appendChild(sp);
-    var del=document.createElement('button');del.className='cat-del';del.textContent='删除';
-    del.addEventListener('click',function(){if(!confirm('删除分类「'+c.name+'」？记录将变为未分类。'))return;
-      categories=categories.filter(function(x){return x.id!==c.id;});saveCats(categories);
-      notes.forEach(function(n){if(n.category_id===c.id)n.category_id='';});saveNotes(notes);renderCatManager();renderCatBar();render();});
-    li.appendChild(del);catListEl.appendChild(li);});}
-  document.getElementById('addCatBtn').addEventListener('click',function(){var name=newCatInput.value.trim();
-    if(!name)return;if(name.length>20){alert('最长20字');return;}
-    if(categories.some(function(c){return c.name===name;})){alert('已存在');return;}
-    categories.push({id:genId(),name:name});saveCats(categories);newCatInput.value='';renderCatManager();renderCatBar();});
-  document.getElementById('catCloseBtn').addEventListener('click',function(){catOverlay.classList.add('hidden');});
-
-  // --- 新增/编辑 ---
-  document.getElementById('addBtn').addEventListener('click',function(){
-    editing=null; sheetTitle.textContent='新增记录'; input.value='';
-    catSelection=(currentCat&&currentCat!=='__none__')?currentCat:'';
-    renderCatSelect(catSelection); overlay.classList.remove('hidden'); setTimeout(function(){input.focus();},100);
-  });
-  function openEdit(n){editing={id:n.id};sheetTitle.textContent='编辑记录';input.value=n.content;
-    catSelection=n.category_id||'';renderCatSelect(catSelection);overlay.classList.remove('hidden');setTimeout(function(){input.focus();},100);}
-  document.getElementById('cancelBtn').addEventListener('click',function(){overlay.classList.add('hidden');input.value='';editing=null;});
-  saveBtn.addEventListener('click',function(){
-    var content=input.value.trim(); if(!content){input.focus();return;}
-    if(editing){
-      for(var i=0;i<notes.length;i++){if(notes[i].id===editing.id){notes[i].content=content;notes[i].category_id=catSelection;notes[i].updated_at=now();notes[i].synced=false;break;}}
-      saveNotes(notes); overlay.classList.add('hidden'); input.value=''; editing=null; render(); updateSyncStatus();
-    } else {
-      var note={id:genId(),client_id:genId(),content:content,created_at:now(),updated_at:'',category_id:catSelection,copy_count:0,last_copied_at:'',synced:false};
-      notes.unshift(note); saveNotes(notes); input.value=''; input.focus(); render(); renderCatBar(); updateSyncStatus();
-    }
-  });
-  function delNote(n){if(!confirm('确定删除？'))return;notes=notes.filter(function(x){return x.id!==n.id;});saveNotes(notes);render();renderCatBar();}
-
-  // --- 同步状态（单人使用：GitHub 唯一通道，synced 即"待推送到仓库"） ---
-  var syncing = false;
-  var syncInfo = document.getElementById('syncInfo');
-
-  function unsyncedCount() { return notes.filter(function(n){ return !n.synced; }).length; }
-
-  function updateSyncStatus() {
-    var uc = unsyncedCount();
-    var t = ghSettings().lastSyncAt;
-    var txt = syncing ? '同步中…' : (uc > 0 ? '⏳ ' + uc + ' 条待同步到 GitHub' : '✓ 已全部同步');
-    if (t) txt += ' · 上次 ' + t.slice(5, 16);
-    syncInfo.textContent = txt;
-  }
-
-  // 头部「☁️ 同步 / ⚙️ 设置」按钮在下方 GitHub 区块统一绑定（方案A：同步直接执行、设置直接开弹层）
-
-  /* ---------------- GitHub 仓库同步（完全手动，无自动触发） ---------------- */
-  var LS_GH = 'vn_gh_sync';
-  var GH_API = 'https://api.github.com';
-  var GH_DEFAULTS = {
-    token: '',
-    repo: 'pcl1350306170/pcl1350306170.github.io',
-    path: 'application/voice_notes/data/notes.json',
-    password: '',
-    lastSyncAt: ''
-  };
-  function ghSettings() { try { return Object.assign({}, GH_DEFAULTS, JSON.parse(localStorage.getItem(LS_GH) || '{}')); } catch(e) { return Object.assign({}, GH_DEFAULTS); } }
-  function ghSaveSettings(s) { localStorage.setItem(LS_GH, JSON.stringify(s)); }
-  function ghMDPath(p) { return p.replace(/\/[^\/]*$/, '') + '/notes-export.md'; }
-  function ghFetch(url, opts) { // 带令牌的 fetch，附带 GitHub API 必需头
-    opts = opts || {}; opts.headers = opts.headers || {};
-    opts.headers['Authorization'] = 'Bearer ' + ghSettings().token;
-    opts.headers['Accept'] = 'application/vnd.github+json';
-    opts.headers['X-GitHub-Api-Version'] = '2022-11-28';
-    return fetch(url, opts);
-  }
-  function utf8ToB64(str) { // 中文安全：先 UTF-8 编码再 base64
-    var bytes = new TextEncoder().encode(str), bin = '';
-    bytes.forEach(function(b){ bin += String.fromCharCode(b); });
-    return btoa(bin);
-  }
-  function b64ToUtf8(s) {
-    var bin = atob((s || '').replace(/\s/g, '')), u = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-    return new TextDecoder().decode(u);
-  }
-
-  function ghBuildPayload() {
-    return {
-      version: 1,
-      exported_at: now(),
-      categories: categories.map(function(c){ return { id: c.id, name: c.name }; }),
-      notes: notes.map(function(n){ return {
-        id: n.id, client_id: n.client_id || n.id, content: n.content,
-        created_at: n.created_at, updated_at: n.updated_at || '',
-        category_id: n.category_id || '', copy_count: n.copy_count || 0,
-        last_copied_at: n.last_copied_at || ''
-      }; })
-    };
-  }
-
-  function ghBuildMD(data) {
-    var lines = ['# 语音速记导出', '', '> 由 GitHub 同步自动生成，请勿手动编辑（会被下次同步覆盖）', '> 最近同步：' + now() + ' · 共 ' + data.notes.length + ' 条', ''];
-    function one(n) {
-      lines.push('## ' + (n.created_at || ''));
-      lines.push('');
-      lines.push(n.content);
-      lines.push('');
-      var meta = [];
-      if (n.updated_at) meta.push('编辑 ' + n.updated_at);
-      if (n.copy_count) meta.push('复制 ' + n.copy_count + ' 次');
-      if (meta.length) { lines.push('*(' + meta.join(' · ') + ')*'); lines.push(''); }
-    }
-    data.categories.forEach(function(c) {
-      var arr = data.notes.filter(function(n){ return n.category_id === c.id; })
-        .sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
-      if (!arr.length) return;
-      lines.push('# ' + c.name + '（' + arr.length + '）'); lines.push('');
-      arr.forEach(one);
-    });
-    var none = data.notes.filter(function(n){ return !n.category_id || !data.categories.some(function(c){ return c.id === n.category_id; }); })
-      .sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
-    if (none.length) { lines.push('# 未分类（' + none.length + '）'); lines.push(''); none.forEach(one); }
-    return lines.join('\n');
-  }
-
-  // 合并远端数据到本地：本地未同步（待推送）记录始终胜出；已同步的按 updated_at 新者胜
-  function ghMergeRemote(data) {
-    var added = 0, updated = 0;
-    var catNameToId = {};
-    categories.forEach(function(c){ catNameToId[c.name] = c.id; });
-    ((data && data.categories) || []).forEach(function(rc) {
-      var name = (rc.name || '').trim(); if (!name) return;
-      if (!catNameToId[name]) { var nid = genId(); categories.push({ id: nid, name: name }); catNameToId[name] = nid; }
-    });
-    saveCats(categories);
-    var keyOf = function(n){ return n.client_id || n.id || ''; };
-    var rcats = (data && data.categories) || [];
-    var idx = {}; notes.forEach(function(n,i){ idx[keyOf(n)] = i; });
-    ((data && data.notes) || []).forEach(function(rn) {
-      var key = keyOf(rn); if (!key) return;
-      var content = (rn.content || '').trim(); if (!content) return;
-      var localCatId = ghMapCat(rn.category_id, rcats, catNameToId);
-      if (idx[key] === undefined) {
-        notes.push({ id: rn.id || genId(), client_id: key, content: content,
-          created_at: rn.created_at || now(), updated_at: rn.updated_at || '',
-          category_id: localCatId, copy_count: rn.copy_count || 0,
-          last_copied_at: rn.last_copied_at || '', synced: true });
-        idx[key] = notes.length - 1; added++;
-      } else {
-        var local = notes[idx[key]], ru = rn.updated_at || '', lu = local.updated_at || '';
-        if (local.synced) {
-          if (ru && ru > lu) { local.content = content; local.updated_at = ru; local.category_id = localCatId || local.category_id;
-            local.copy_count = rn.copy_count || local.copy_count; local.last_copied_at = rn.last_copied_at || local.last_copied_at; updated++; }
-        } else if (ru > lu) { // 远端更新且本地未同步：取远端并视为已同步（本地更旧无需再推）
-          local.content = content; local.updated_at = ru; local.category_id = localCatId || local.category_id; local.synced = true; updated++;
-        }
+    @media (min-aspect-ratio: 1/1) {
+      body {
+        font-size: 15px;
       }
-    });
-    saveNotes(notes); renderCatBar(); render(); updateSyncStatus();
-    return { added: added, updated: updated };
-  }
-  function catNameOf(catId, rcats) {
-    for (var i = 0; i < rcats.length; i++) if (rcats[i].id === catId) return rcats[i].name;
-    return '';
-  }
-  // 远端分类ID → 本地分类ID：单人使用两端分类同源，直接按名称映射
-  function ghMapCat(catId, rcats, catNameToId) {
-    if (!catId) return '';
-    var name = catNameOf(catId, rcats);
-    return (name && catNameToId[name]) || '';
-  }
 
-  function ghEnsureSettings() {
-    var s = ghSettings();
-    if (!s.token) { toast('请先在「⚙️ GitHub 设置」填写令牌'); return null; }
-    return s;
-  }
+      header {
+        padding: 14px 28px;
+      }
 
-  function ghRepoEnc() { return ghSettings().repo; }
-  function ghDataUrl(path) { return GH_API + '/repos/' + ghRepoEnc() + '/contents/' + path; }
+      header h1 {
+        font-size: 20px;
+      }
 
-  /* ---------------- 端到端加密（Web Crypto：AES-GCM 256 + PBKDF2 派生口令，纯前端） ---------------- */
-  var ENC_ALG = 'AES-GCM', PBKDF2_ITER = 150000;
-  function te(s) { return new TextEncoder().encode(s); }
-  function b64enc(buf) { var bin = '', u = new Uint8Array(buf);
-    for (var i = 0; i < u.length; i++) bin += String.fromCharCode(u[i]); return btoa(bin); }
-  function b64dec(s) { var bin = atob((s || '').replace(/\s/g, '')), u = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
-  function ghDeriveKey(pw, salt) {
-    return crypto.subtle.importKey('raw', te(pw), 'PBKDF2', false, ['deriveKey'])
-      .then(function(km) { return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: PBKDF2_ITER, hash: 'SHA-256' }, km, { name: ENC_ALG, length: 256 }, false, ['encrypt', 'decrypt']); });
-  }
-  function ghEncrypt(obj, pw) {
-    var salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
-    return ghDeriveKey(pw, salt).then(function(key) {
-      return crypto.subtle.encrypt({ name: ENC_ALG, iv: iv }, key, te(JSON.stringify(obj))).then(function(ct) {
-        return { enc: 'v1', alg: ENC_ALG, iterations: PBKDF2_ITER, salt: b64enc(salt), iv: b64enc(iv), data: b64enc(ct) };
-      });
-    });
-  }
-  function ghDecrypt(env, pw) {
-    var salt = b64dec(env.salt), iv = b64dec(env.iv);
-    return ghDeriveKey(pw, salt).then(function(key) {
-      return crypto.subtle.decrypt({ name: ENC_ALG, iv: iv }, key, b64dec(env.data));
-    }).then(function(pt) { return JSON.parse(new TextDecoder().decode(pt)); })
-      .catch(function(e) { var err = new Error('口令错误或密文已损坏，无法解密'); err.name = 'WrongPassword'; throw err; });
-  }
-  function ghAskPassword(msg, cb) { // 口令缺失/不对时现场输入；选“取消”返回 null
-    var pw = prompt(msg || '请输入数据加密口令（同步时用于解密/加密 GitHub 上的数据）');
-    if (pw === null) return cb(null);
-    pw = pw.trim(); if (!pw) return cb(null);
-    cb(pw);
-  }
+      #count {
+        font-size: 13px;
+        margin-right: 10px;
+      }
 
-  // 一键同步：拉取合并 → 全量提交（加密，JSON + md 归档均为密文）；409 冲突自动重读 SHA 重试一次
-  function ghSyncAll() {
-    var s = ghEnsureSettings(); if (!s) return Promise.resolve();
-    syncing = true; updateSyncStatus();
-    var btn = document.getElementById('headerSyncBtn'); if (btn) btn.disabled = true;
-    function done() { syncing = false; if (btn) btn.disabled = false; updateSyncStatus(); }
-    function readRemoteJson() {
-      return ghFetch(ghDataUrl(s.path), { method: 'GET' }).then(function(r) {
-        if (r.ok) return r.json().then(function(d) { return { sha: d.sha, raw: d.content ? JSON.parse(b64ToUtf8(d.content)) : null }; });
-        if (r.status === 404) return null; // 首次创建
-        return r.json().then(function(d){ throw new Error('读取远端失败：' + ((d && d.message) || ('HTTP ' + r.status))); });
-      });
+      #themeBtn {
+        font-size: 16px;
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+      }
+
+      .hbtn {
+        height: 38px;
+        border-radius: 8px;
+        padding: 0 12px;
+        margin-right: 8px;
+        gap: 6px;
+      }
+
+      .hbtn .hbtn-ico {
+        font-size: 16px;
+      }
+
+      .hbtn .hbtn-txt {
+        display: inline;
+        font-size: 14px;
+      }
+
+      #syncStatus {
+        position: static;
+        padding: 6px 28px;
+        font-size: 12px;
+      }
+
+      /* 左侧栏：分类竖排 */
+      #catBar {
+        position: fixed;
+        top: 86px;
+        left: 0;
+        bottom: 0;
+        z-index: 9;
+        width: 240px;
+        flex-direction: column;
+        align-items: stretch;
+        overflow-y: auto;
+        gap: 6px;
+        padding: 14px 12px;
+        background: var(--card-bg);
+        border-right: 1px solid var(--border);
+      }
+
+      .chip {
+        width: 100%;
+        text-align: left;
+        font-size: 14px;
+        border-radius: 8px;
+        padding: 9px 12px;
+      }
+
+      /* 右侧主区：记录列表 */
+      #list {
+        margin-left: 240px;
+        max-width: 1000px;
+        padding: 16px 28px 100px;
+      }
+
+      #empty {
+        margin-left: 240px;
+        font-size: 15px;
+        padding: 120px 24px;
+      }
+
+      .card {
+        padding: 16px 18px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+      }
+
+      .card .time {
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+
+      .card .content {
+        font-size: 15px;
+        padding: 4px 0;
+      }
+
+      .expand-btn {
+        font-size: 12px;
+      }
+
+      .card .ops {
+        margin-top: 8px;
+        gap: 16px;
+      }
+
+      .card .ops button {
+        font-size: 13px;
+        padding: 6px 2px;
+      }
+
+      .cat-badge {
+        font-size: 11px;
+        border-radius: 6px;
+        padding: 2px 8px;
+        margin-left: 8px;
+      }
+
+      /* 悬浮按钮：桌面尺寸 */
+      #addBtn {
+        width: 56px;
+        height: 56px;
+        font-size: 26px;
+        right: 28px;
+        bottom: 28px;
+      }
+
+      /* 弹层：底部抽屉改居中模态框 */
+      #overlay,
+      #catOverlay,
+      #ghOverlay {
+        align-items: center;
+      }
+
+      .sheet {
+        width: min(640px, 92%);
+        border-radius: 12px;
+        padding: 24px;
+        max-height: 86vh;
+        overflow: auto;
+      }
+
+      .sheet-title {
+        font-size: 17px;
+        margin-bottom: 14px;
+      }
+
+      #contentInput {
+        min-height: 180px;
+        font-size: 15px;
+        border-radius: 8px;
+        padding: 12px;
+      }
+
+      #catSelect {
+        gap: 8px;
+        margin: 12px 0;
+      }
+
+      .selchip {
+        font-size: 13px;
+        border-radius: 8px;
+        padding: 7px 12px;
+      }
+
+      .actions {
+        margin-top: 16px;
+        gap: 12px;
+      }
+
+      .actions button {
+        padding: 11px;
+        font-size: 15px;
+        border-radius: 8px;
+      }
+
+      .cat-add-row {
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      #newCatInput {
+        font-size: 14px;
+        padding: 10px 12px;
+        border-radius: 8px;
+      }
+
+      #addCatBtn {
+        padding: 0 20px;
+        font-size: 14px;
+        border-radius: 8px;
+      }
+
+      .cat-item {
+        font-size: 14px;
+        padding: 10px 4px;
+      }
+
+      .cat-item .cat-num {
+        font-size: 12px;
+        margin-left: 8px;
+      }
+
+      .cat-del {
+        font-size: 13px;
+        padding: 6px 10px;
+      }
+
+      #catCloseBtn {
+        padding: 11px;
+        font-size: 14px;
+        border-radius: 8px;
+      }
+
+      .sync-manual {
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .sync-manual button {
+        min-width: 0;
+        padding: 10px;
+        font-size: 13px;
+        border-radius: 8px;
+      }
+
+      #ghInfo {
+        font-size: 12px;
+      }
+
+      .gh-input {
+        font-size: 14px;
+        padding: 10px 12px;
+        border-radius: 8px;
+      }
+
+      .gh-label {
+        font-size: 12px;
+        margin: 10px 0 6px;
+      }
+
+      #toast {
+        font-size: 14px;
+        bottom: 40px;
+        padding: 10px 20px;
+        border-radius: 8px;
+        max-width: 420px;
+      }
     }
-    function putFile(path, contentB64, sha, msg) { // 单文件提交：完整路径 PUT（已实测可用）
-      var body = { message: msg, content: contentB64, branch: 'main' };
-      if (sha) body.sha = sha;
-      return ghFetch(ghDataUrl(path), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+    /* 手动选 PC：无视宽高比套用同一套 PC 规则（选择器特异性高于基础样式） */
+    html.force-pc body {
+      font-size: 15px;
     }
-    function resolvePw() { // 推送需要口令：已保存直接用，否则现场输入
-      return new Promise(function(res, rej) {
-        var saved = ghSettings().password;
-        if (saved) return res(saved);
-        ghAskPassword('首次加密同步：请设置数据加密口令（将保存在本设备，之后自动使用；忘口令则数据无法解密）', function(pw) {
-          if (!pw) return rej(new Error('未输入口令，已取消同步'));
-          var st = ghSettings(); st.password = pw; ghSaveSettings(st); res(pw);
+
+    html.force-pc header {
+      padding: 14px 28px;
+    }
+
+    html.force-pc header h1 {
+      font-size: 20px;
+    }
+
+    html.force-pc #count {
+      font-size: 13px;
+      margin-right: 10px;
+    }
+
+    html.force-pc #themeBtn {
+      font-size: 16px;
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+    }
+
+    html.force-pc .hbtn {
+      height: 38px;
+      border-radius: 8px;
+      padding: 0 12px;
+      margin-right: 8px;
+      gap: 6px;
+    }
+
+    html.force-pc .hbtn .hbtn-ico {
+      font-size: 16px;
+    }
+
+    html.force-pc .hbtn .hbtn-txt {
+      display: inline;
+      font-size: 14px;
+    }
+
+    html.force-pc #syncStatus {
+      position: static;
+      padding: 6px 28px;
+      font-size: 12px;
+    }
+
+    html.force-pc #catBar {
+      position: fixed;
+      top: 86px;
+      left: 0;
+      bottom: 0;
+      z-index: 9;
+      width: 240px;
+      flex-direction: column;
+      align-items: stretch;
+      overflow-y: auto;
+      gap: 6px;
+      padding: 14px 12px;
+      background: var(--card-bg);
+      border-right: 1px solid var(--border);
+    }
+
+    html.force-pc .chip {
+      width: 100%;
+      text-align: left;
+      font-size: 14px;
+      border-radius: 8px;
+      padding: 9px 12px;
+    }
+
+    html.force-pc #list {
+      margin-left: 240px;
+      max-width: 1000px;
+      padding: 16px 28px 100px;
+    }
+
+    html.force-pc #empty {
+      margin-left: 240px;
+      font-size: 15px;
+      padding: 120px 24px;
+    }
+
+    html.force-pc .card {
+      padding: 16px 18px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+
+    html.force-pc .card .time {
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    html.force-pc .card .content {
+      font-size: 15px;
+      padding: 4px 0;
+    }
+
+    html.force-pc .expand-btn {
+      font-size: 12px;
+    }
+
+    html.force-pc .card .ops {
+      margin-top: 8px;
+      gap: 16px;
+    }
+
+    html.force-pc .card .ops button {
+      font-size: 13px;
+      padding: 6px 2px;
+    }
+
+    html.force-pc .cat-badge {
+      font-size: 11px;
+      border-radius: 6px;
+      padding: 2px 8px;
+      margin-left: 8px;
+    }
+
+    html.force-pc #addBtn {
+      width: 56px;
+      height: 56px;
+      font-size: 26px;
+      right: 28px;
+      bottom: 28px;
+    }
+
+    html.force-pc #overlay,
+    html.force-pc #catOverlay,
+    html.force-pc #ghOverlay {
+      align-items: center;
+    }
+
+    html.force-pc .sheet {
+      width: min(640px, 92%);
+      border-radius: 12px;
+      padding: 24px;
+      max-height: 86vh;
+      overflow: auto;
+    }
+
+    html.force-pc .sheet-title {
+      font-size: 17px;
+      margin-bottom: 14px;
+    }
+
+    html.force-pc #contentInput {
+      min-height: 180px;
+      font-size: 15px;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    html.force-pc #catSelect {
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    html.force-pc .selchip {
+      font-size: 13px;
+      border-radius: 8px;
+      padding: 7px 12px;
+    }
+
+    html.force-pc .actions {
+      margin-top: 16px;
+      gap: 12px;
+    }
+
+    html.force-pc .actions button {
+      padding: 11px;
+      font-size: 15px;
+      border-radius: 8px;
+    }
+
+    html.force-pc .cat-add-row {
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    html.force-pc #newCatInput {
+      font-size: 14px;
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    html.force-pc #addCatBtn {
+      padding: 0 20px;
+      font-size: 14px;
+      border-radius: 8px;
+    }
+
+    html.force-pc .cat-item {
+      font-size: 14px;
+      padding: 10px 4px;
+    }
+
+    html.force-pc .cat-item .cat-num {
+      font-size: 12px;
+      margin-left: 8px;
+    }
+
+    html.force-pc .cat-del {
+      font-size: 13px;
+      padding: 6px 10px;
+    }
+
+    html.force-pc #catCloseBtn {
+      padding: 11px;
+      font-size: 14px;
+      border-radius: 8px;
+    }
+
+    html.force-pc .sync-manual {
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    html.force-pc .sync-manual button {
+      min-width: 0;
+      padding: 10px;
+      font-size: 13px;
+      border-radius: 8px;
+    }
+
+    html.force-pc #ghInfo {
+      font-size: 12px;
+    }
+
+    html.force-pc .gh-input {
+      font-size: 14px;
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    html.force-pc .gh-label {
+      font-size: 12px;
+      margin: 10px 0 6px;
+    }
+
+    html.force-pc #toast {
+      font-size: 14px;
+      bottom: 40px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      max-width: 420px;
+    }
+
+    /* 手动选手机：逐条把上面 PC 属性覆盖回基础（手机）值；位置在媒体查询之后，同特异性后者胜 */
+    html.force-mobile body {
+      font-size: 5.5vw;
+    }
+
+    html.force-mobile header {
+      padding: 5vw 5vw;
+    }
+
+    html.force-mobile header h1 {
+      font-size: 7.5vw;
+    }
+
+    html.force-mobile #count {
+      font-size: 5vw;
+      margin-right: 3vw;
+    }
+
+    html.force-mobile #themeBtn {
+      font-size: 6.5vw;
+      width: 13vw;
+      height: 13vw;
+      border-radius: 3.5vw;
+    }
+
+    html.force-mobile .hbtn {
+      height: 13vw;
+      border-radius: 3.5vw;
+      padding: 0 3.2vw;
+      margin-right: 3vw;
+      gap: 1.5vw;
+    }
+
+    html.force-mobile .hbtn .hbtn-ico {
+      font-size: 6.5vw;
+    }
+
+    html.force-mobile .hbtn .hbtn-txt {
+      display: none;
+    }
+
+    html.force-mobile #syncStatus {
+      position: sticky;
+      top: 0;
+      padding: 2vw 5vw;
+      font-size: 3.8vw;
+    }
+
+    html.force-mobile #catBar {
+      position: sticky;
+      top: 16vw;
+      left: auto;
+      bottom: auto;
+      z-index: 8;
+      width: auto;
+      flex-direction: row;
+      align-items: center;
+      overflow: visible;
+      overflow-x: auto;
+      gap: 3vw;
+      padding: 4vw 5vw;
+      background: var(--bg);
+      border-right: none;
+    }
+
+    html.force-mobile .chip {
+      width: auto;
+      text-align: center;
+      font-size: 4.8vw;
+      border-radius: 6.5vw;
+      padding: 3.2vw 5.5vw;
+    }
+
+    html.force-mobile #list {
+      margin-left: 0;
+      max-width: none;
+      padding: 4vw 5vw 36vw;
+    }
+
+    html.force-mobile #empty {
+      margin-left: 0;
+      font-size: 5.5vw;
+      padding: 25vh 6vw;
+    }
+
+    html.force-mobile .card {
+      padding: 5.5vw;
+      border-radius: 4vw;
+      margin-bottom: 4vw;
+    }
+
+    html.force-mobile .card .time {
+      font-size: 4.2vw;
+      margin-bottom: 2.5vw;
+    }
+
+    html.force-mobile .card .content {
+      font-size: 5.5vw;
+      padding: 1.5vw 0;
+    }
+
+    html.force-mobile .expand-btn {
+      font-size: 4vw;
+    }
+
+    html.force-mobile .card .ops {
+      margin-top: 3.5vw;
+      gap: 5vw;
+    }
+
+    html.force-mobile .card .ops button {
+      font-size: 5vw;
+      padding: 3vw 1.5vw;
+    }
+
+    html.force-mobile .cat-badge {
+      font-size: 3.8vw;
+      border-radius: 3vw;
+      padding: 1.2vw 3vw;
+      margin-left: 2.5vw;
+    }
+
+    html.force-mobile #addBtn {
+      width: 18vw;
+      height: 18vw;
+      font-size: 10vw;
+      right: 5vw;
+      bottom: calc(9vw + env(safe-area-inset-bottom));
+    }
+
+    html.force-mobile #overlay,
+    html.force-mobile #catOverlay,
+    html.force-mobile #ghOverlay {
+      align-items: flex-end;
+    }
+
+    html.force-mobile .sheet {
+      width: 100%;
+      border-radius: 6vw 6vw 0 0;
+      padding: 6vw 5vw calc(6vw + env(safe-area-inset-bottom));
+      max-height: none;
+      overflow: visible;
+    }
+
+    html.force-mobile .sheet-title {
+      font-size: 6.5vw;
+      margin-bottom: 4vw;
+    }
+
+    html.force-mobile #contentInput {
+      min-height: 40vw;
+      font-size: 5.5vw;
+      border-radius: 4vw;
+      padding: 4.5vw;
+    }
+
+    html.force-mobile #catSelect {
+      gap: 3vw;
+      margin: 4vw 0;
+    }
+
+    html.force-mobile .selchip {
+      font-size: 4.8vw;
+      border-radius: 6.5vw;
+      padding: 3.2vw 5.5vw;
+    }
+
+    html.force-mobile .actions {
+      margin-top: 5vw;
+      gap: 3.5vw;
+    }
+
+    html.force-mobile .actions button {
+      padding: 5vw;
+      font-size: 5.5vw;
+      border-radius: 4vw;
+    }
+
+    html.force-mobile .cat-add-row {
+      gap: 3vw;
+      margin-bottom: 5vw;
+    }
+
+    html.force-mobile #newCatInput {
+      font-size: 5.2vw;
+      padding: 4.2vw 3.5vw;
+      border-radius: 3.5vw;
+    }
+
+    html.force-mobile #addCatBtn {
+      padding: 0 6vw;
+      font-size: 5.2vw;
+      border-radius: 3.5vw;
+    }
+
+    html.force-mobile .cat-item {
+      font-size: 5vw;
+      padding: 4.2vw 1.5vw;
+    }
+
+    html.force-mobile .cat-item .cat-num {
+      font-size: 4.2vw;
+      margin-left: 2.5vw;
+    }
+
+    html.force-mobile .cat-del {
+      font-size: 4.8vw;
+      padding: 2.5vw 3.5vw;
+    }
+
+    html.force-mobile #catCloseBtn {
+      padding: 5vw;
+      font-size: 5.5vw;
+      border-radius: 4vw;
+    }
+
+    html.force-mobile .sync-manual {
+      gap: 3vw;
+      margin-top: 3.5vw;
+    }
+
+    html.force-mobile .sync-manual button {
+      min-width: 28vw;
+      padding: 4vw;
+      font-size: 4.8vw;
+      border-radius: 3.5vw;
+    }
+
+    html.force-mobile #ghInfo {
+      font-size: 3.8vw;
+    }
+
+    html.force-mobile .gh-input {
+      font-size: 4.8vw;
+      padding: 3.5vw;
+      border-radius: 3.5vw;
+    }
+
+    html.force-mobile .gh-label {
+      font-size: 4.2vw;
+      margin: 3vw 0 1.5vw;
+    }
+
+    html.force-mobile #toast {
+      font-size: 5vw;
+      bottom: 22vw;
+      padding: 4vw 6vw;
+      border-radius: 3.5vw;
+      max-width: 85%;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🗒 语音速记</h1>
+    <div style="display:flex;align-items:center;">
+      <span id="count"></span>
+      <button id="headerSyncBtn" class="hbtn" title="同步到 GitHub"><span class="hbtn-ico">☁️</span><span
+          class="hbtn-txt">同步</span></button>
+      <button id="headerGhBtn" class="hbtn" title="GitHub 设置"><span class="hbtn-ico">⚙️</span><span
+          class="hbtn-txt">设置</span></button>
+      <button id="themeBtn" title="切换明暗模式">🌙</button>
+    </div>
+  </header>
+  <div id="syncStatus"><span id="syncInfo">初始化…</span></div>
+  <div id="catBar"></div>
+  <ul id="list"></ul>
+  <div id="empty">还没有记录，点「＋」开始</div>
+  <button id="addBtn" title="新增记录">＋</button>
+
+  <div id="overlay" class="hidden">
+    <div class="sheet">
+      <div class="sheet-title" id="sheetTitle">新增记录</div>
+      <textarea id="contentInput" placeholder="点这里输入文字…"></textarea>
+      <div id="catSelect"></div>
+      <div class="actions"><button id="cancelBtn">取消</button><button id="saveBtn">保存</button></div>
+    </div>
+  </div>
+
+  <div id="catOverlay" class="hidden">
+    <div class="sheet">
+      <div class="sheet-title">分类管理</div>
+      <div class="cat-add-row">
+        <input id="newCatInput" placeholder="输入新分类名" maxlength="20">
+        <button id="addCatBtn">添加</button>
+      </div>
+      <ul id="catList"></ul>
+      <button id="catCloseBtn">关闭</button>
+    </div>
+  </div>
+
+  <div id="ghOverlay" class="hidden">
+    <div class="sheet">
+      <div class="sheet-title">GitHub 设置</div>
+      <p id="ghInfo"></p>
+      <input type="password" id="ghToken" class="gh-input" placeholder="Fine-grained PAT（仅 Contents: RW 权限）">
+      <div class="gh-label">仓库（owner/repo）</div>
+      <input type="text" id="ghRepo" class="gh-input" placeholder="pcl1350306170/pcl1350306170.github.io">
+      <div class="gh-label">数据文件路径（JSON，加密后写入；md 密文归档自动生成在同目录）</div>
+      <input type="text" id="ghPath" class="gh-input" placeholder="application/voice_notes/data/notes.json">
+      <div class="gh-label">加密口令（忘口令 = 数据永久解不开；每台设备各配一次）</div>
+      <input type="password" id="ghPassword" class="gh-input" placeholder="用于解密/加密 GitHub 上的数据，留空则同步时现场询问">
+      <div class="gh-label">视图模式（默认按屏幕宽高自动判断：宽≥高才算 PC；像素宽度不参与判断）</div>
+      <div class="sync-manual" id="viewModeRow">
+        <button type="button" data-mode="">自动</button><button type="button" data-mode="pc">PC 布局</button><button
+          type="button" data-mode="mobile">手机布局</button>
+      </div>
+      <div class="sync-manual"><button id="btnGhSave">保存并验证</button><button id="btnGhClose">关闭</button></div>
+      <p id="ghSettingsHint" class="gh-label"></p>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    (function () {
+      var LS_NOTES = 'vn_offline_notes';
+      var LS_CATS = 'vn_offline_cats';
+      var DEFAULT_CATS = [
+        { id: 'cat_daily', name: '日常记录' },
+        { id: 'cat_xianjian4', name: '仙剑四游戏同人小说大纲' }
+      ];
+
+      // --- 数据层 ---
+      function loadNotes() { try { return JSON.parse(localStorage.getItem(LS_NOTES) || '[]'); } catch (e) { return []; } }
+      function saveNotes(n) { localStorage.setItem(LS_NOTES, JSON.stringify(n)); }
+      function loadCats() { try { var c = JSON.parse(localStorage.getItem(LS_CATS) || 'null'); return (c && c.length) ? c : DEFAULT_CATS.slice(); } catch (e) { return DEFAULT_CATS.slice(); } }
+      function saveCats(c) { localStorage.setItem(LS_CATS, JSON.stringify(c)); }
+
+      var notes = loadNotes();
+      var categories = loadCats();
+      var currentCat = '';
+      var catSelection = '';
+      var editing = null;
+
+      // --- DOM ---
+      var listEl = document.getElementById('list'), emptyEl = document.getElementById('empty');
+      var countEl = document.getElementById('count'), overlay = document.getElementById('overlay');
+      var input = document.getElementById('contentInput'), saveBtn = document.getElementById('saveBtn');
+      var sheetTitle = document.getElementById('sheetTitle'), themeBtn = document.getElementById('themeBtn');
+      var toastEl = document.getElementById('toast'), catBarEl = document.getElementById('catBar');
+      var catSelectEl = document.getElementById('catSelect'), catOverlay = document.getElementById('catOverlay');
+      var newCatInput = document.getElementById('newCatInput'), catListEl = document.getElementById('catList');
+
+      // --- 工具 ---
+      function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+      function now() {
+        var d = new Date(); function p(n) { return (n < 10 ? '0' : '') + n; }
+        return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+      }
+      function toast(msg) {
+        toastEl.textContent = msg; toastEl.classList.add('show');
+        clearTimeout(toast._t); toast._t = setTimeout(function () { toastEl.classList.remove('show'); }, 2000);
+      }
+
+      var PALETTE = [['#1d4ed8', '#dbeafe'], ['#047857', '#d1fae5'], ['#b45309', '#fef3c7'],
+      ['#7c3aed', '#ede9fe'], ['#be185d', '#fce7f3'], ['#0369a1', '#e0f2fe'], ['#15803d', '#dcfce7'], ['#c2410c', '#ffedd5']];
+      function catColor(id) { var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0; return PALETTE[h % PALETTE.length]; }
+      function catName(id) { for (var i = 0; i < categories.length; i++) if (categories[i].id === id) return categories[i].name; return ''; }
+
+      // --- Markdown 过滤（仅显示时过滤，不修改原始数据） ---
+      function stripMarkdown(text) {
+        if (!text) return '';
+        var s = text;
+        // 图片：![alt](url) → 删除
+        s = s.replace(/!\[([^\]]*)\]\([^)]+\)/g, '');
+        // 链接：[text](url) → 保留文字
+        s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+        // 标题：# 文本 → 文本
+        s = s.replace(/^#{1,6}\s+/gm, '');
+        // 粗体/斜体：**text**、*text*、__text__、_text_
+        s = s.replace(/\*\*(.+?)\*\*/g, '$1');
+        s = s.replace(/__(.+?)__/g, '$1');
+        s = s.replace(/\*(.+?)\*/g, '$1');
+        s = s.replace(/_(.+?)_/g, '$1');
+        // 代码：`code` → code
+        s = s.replace(/`([^`]+)`/g, '$1');
+        // 列表符号：- 、* 、1. 
+        s = s.replace(/^[\s]*[-*+]\s+/gm, '');
+        s = s.replace(/^[\s]*\d+\.\s+/gm, '');
+        // 引用：> 
+        s = s.replace(/^>\s?/gm, '');
+        // 分隔线：---、***
+        s = s.replace(/^[-*_]{3,}$/gm, '');
+        return s.trim();
+      }
+
+      // --- 主题 ---
+      function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
+      }
+      function getTheme() {
+        var s = localStorage.getItem('vn_theme');
+        return (s === 'dark' || s === 'light') ? s : (window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+      }
+      applyTheme(getTheme());
+      themeBtn.addEventListener('click', function () {
+        var n = getTheme() === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('vn_theme', n); applyTheme(n);
+      });
+
+      // --- 视图模式：自动（按宽高比）/ 强制 PC / 强制手机，存 localStorage，设置弹层里切换 ---
+      var LS_VIEW = 'vn_view_mode';
+      function applyViewMode(m) {
+        var cl = document.documentElement.classList;
+        cl.toggle('force-pc', m === 'pc'); cl.toggle('force-mobile', m === 'mobile');
+      }
+      function getViewMode() {
+        var s = localStorage.getItem(LS_VIEW);
+        return (s === 'pc' || s === 'mobile') ? s : '';
+      }
+      applyViewMode(getViewMode());
+      function refreshViewRow() {
+        var m = getViewMode();
+        document.querySelectorAll('#viewModeRow button').forEach(function (b) {
+          b.classList.toggle('active', b.getAttribute('data-mode') === m);
         });
+      }
+      document.getElementById('viewModeRow').addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) return;
+        var m = b.getAttribute('data-mode');
+        if (m) localStorage.setItem(LS_VIEW, m); else localStorage.removeItem(LS_VIEW);
+        applyViewMode(m); refreshViewRow();
+        toast(m ? '已切换：' + b.textContent : '已恢复自动判断');
       });
-    }
-    function commit(info) { // info: {sha, raw}；raw 兼容旧版明文（自动迁移为密文）
-      var data = ghBuildPayload();
-      var mdStr = ghBuildMD(data);
-      var mdPath = ghMDPath(s.path);
-      return resolvePw().then(function(pw) {
-        return ghEncrypt(data, pw).then(function(env) {
-          return putFile(s.path, utf8ToB64(JSON.stringify(env, null, 2)), info && info.sha, 'voice_notes: encrypted sync ' + now() + ' (' + data.notes.length + ' notes)').then(function(r) {
-            if (r.status !== 200 && r.status !== 201) return r; // 失败/冲突交给外层处理
-            // md 归档同样加密，尽力而为：失败不影响主同步
-            return ghEncrypt({ enc: 'v1', markdown: mdStr }, pw).then(function(envMd) {
-              return putFile(mdPath, utf8ToB64(JSON.stringify(envMd, null, 2)), null, 'voice_notes: refresh encrypted md export').catch(function(){ return null; });
-            }).then(function(){ return r; });
+
+      // --- 分类筛选 ---
+      function catMatch(n) { if (currentCat === '') return true; if (currentCat === '__none__') return !n.category_id; return n.category_id === currentCat; }
+
+      function renderCatBar() {
+        catBarEl.innerHTML = '';
+        function addChip(id, name, cls) {
+          var b = document.createElement('button');
+          b.className = 'chip' + (currentCat === id ? ' active' : '') + (cls || ''); b.textContent = name;
+          b.addEventListener('click', function () { currentCat = id; renderCatBar(); render(); }); catBarEl.appendChild(b);
+        }
+        addChip('', '全部'); categories.forEach(function (c) { addChip(c.id, c.name, ''); });
+        if (notes.some(function (n) { return !n.category_id; })) addChip('__none__', '未分类', '');
+        var ab = document.createElement('button'); ab.className = 'chip chip-add'; ab.textContent = '＋ 分类';
+        ab.addEventListener('click', openCatManager); catBarEl.appendChild(ab);
+      }
+
+      // --- 渲染列表 ---
+      function render() {
+        var filtered = notes.filter(catMatch).sort(function (a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); });
+        listEl.innerHTML = ''; if (filtered.length) emptyEl.classList.add('hidden'); else emptyEl.classList.remove('hidden');
+        countEl.textContent = notes.length ? notes.length + ' 条' : '';
+        filtered.forEach(function (n) {
+          var li = document.createElement('li'); li.className = 'card';
+          var time = document.createElement('div'); time.className = 'time'; time.textContent = n.created_at;
+          var cname = catName(n.category_id || '');
+          if (cname) { var col = catColor(n.category_id); var cb = document.createElement('span'); cb.className = 'cat-badge'; cb.textContent = cname; cb.style.color = col[0]; cb.style.background = col[1]; time.appendChild(cb); }
+          if (n.copy_count) { var ci = document.createElement('span'); ci.style.cssText = 'color:var(--muted);margin-left:6px'; ci.textContent = '· 复制 ' + n.copy_count + ' 次'; if (n.last_copied_at) ci.title = '最近复制：' + n.last_copied_at; time.appendChild(ci); }
+          li.appendChild(time);
+          // 内容区：过滤 markdown，截断显示
+          var content = document.createElement('div'); content.className = 'content content-truncated';
+          content.textContent = stripMarkdown(n.content); li.appendChild(content);
+          // 展开/收起按钮
+          var expandBtn = document.createElement('button'); expandBtn.className = 'expand-btn'; expandBtn.textContent = '展开全文';
+          expandBtn.style.display = 'none';
+          expandBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (content.classList.contains('content-truncated')) {
+              content.classList.remove('content-truncated');
+              expandBtn.textContent = '收起';
+            } else {
+              content.classList.add('content-truncated');
+              expandBtn.textContent = '展开全文';
+            }
+          });
+          li.appendChild(expandBtn);
+          // 渲染后检测是否需要展开按钮
+          setTimeout(function () {
+            if (content.scrollHeight > content.clientHeight + 2) {
+              expandBtn.style.display = 'block';
+            }
+          }, 0);
+          var ops = document.createElement('div'); ops.className = 'ops';
+          var btnC = document.createElement('button'); btnC.className = 'btn-copy'; btnC.textContent = '复制';
+          btnC.addEventListener('click', function () { doCopy(n); }); ops.appendChild(btnC);
+          var btnE = document.createElement('button'); btnE.className = 'btn-edit'; btnE.textContent = '编辑';
+          btnE.addEventListener('click', function () { openEdit(n); }); ops.appendChild(btnE);
+          var btnD = document.createElement('button'); btnD.className = 'btn-del'; btnD.textContent = '删除';
+          btnD.addEventListener('click', function () { delNote(n); }); ops.appendChild(btnD);
+          li.appendChild(ops); listEl.appendChild(li);
+        });
+      }
+
+      function doCopy(n) {
+        var ta = document.createElement('textarea'); ta.value = n.content; ta.style.cssText = 'position:fixed;top:-9999px';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); toast('已复制'); } catch (e) { toast('复制失败'); }
+        document.body.removeChild(ta);
+        n.copy_count = (n.copy_count || 0) + 1; n.last_copied_at = now(); n.synced = false;
+        saveNotes(notes); render(); updateSyncStatus();
+      }
+
+      // --- 分类选择 ---
+      function renderCatSelect(selected) {
+        catSelectEl.innerHTML = '';
+        function addSel(id, name) {
+          var b = document.createElement('button'); b.className = 'selchip' + (selected === id ? ' active' : '');
+          b.textContent = name; b.addEventListener('click', function () {
+            catSelectEl.querySelectorAll('.selchip').forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active'); catSelection = id;
+          }); catSelectEl.appendChild(b);
+        }
+        addSel('', '未分类'); categories.forEach(function (c) { addSel(c.id, c.name); });
+      }
+
+      // --- 分类管理 ---
+      function openCatManager() { catOverlay.classList.remove('hidden'); newCatInput.value = ''; renderCatManager(); setTimeout(function () { newCatInput.focus(); }, 100); }
+      function renderCatManager() {
+        catListEl.innerHTML = ''; categories.forEach(function (c) {
+          var li = document.createElement('li'); li.className = 'cat-item';
+          var sp = document.createElement('span'); sp.textContent = c.name; var cnt = notes.filter(function (n) { return n.category_id === c.id; }).length;
+          var num = document.createElement('span'); num.className = 'cat-num'; num.textContent = cnt + ' 条'; sp.appendChild(num); li.appendChild(sp);
+          var del = document.createElement('button'); del.className = 'cat-del'; del.textContent = '删除';
+          del.addEventListener('click', function () {
+            if (!confirm('删除分类「' + c.name + '」？记录将变为未分类。')) return;
+            categories = categories.filter(function (x) { return x.id !== c.id; }); saveCats(categories);
+            notes.forEach(function (n) { if (n.category_id === c.id) n.category_id = ''; }); saveNotes(notes); renderCatManager(); renderCatBar(); render();
+          });
+          li.appendChild(del); catListEl.appendChild(li);
+        });
+      }
+      document.getElementById('addCatBtn').addEventListener('click', function () {
+        var name = newCatInput.value.trim();
+        if (!name) return; if (name.length > 20) { alert('最长20字'); return; }
+        if (categories.some(function (c) { return c.name === name; })) { alert('已存在'); return; }
+        categories.push({ id: genId(), name: name }); saveCats(categories); newCatInput.value = ''; renderCatManager(); renderCatBar();
+      });
+      document.getElementById('catCloseBtn').addEventListener('click', function () { catOverlay.classList.add('hidden'); });
+
+      // --- 新增/编辑 ---
+      document.getElementById('addBtn').addEventListener('click', function () {
+        editing = null; sheetTitle.textContent = '新增记录'; input.value = '';
+        catSelection = (currentCat && currentCat !== '__none__') ? currentCat : '';
+        renderCatSelect(catSelection); overlay.classList.remove('hidden'); setTimeout(function () { input.focus(); }, 100);
+      });
+      function openEdit(n) {
+        editing = { id: n.id }; sheetTitle.textContent = '编辑记录'; input.value = n.content;
+        catSelection = n.category_id || ''; renderCatSelect(catSelection); overlay.classList.remove('hidden'); setTimeout(function () { input.focus(); }, 100);
+      }
+      document.getElementById('cancelBtn').addEventListener('click', function () { overlay.classList.add('hidden'); input.value = ''; editing = null; });
+      saveBtn.addEventListener('click', function () {
+        var content = input.value.trim(); if (!content) { input.focus(); return; }
+        if (editing) {
+          for (var i = 0; i < notes.length; i++) { if (notes[i].id === editing.id) { notes[i].content = content; notes[i].category_id = catSelection; notes[i].updated_at = now(); notes[i].synced = false; break; } }
+          saveNotes(notes); overlay.classList.add('hidden'); input.value = ''; editing = null; render(); updateSyncStatus();
+        } else {
+          var note = { id: genId(), client_id: genId(), content: content, created_at: now(), updated_at: '', category_id: catSelection, copy_count: 0, last_copied_at: '', synced: false };
+          notes.unshift(note); saveNotes(notes); input.value = ''; input.focus(); render(); renderCatBar(); updateSyncStatus();
+        }
+      });
+      function delNote(n) { if (!confirm('确定删除？')) return; notes = notes.filter(function (x) { return x.id !== n.id; }); saveNotes(notes); render(); renderCatBar(); }
+
+      // --- 同步状态（单人使用：GitHub 唯一通道，synced 即"待推送到仓库"） ---
+      var syncing = false;
+      var syncInfo = document.getElementById('syncInfo');
+
+      function unsyncedCount() { return notes.filter(function (n) { return !n.synced; }).length; }
+
+      function updateSyncStatus() {
+        var uc = unsyncedCount();
+        var t = ghSettings().lastSyncAt;
+        var txt = syncing ? '同步中…' : (uc > 0 ? '⏳ ' + uc + ' 条待同步到 GitHub' : '✓ 已全部同步');
+        if (t) txt += ' · 上次 ' + t.slice(5, 16);
+        syncInfo.textContent = txt;
+      }
+
+      // 头部「☁️ 同步 / ⚙️ 设置」按钮在下方 GitHub 区块统一绑定（方案A：同步直接执行、设置直接开弹层）
+
+      /* ---------------- GitHub 仓库同步（完全手动，无自动触发） ---------------- */
+      var LS_GH = 'vn_gh_sync';
+      var GH_API = 'https://api.github.com';
+      var GH_DEFAULTS = {
+        token: '',
+        repo: 'pcl1350306170/pcl1350306170.github.io',
+        path: 'application/voice_notes/data/notes.json',
+        password: '',
+        lastSyncAt: ''
+      };
+      function ghSettings() { try { return Object.assign({}, GH_DEFAULTS, JSON.parse(localStorage.getItem(LS_GH) || '{}')); } catch (e) { return Object.assign({}, GH_DEFAULTS); } }
+      function ghSaveSettings(s) { localStorage.setItem(LS_GH, JSON.stringify(s)); }
+      function ghMDPath(p) { return p.replace(/\/[^\/]*$/, '') + '/notes-export.md'; }
+      function ghFetch(url, opts) { // 带令牌的 fetch，附带 GitHub API 必需头
+        opts = opts || {}; opts.headers = opts.headers || {};
+        opts.headers['Authorization'] = 'Bearer ' + ghSettings().token;
+        opts.headers['Accept'] = 'application/vnd.github+json';
+        opts.headers['X-GitHub-Api-Version'] = '2022-11-28';
+        return fetch(url, opts);
+      }
+      function utf8ToB64(str) { // 中文安全：先 UTF-8 编码再 base64
+        var bytes = new TextEncoder().encode(str), bin = '';
+        bytes.forEach(function (b) { bin += String.fromCharCode(b); });
+        return btoa(bin);
+      }
+      function b64ToUtf8(s) {
+        var bin = atob((s || '').replace(/\s/g, '')), u = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        return new TextDecoder().decode(u);
+      }
+
+      function ghBuildPayload() {
+        return {
+          version: 1,
+          exported_at: now(),
+          categories: categories.map(function (c) { return { id: c.id, name: c.name }; }),
+          notes: notes.map(function (n) {
+            return {
+              id: n.id, client_id: n.client_id || n.id, content: n.content,
+              created_at: n.created_at, updated_at: n.updated_at || '',
+              category_id: n.category_id || '', copy_count: n.copy_count || 0,
+              last_copied_at: n.last_copied_at || ''
+            };
+          })
+        };
+      }
+
+      function ghBuildMD(data) {
+        var lines = ['# 语音速记导出', '', '> 由 GitHub 同步自动生成，请勿手动编辑（会被下次同步覆盖）', '> 最近同步：' + now() + ' · 共 ' + data.notes.length + ' 条', ''];
+        function one(n) {
+          lines.push('## ' + (n.created_at || ''));
+          lines.push('');
+          lines.push(n.content);
+          lines.push('');
+          var meta = [];
+          if (n.updated_at) meta.push('编辑 ' + n.updated_at);
+          if (n.copy_count) meta.push('复制 ' + n.copy_count + ' 次');
+          if (meta.length) { lines.push('*(' + meta.join(' · ') + ')*'); lines.push(''); }
+        }
+        data.categories.forEach(function (c) {
+          var arr = data.notes.filter(function (n) { return n.category_id === c.id; })
+            .sort(function (a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); });
+          if (!arr.length) return;
+          lines.push('# ' + c.name + '（' + arr.length + '）'); lines.push('');
+          arr.forEach(one);
+        });
+        var none = data.notes.filter(function (n) { return !n.category_id || !data.categories.some(function (c) { return c.id === n.category_id; }); })
+          .sort(function (a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); });
+        if (none.length) { lines.push('# 未分类（' + none.length + '）'); lines.push(''); none.forEach(one); }
+        return lines.join('\n');
+      }
+
+      // 合并远端数据到本地：本地未同步（待推送）记录始终胜出；已同步的按 updated_at 新者胜
+      function ghMergeRemote(data) {
+        var added = 0, updated = 0;
+        var catNameToId = {};
+        categories.forEach(function (c) { catNameToId[c.name] = c.id; });
+        ((data && data.categories) || []).forEach(function (rc) {
+          var name = (rc.name || '').trim(); if (!name) return;
+          if (!catNameToId[name]) { var nid = genId(); categories.push({ id: nid, name: name }); catNameToId[name] = nid; }
+        });
+        saveCats(categories);
+        var keyOf = function (n) { return n.client_id || n.id || ''; };
+        var rcats = (data && data.categories) || [];
+        var idx = {}; notes.forEach(function (n, i) { idx[keyOf(n)] = i; });
+        ((data && data.notes) || []).forEach(function (rn) {
+          var key = keyOf(rn); if (!key) return;
+          var content = (rn.content || '').trim(); if (!content) return;
+          var localCatId = ghMapCat(rn.category_id, rcats, catNameToId);
+          if (idx[key] === undefined) {
+            notes.push({
+              id: rn.id || genId(), client_id: key, content: content,
+              created_at: rn.created_at || now(), updated_at: rn.updated_at || '',
+              category_id: localCatId, copy_count: rn.copy_count || 0,
+              last_copied_at: rn.last_copied_at || '', synced: true
+            });
+            idx[key] = notes.length - 1; added++;
+          } else {
+            var local = notes[idx[key]], ru = rn.updated_at || '', lu = local.updated_at || '';
+            if (local.synced) {
+              if (ru && ru > lu) {
+                local.content = content; local.updated_at = ru; local.category_id = localCatId || local.category_id;
+                local.copy_count = rn.copy_count || local.copy_count; local.last_copied_at = rn.last_copied_at || local.last_copied_at; updated++;
+              }
+            } else if (ru > lu) { // 远端更新且本地未同步：取远端并视为已同步（本地更旧无需再推）
+              local.content = content; local.updated_at = ru; local.category_id = localCatId || local.category_id; local.synced = true; updated++;
+            }
+          }
+        });
+        saveNotes(notes); renderCatBar(); render(); updateSyncStatus();
+        return { added: added, updated: updated };
+      }
+      function catNameOf(catId, rcats) {
+        for (var i = 0; i < rcats.length; i++) if (rcats[i].id === catId) return rcats[i].name;
+        return '';
+      }
+      // 远端分类ID → 本地分类ID：单人使用两端分类同源，直接按名称映射
+      function ghMapCat(catId, rcats, catNameToId) {
+        if (!catId) return '';
+        var name = catNameOf(catId, rcats);
+        return (name && catNameToId[name]) || '';
+      }
+
+      function ghEnsureSettings() {
+        var s = ghSettings();
+        if (!s.token) { toast('请先在「⚙️ GitHub 设置」填写令牌'); return null; }
+        return s;
+      }
+
+      function ghRepoEnc() { return ghSettings().repo; }
+      function ghDataUrl(path) { return GH_API + '/repos/' + ghRepoEnc() + '/contents/' + path; }
+
+      /* ---------------- 端到端加密（Web Crypto：AES-GCM 256 + PBKDF2 派生口令，纯前端） ---------------- */
+      var ENC_ALG = 'AES-GCM', PBKDF2_ITER = 150000;
+      function te(s) { return new TextEncoder().encode(s); }
+      function b64enc(buf) {
+        var bin = '', u = new Uint8Array(buf);
+        for (var i = 0; i < u.length; i++) bin += String.fromCharCode(u[i]); return btoa(bin);
+      }
+      function b64dec(s) {
+        var bin = atob((s || '').replace(/\s/g, '')), u = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u;
+      }
+      function ghDeriveKey(pw, salt) {
+        return crypto.subtle.importKey('raw', te(pw), 'PBKDF2', false, ['deriveKey'])
+          .then(function (km) { return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: PBKDF2_ITER, hash: 'SHA-256' }, km, { name: ENC_ALG, length: 256 }, false, ['encrypt', 'decrypt']); });
+      }
+      function ghEncrypt(obj, pw) {
+        var salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+        return ghDeriveKey(pw, salt).then(function (key) {
+          return crypto.subtle.encrypt({ name: ENC_ALG, iv: iv }, key, te(JSON.stringify(obj))).then(function (ct) {
+            return { enc: 'v1', alg: ENC_ALG, iterations: PBKDF2_ITER, salt: b64enc(salt), iv: b64enc(iv), data: b64enc(ct) };
           });
         });
-      });
-    }
-    function onSuccess() {
-      done();
-      notes.forEach(function(n){ n.synced = true; }); saveNotes(notes); updateSyncStatus();
-      var st = ghSettings(); st.lastSyncAt = now(); ghSaveSettings(st);
-      toast('已同步到 GitHub（' + notes.length + ' 条全部上传）');
-    }
-    function isOkCreate(r) { return r && (r.status === 201 || r.status === 200); } // 201=新建 200=更新
-    function onFailure(r) {
-      done();
-      if (r && r.status === 401) toast('令牌无效或已过期，请更新「GitHub 设置」');
-      else if (r && r.status === 403) toast('被 GitHub 限流或拒绝，请稍后再试');
-      else if (r && r.status === 422) toast('提交被拒：路径或分支有误，请检查「GitHub 设置」');
-      else toast('同步失败：HTTP ' + (r ? r.status : '?') + (r && r._detail ? r._detail : ''));
-    }
-    function readErr(r) { // 提取 GitHub 返回的原始错误信息，便于定位问题
-      try { return r.clone().json().then(function(d){ return (d && d.message) ? ('：' + d.message) : ''; }); }
-      catch(e) { return Promise.resolve(''); }
-    }
-    return readRemoteJson().then(function(info) {
-      var raw = info && info.raw;
-      if (raw && raw.enc === 'v1') { // 远端为密文：先用已存口令解密并合并
-        var pw = ghSettings().password;
-        if (!pw) return new Promise(function(res, rej) {
-          ghAskPassword('远端数据已加密，请输入加密口令：', function(p) {
-            if (!p) return rej(new Error('未输入口令，已取消同步'));
-            var st = ghSettings(); st.password = p; ghSaveSettings(st); res(p);
+      }
+      function ghDecrypt(env, pw) {
+        var salt = b64dec(env.salt), iv = b64dec(env.iv);
+        return ghDeriveKey(pw, salt).then(function (key) {
+          return crypto.subtle.decrypt({ name: ENC_ALG, iv: iv }, key, b64dec(env.data));
+        }).then(function (pt) { return JSON.parse(new TextDecoder().decode(pt)); })
+          .catch(function (e) { var err = new Error('口令错误或密文已损坏，无法解密'); err.name = 'WrongPassword'; throw err; });
+      }
+      function ghAskPassword(msg, cb) { // 口令缺失/不对时现场输入；选“取消”返回 null
+        var pw = prompt(msg || '请输入数据加密口令（同步时用于解密/加密 GitHub 上的数据）');
+        if (pw === null) return cb(null);
+        pw = pw.trim(); if (!pw) return cb(null);
+        cb(pw);
+      }
+
+      // 一键同步：拉取合并 → 全量提交（加密，JSON + md 归档均为密文）；409 冲突自动重读 SHA 重试一次
+      function ghSyncAll() {
+        var s = ghEnsureSettings(); if (!s) return Promise.resolve();
+        syncing = true; updateSyncStatus();
+        var btn = document.getElementById('headerSyncBtn'); if (btn) btn.disabled = true;
+        function done() { syncing = false; if (btn) btn.disabled = false; updateSyncStatus(); }
+        function readRemoteJson() {
+          return ghFetch(ghDataUrl(s.path), { method: 'GET' }).then(function (r) {
+            if (r.ok) return r.json().then(function (d) { return { sha: d.sha, raw: d.content ? JSON.parse(b64ToUtf8(d.content)) : null }; });
+            if (r.status === 404) return null; // 首次创建
+            return r.json().then(function (d) { throw new Error('读取远端失败：' + ((d && d.message) || ('HTTP ' + r.status))); });
           });
-        }).then(function(p2) { return ghDecrypt(raw, p2).then(mergeRemote); });
-        return ghDecrypt(raw, pw).then(mergeRemote).catch(function(e) {
-          if (e && e.name !== 'WrongPassword') throw e;
-          return new Promise(function(res, rej) {
-            ghAskPassword('已存口令无法解密远端数据，请重新输入正确口令：', function(p) {
-              if (!p) return rej(new Error('未输入口令，已取消同步'));
-              var st = ghSettings(); st.password = p; ghSaveSettings(st);
-              res(ghDecrypt(raw, p).then(mergeRemote));
+        }
+        function putFile(path, contentB64, sha, msg) { // 单文件提交：完整路径 PUT（已实测可用）
+          var body = { message: msg, content: contentB64, branch: 'main' };
+          if (sha) body.sha = sha;
+          return ghFetch(ghDataUrl(path), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        }
+        function resolvePw() { // 推送需要口令：已保存直接用，否则现场输入
+          return new Promise(function (res, rej) {
+            var saved = ghSettings().password;
+            if (saved) return res(saved);
+            ghAskPassword('首次加密同步：请设置数据加密口令（将保存在本设备，之后自动使用；忘口令则数据无法解密）', function (pw) {
+              if (!pw) return rej(new Error('未输入口令，已取消同步'));
+              var st = ghSettings(); st.password = pw; ghSaveSettings(st); res(pw);
             });
           });
-        });
-      }
-      return mergeRemote(raw); // 不存在（首次）或旧版明文：明文会被合并后由 commit 自动迁移为密文
-      function mergeRemote(remote) { if (remote) ghMergeRemote(remote); return commit(info); }
-    }).then(function(r) { // 提交结果处理（含口令错误短路时 r 为 undefined）
-      if (!r) return;
-      return readErr(r).then(function(detail) {
-        r._detail = detail;
-        if (isOkCreate(r)) { onSuccess(); return; }
-        if (r.status === 409) { // 罕见：提交瞬间其他端刚写过，自动重读重试一次
-          toast('检测到并发提交，自动重试…');
-          return readRemoteJson().then(function(i2) {
-            return commit(i2).then(function(r2) { return readErr(r2).then(function(d2){ r2._detail = d2; if (isOkCreate(r2)) onSuccess(); else onFailure(r2); }); });
+        }
+        function commit(info) { // info: {sha, raw}；raw 兼容旧版明文（自动迁移为密文）
+          var data = ghBuildPayload();
+          var mdStr = ghBuildMD(data);
+          var mdPath = ghMDPath(s.path);
+          return resolvePw().then(function (pw) {
+            return ghEncrypt(data, pw).then(function (env) {
+              return putFile(s.path, utf8ToB64(JSON.stringify(env, null, 2)), info && info.sha, 'voice_notes: encrypted sync ' + now() + ' (' + data.notes.length + ' notes)').then(function (r) {
+                if (r.status !== 200 && r.status !== 201) return r; // 失败/冲突交给外层处理
+                // md 归档同样加密，尽力而为：失败不影响主同步
+                return ghEncrypt({ enc: 'v1', markdown: mdStr }, pw).then(function (envMd) {
+                  return putFile(mdPath, utf8ToB64(JSON.stringify(envMd, null, 2)), null, 'voice_notes: refresh encrypted md export').catch(function () { return null; });
+                }).then(function () { return r; });
+              });
+            });
           });
         }
-        onFailure(r);
+        function onSuccess() {
+          done();
+          notes.forEach(function (n) { n.synced = true; }); saveNotes(notes); updateSyncStatus();
+          var st = ghSettings(); st.lastSyncAt = now(); ghSaveSettings(st);
+          toast('已同步到 GitHub（' + notes.length + ' 条全部上传）');
+        }
+        function isOkCreate(r) { return r && (r.status === 201 || r.status === 200); } // 201=新建 200=更新
+        function onFailure(r) {
+          done();
+          if (r && r.status === 401) toast('令牌无效或已过期，请更新「GitHub 设置」');
+          else if (r && r.status === 403) toast('被 GitHub 限流或拒绝，请稍后再试');
+          else if (r && r.status === 422) toast('提交被拒：路径或分支有误，请检查「GitHub 设置」');
+          else toast('同步失败：HTTP ' + (r ? r.status : '?') + (r && r._detail ? r._detail : ''));
+        }
+        function readErr(r) { // 提取 GitHub 返回的原始错误信息，便于定位问题
+          try { return r.clone().json().then(function (d) { return (d && d.message) ? ('：' + d.message) : ''; }); }
+          catch (e) { return Promise.resolve(''); }
+        }
+        return readRemoteJson().then(function (info) {
+          var raw = info && info.raw;
+          if (raw && raw.enc === 'v1') { // 远端为密文：先用已存口令解密并合并
+            var pw = ghSettings().password;
+            if (!pw) return new Promise(function (res, rej) {
+              ghAskPassword('远端数据已加密，请输入加密口令：', function (p) {
+                if (!p) return rej(new Error('未输入口令，已取消同步'));
+                var st = ghSettings(); st.password = p; ghSaveSettings(st); res(p);
+              });
+            }).then(function (p2) { return ghDecrypt(raw, p2).then(mergeRemote); });
+            return ghDecrypt(raw, pw).then(mergeRemote).catch(function (e) {
+              if (e && e.name !== 'WrongPassword') throw e;
+              return new Promise(function (res, rej) {
+                ghAskPassword('已存口令无法解密远端数据，请重新输入正确口令：', function (p) {
+                  if (!p) return rej(new Error('未输入口令，已取消同步'));
+                  var st = ghSettings(); st.password = p; ghSaveSettings(st);
+                  res(ghDecrypt(raw, p).then(mergeRemote));
+                });
+              });
+            });
+          }
+          return mergeRemote(raw); // 不存在（首次）或旧版明文：明文会被合并后由 commit 自动迁移为密文
+          function mergeRemote(remote) { if (remote) ghMergeRemote(remote); return commit(info); }
+        }).then(function (r) { // 提交结果处理（含口令错误短路时 r 为 undefined）
+          if (!r) return;
+          return readErr(r).then(function (detail) {
+            r._detail = detail;
+            if (isOkCreate(r)) { onSuccess(); return; }
+            if (r.status === 409) { // 罕见：提交瞬间其他端刚写过，自动重读重试一次
+              toast('检测到并发提交，自动重试…');
+              return readRemoteJson().then(function (i2) {
+                return commit(i2).then(function (r2) { return readErr(r2).then(function (d2) { r2._detail = d2; if (isOkCreate(r2)) onSuccess(); else onFailure(r2); }); });
+              });
+            }
+            onFailure(r);
+          });
+        }).catch(function (e) { done(); toast('同步失败：' + e.message); });
+      }
+
+      // --- GitHub 设置弹层 ---
+      var ghOverlayEl = document.getElementById('ghOverlay');
+      var ghTokenEl = document.getElementById('ghToken');
+      var ghRepoEl = document.getElementById('ghRepo');
+      var ghPathEl = document.getElementById('ghPath');
+      var ghPasswordEl = document.getElementById('ghPassword');
+      var ghSettingsHint = document.getElementById('ghSettingsHint');
+      var ghInfoEl = document.getElementById('ghInfo');
+      function ghRenderInfo() {
+        var st = ghSettings();
+        ghInfoEl.textContent = (st.token ? '✓ 令牌已配置 · ' : '⚠ 尚未配置令牌 · ') + st.repo + ' / ' + st.path +
+          (st.lastSyncAt ? ' · 上次同步 ' + st.lastSyncAt : '');
+      }
+      function openGhSettings() {
+        var st = ghSettings();
+        ghTokenEl.value = st.token; ghRepoEl.value = st.repo; ghPathEl.value = st.path; ghPasswordEl.value = st.password || '';
+        ghSettingsHint.textContent = st.token ? '令牌已保存：' + st.token.slice(0, 7) + '…' : '尚未保存令牌';
+        refreshViewRow();
+        ghOverlayEl.classList.remove('hidden');
+      }
+      document.getElementById('headerGhBtn').addEventListener('click', openGhSettings);
+      document.getElementById('btnGhClose').addEventListener('click', function () { ghOverlayEl.classList.add('hidden'); });
+      document.getElementById('btnGhSave').addEventListener('click', function () {
+        var st = ghSettings();
+        st.token = ghTokenEl.value.trim(); st.repo = ghRepoEl.value.trim() || GH_DEFAULTS.repo; st.path = ghPathEl.value.trim() || GH_DEFAULTS.path;
+        st.password = ghPasswordEl.value.trim();
+        if (!/^https?:\/\//.test(st.path)) st.path = st.path.replace(/^\/+/, '');
+        if (!st.token) { ghSettingsHint.textContent = '令牌不能为空'; return; }
+        ghSaveSettings(st);
+        ghSettingsHint.textContent = '已保存，正在验证…';
+        ghFetch(GH_API + '/repos/' + st.repo + '/contents/' + st.path, { method: 'GET' }).then(function (r) {
+          if (r.ok) ghSettingsHint.textContent = '✓ 验证成功，可读写目标路径';
+          else if (r.status === 404) ghSettingsHint.textContent = '✓ 令牌可用，路径暂不存在（首次同步会自动创建）';
+          else if (r.status === 401) ghSettingsHint.textContent = '✗ 令牌无效或无此仓库权限';
+          else ghSettingsHint.textContent = '✗ 验证失败：HTTP ' + r.status;
+          ghRenderInfo();
+        }).catch(function (e) { ghSettingsHint.textContent = '✗ 无法连接 GitHub：' + e.message; });
       });
-    }).catch(function(e){ done(); toast('同步失败：' + e.message); });
-  }
-
-  // --- GitHub 设置弹层 ---
-  var ghOverlayEl = document.getElementById('ghOverlay');
-  var ghTokenEl = document.getElementById('ghToken');
-  var ghRepoEl = document.getElementById('ghRepo');
-  var ghPathEl = document.getElementById('ghPath');
-  var ghPasswordEl = document.getElementById('ghPassword');
-  var ghSettingsHint = document.getElementById('ghSettingsHint');
-  var ghInfoEl = document.getElementById('ghInfo');
-  function ghRenderInfo() {
-    var st = ghSettings();
-    ghInfoEl.textContent = (st.token ? '✓ 令牌已配置 · ' : '⚠ 尚未配置令牌 · ') + st.repo + ' / ' + st.path +
-      (st.lastSyncAt ? ' · 上次同步 ' + st.lastSyncAt : '');
-  }
-  function openGhSettings() {
-    var st = ghSettings();
-    ghTokenEl.value = st.token; ghRepoEl.value = st.repo; ghPathEl.value = st.path; ghPasswordEl.value = st.password || '';
-    ghSettingsHint.textContent = st.token ? '令牌已保存：' + st.token.slice(0, 7) + '…' : '尚未保存令牌';
-    refreshViewRow();
-    ghOverlayEl.classList.remove('hidden');
-  }
-  document.getElementById('headerGhBtn').addEventListener('click', openGhSettings);
-  document.getElementById('btnGhClose').addEventListener('click', function(){ ghOverlayEl.classList.add('hidden'); });
-  document.getElementById('btnGhSave').addEventListener('click', function() {
-    var st = ghSettings();
-    st.token = ghTokenEl.value.trim(); st.repo = ghRepoEl.value.trim() || GH_DEFAULTS.repo; st.path = ghPathEl.value.trim() || GH_DEFAULTS.path;
-    st.password = ghPasswordEl.value.trim();
-    if (!/^https?:\/\//.test(st.path)) st.path = st.path.replace(/^\/+/, '');
-    if (!st.token) { ghSettingsHint.textContent = '令牌不能为空'; return; }
-    ghSaveSettings(st);
-    ghSettingsHint.textContent = '已保存，正在验证…';
-    ghFetch(GH_API + '/repos/' + st.repo + '/contents/' + st.path, { method: 'GET' }).then(function(r) {
-      if (r.ok) ghSettingsHint.textContent = '✓ 验证成功，可读写目标路径';
-      else if (r.status === 404) ghSettingsHint.textContent = '✓ 令牌可用，路径暂不存在（首次同步会自动创建）';
-      else if (r.status === 401) ghSettingsHint.textContent = '✗ 令牌无效或无此仓库权限';
-      else ghSettingsHint.textContent = '✗ 验证失败：HTTP ' + r.status;
+      document.getElementById('headerSyncBtn').addEventListener('click', ghSyncAll);
       ghRenderInfo();
-    }).catch(function(e){ ghSettingsHint.textContent = '✗ 无法连接 GitHub：' + e.message; });
-  });
-  document.getElementById('headerSyncBtn').addEventListener('click', ghSyncAll);
-  ghRenderInfo();
 
-  // --- 初始化 ---
-  // 迁移旧数据：给没有 client_id 的记录补上
-  var migrated = false;
-  notes.forEach(function(n){ if(!n.client_id){ n.client_id = n.id || genId(); migrated=true; } if(n.synced===undefined){ n.synced=true; migrated=true; } });
-  if(migrated) saveNotes(notes);
-  renderCatBar(); render(); updateSyncStatus();
-})();
-</script>
+      // --- 初始化 ---
+      // 迁移旧数据：给没有 client_id 的记录补上
+      var migrated = false;
+      notes.forEach(function (n) { if (!n.client_id) { n.client_id = n.id || genId(); migrated = true; } if (n.synced === undefined) { n.synced = true; migrated = true; } });
+      if (migrated) saveNotes(notes);
+      renderCatBar(); render(); updateSyncStatus();
+    })();
+  </script>
 </body>
+
 </html>
