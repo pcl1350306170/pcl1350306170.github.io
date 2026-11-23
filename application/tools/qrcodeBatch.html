@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>批量二维码生成</title>
+    <link rel="icon" type="image/jpeg" href="https://cdn.jsdelivr.net/gh/pcl1350306170/Miscellaneous@refs/heads/main/GPT-IMG/头像/137.jpg">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <style>
+        :root {
+            --paper: #f4f2ea;
+            --card: #fffdf7;
+            --ink: #22322a;
+            --ink-soft: #6b7a70;
+            --green: #2e7d54;
+            --green-deep: #1f5b3d;
+            --green-mist: #e3efe7;
+            --line: #dfdcd0;
+            --mono: "JetBrains Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+            --serif: Georgia, "Songti SC", "STSong", SimSun, serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            font-size: 16px;
+        }
+
+        body {
+            font-family: var(--serif);
+            color: var(--ink);
+            background-color: var(--paper);
+            background-image: radial-gradient(rgba(46, 125, 84, .10) 1px, transparent 1px);
+            background-size: 22px 22px;
+            min-height: 100vh;
+            padding: 32px 20px 64px;
+        }
+
+        .wrap {
+            max-width: 980px;
+            margin: 0 auto;
+        }
+
+        /* ---------- 页头 ---------- */
+        header {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 26px;
+        }
+
+        header h1 {
+            font-size: 1.7rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+        }
+
+        header h1 .dot {
+            color: var(--green);
+        }
+
+        header p {
+            color: var(--ink-soft);
+            font-size: .9rem;
+            letter-spacing: .06em;
+        }
+
+        /* ---------- 输入卡片 ---------- */
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 22px 24px;
+            box-shadow: 0 1px 0 rgba(34, 50, 42, .05), 0 10px 30px -18px rgba(34, 50, 42, .25);
+        }
+
+        .panel .label {
+            font-size: .82rem;
+            color: var(--ink-soft);
+            letter-spacing: .12em;
+            margin-bottom: 12px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        #rangeInput {
+            flex: 1;
+            min-width: 220px;
+            font-family: var(--mono);
+            font-size: 1.15rem;
+            letter-spacing: .05em;
+            color: var(--ink);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid var(--line);
+            padding: 10px 4px;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        #rangeInput:focus {
+            border-bottom-color: var(--green);
+        }
+
+        #rangeInput::placeholder {
+            color: #b6b2a4;
+            letter-spacing: .02em;
+        }
+
+        .gen-btn {
+            font-family: var(--serif);
+            font-size: 1rem;
+            letter-spacing: .18em;
+            color: #fff;
+            background: var(--green);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 34px;
+            cursor: pointer;
+            transition: background .2s, transform .1s;
+        }
+
+        .gen-btn:hover {
+            background: var(--green-deep);
+        }
+
+        .gen-btn:active {
+            transform: scale(.97);
+        }
+
+        .hint {
+            margin-top: 12px;
+            font-size: .8rem;
+            color: var(--ink-soft);
+            min-height: 1.2em;
+        }
+
+        .hint.error {
+            color: #c0503f;
+        }
+
+        /* ---------- 结果区 ---------- */
+        .result-bar {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            margin: 28px 2px 14px;
+        }
+
+        .result-bar.show {
+            display: flex;
+        }
+
+        .result-bar .count {
+            font-size: .92rem;
+            letter-spacing: .06em;
+            color: var(--ink-soft);
+        }
+
+        .result-bar .count b {
+            font-family: var(--mono);
+            color: var(--green-deep);
+            font-size: 1.05rem;
+        }
+
+        .result-bar .tip {
+            font-size: .78rem;
+            color: #a8a496;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 14px;
+        }
+
+        .qr-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px 12px 10px;
+            cursor: zoom-in;
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+            animation: pop .35s ease backwards;
+        }
+
+        .qr-card:hover {
+            transform: translateY(-3px);
+            border-color: #c9d8cd;
+            box-shadow: 0 12px 24px -14px rgba(31, 91, 61, .45);
+        }
+
+        .qr-card svg {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .qr-card .num {
+            display: block;
+            text-align: center;
+            font-family: var(--mono);
+            font-size: .95rem;
+            letter-spacing: .1em;
+            color: var(--ink-soft);
+            padding: 8px 0 2px;
+        }
+
+        @keyframes pop {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(.96);
+            }
+        }
+
+        /* ---------- 放大视图 ---------- */
+        #lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(24, 32, 27, .92);
+            backdrop-filter: blur(4px);
+            display: none;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        #lightbox.show {
+            display: flex;
+        }
+
+        .lb-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 22px;
+            color: #dfe7e0;
+        }
+
+        .lb-top .lb-caption {
+            font-family: var(--mono);
+            font-size: 1rem;
+            letter-spacing: .08em;
+        }
+
+        .lb-top .lb-caption .pos {
+            color: #8aa294;
+            font-size: .85rem;
+            margin-left: 10px;
+        }
+
+        .lb-close {
+            background: none;
+            border: 1px solid #4a5a4f;
+            color: #dfe7e0;
+            border-radius: 8px;
+            font-size: .9rem;
+            padding: 6px 14px;
+            cursor: pointer;
+            letter-spacing: .1em;
+            transition: background .2s;
+        }
+
+        .lb-close:hover {
+            background: rgba(255, 255, 255, .08);
+        }
+
+        .lb-stage {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            padding: 0 70px;
+        }
+
+        .lb-frame {
+            background: #fffdf7;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .7);
+            transition: transform .22s ease, opacity .22s ease;
+            touch-action: pan-y;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .lb-frame svg {
+            display: block;
+            width: min(58vmin, 420px);
+            height: min(58vmin, 420px);
+        }
+
+        .lb-frame.sliding-left {
+            transform: translateX(-30px);
+            opacity: .25;
+        }
+
+        .lb-frame.sliding-right {
+            transform: translateX(30px);
+            opacity: .25;
+        }
+
+        .lb-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 1px solid #4a5a4f;
+            background: rgba(255, 255, 255, .05);
+            color: #dfe7e0;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: background .2s, opacity .2s;
+        }
+
+        .lb-arrow:hover:not(:disabled) {
+            background: rgba(255, 255, 255, .14);
+        }
+
+        .lb-arrow:disabled {
+            opacity: .3;
+            cursor: default;
+        }
+
+        .lb-prev {
+            left: 14px;
+        }
+
+        .lb-next {
+            right: 14px;
+        }
+
+        .lb-bottom {
+            text-align: center;
+            color: #7e917f;
+            font-size: .75rem;
+            letter-spacing: .15em;
+            padding: 14px 0 20px;
+        }
+
+        /* ---------- 空状态 ---------- */
+        #empty {
+            text-align: center;
+            color: #a8a496;
+            padding: 70px 0 30px;
+            font-size: .95rem;
+            letter-spacing: .1em;
+        }
+
+        #empty svg {
+            display: block;
+            margin: 0 auto 16px;
+            opacity: .5;
+        }
+
+        /* ---------- 移动端 ---------- */
+        @media (max-width: 560px) {
+            body {
+                padding: 20px 12px 48px;
+            }
+
+            header h1 {
+                font-size: 1.4rem;
+            }
+
+            .panel {
+                padding: 16px;
+            }
+
+            #grid {
+                grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+                gap: 10px;
+            }
+
+            .lb-stage {
+                padding: 0 12px;
+            }
+
+            .lb-arrow {
+                width: 38px;
+                height: 38px;
+            }
+
+            .lb-prev {
+                left: 6px;
+            }
+
+            .lb-next {
+                right: 6px;
+            }
+
+            .lb-frame {
+                padding: 14px;
+            }
+
+            .lb-frame svg {
+                width: min(72vmin, 340px);
+                height: min(72vmin, 340px);
+            }
+
+            .lb-bottom {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <h1>批量二维码<span class="dot">.</span></h1>
+            <p>输入数字区间，一次生成一组二维码 · 点击放大 · 左右滑动切换</p>
+        </header>
+
+        <section class="panel">
+            <div class="label">数字区间</div>
+            <div class="input-row">
+                <input id="rangeInput" type="text" placeholder="例如：010~020" autocomplete="off"
+                    spellcheck="false">
+                <button class="gen-btn" id="genBtn">生 成</button>
+            </div>
+            <div class="hint" id="hint">支持 ~ ～ - — 等分隔符，前导零位数将自动保留</div>
+        </section>
+
+        <div class="result-bar" id="resultBar">
+            <span class="count">共生成 <b id="countNum">0</b> 个二维码</span>
+            <span class="tip">点击任意二维码可放大查看</span>
+        </div>
+
+        <div id="empty">
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#2e7d54" stroke-width="1.4">
+                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                <path d="M14 14h3v3h-3zM20 14v3M17 20h4M20 17v4" stroke-linecap="round"></path>
+            </svg>
+            从区间开始，生成你的第一组二维码
+        </div>
+
+        <div id="grid"></div>
+    </div>
+
+    <!-- 放大视图 -->
+    <div id="lightbox">
+        <div class="lb-top">
+            <span class="lb-caption"><span id="lbNum">010</span><span class="pos"
+                    id="lbPos">1 / 11</span></span>
+            <button class="lb-close" id="lbClose">关闭 ESC</button>
+        </div>
+        <div class="lb-stage" id="lbStage">
+            <button class="lb-arrow lb-prev" id="lbPrev">&#10094;</button>
+            <div class="lb-frame" id="lbFrame"></div>
+            <button class="lb-arrow lb-next" id="lbNext">&#10095;</button>
+        </div>
+        <div class="lb-bottom">左右滑动 / 方向键切换二维码</div>
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            var MAX_COUNT = 500;
+            var current = [];   // 编号字符串数组
+            var index = 0;      // 放大视图当前序号
+
+            var $ = function (id) { return document.getElementById(id); };
+            var input = $('rangeInput'), hint = $('hint'), grid = $('grid'),
+                empty = $('empty'), resultBar = $('resultBar'), countNum = $('countNum'),
+                lightbox = $('lightbox'), lbFrame = $('lbFrame'), lbNum = $('lbNum'),
+                lbPos = $('lbPos'), lbPrev = $('lbPrev'), lbNext = $('lbNext'),
+                lbStage = $('lbStage');
+
+            /* ---------- 区间解析 ---------- */
+            function parseRange(text) {
+                var parts = text.trim().split(/[~～\-—–]+/);
+                if (parts.length !== 2) return { err: '请用分隔符输入区间，例如 010~020' };
+                var startStr = parts[0].trim(), endStr = parts[1].trim();
+                if (!/^\d+$/.test(startStr) || !/^\d+$/.test(endStr)) {
+                    return { err: '区间两端必须是纯数字，不含其他字符' };
+                }
+                var start = parseInt(startStr, 10), end = parseInt(endStr, 10);
+                if (start > end) return { err: '起始数字不能大于终止数字' };
+                var count = end - start + 1;
+                if (count > MAX_COUNT) {
+                    return { err: '一次最多生成 ' + MAX_COUNT + ' 个（当前区间共 ' + count + ' 个）' };
+                }
+                var width = startStr.length;
+                var list = [];
+                for (var n = start; n <= end; n++) {
+                    list.push(String(n).padStart(width, '0'));
+                }
+                return { list: list };
+            }
+
+            /* ---------- 生成二维码 SVG ---------- */
+            function qrSvg(text, px) {
+                var q = qrcode(0, 'M');
+                q.addData(text);
+                q.make();
+                return q.createSvgTag({ cellSize: 4, margin: 2, width: px, scalable: true });
+            }
+
+            /* ---------- 渲染网格 ---------- */
+            function render(list) {
+                current = list;
+                grid.innerHTML = '';
+                var frag = document.createDocumentFragment();
+                list.forEach(function (num, i) {
+                    var card = document.createElement('div');
+                    card.className = 'qr-card';
+                    card.style.animationDelay = Math.min(i * 30, 600) + 'ms';
+                    card.innerHTML = qrSvg(num, 200) + '<span class="num">' + num + '</span>';
+                    card.addEventListener('click', function () { openLb(i); });
+                    frag.appendChild(card);
+                });
+                grid.appendChild(frag);
+                empty.style.display = 'none';
+                resultBar.classList.add('show');
+                countNum.textContent = list.length;
+            }
+
+            function generate() {
+                var r = parseRange(input.value);
+                if (r.err) {
+                    hint.textContent = r.err;
+                    hint.classList.add('error');
+                    return;
+                }
+                hint.classList.remove('error');
+                hint.textContent = '已生成 ' + r.list.length + ' 个二维码（' +
+                    r.list[0] + ' → ' + r.list[r.list.length - 1] + '）';
+                render(r.list);
+            }
+
+            $('genBtn').addEventListener('click', generate);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') generate();
+            });
+
+            /* ---------- 放大视图 ---------- */
+            function openLb(i) {
+                index = i;
+                paintLb();
+                lightbox.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeLb() {
+                lightbox.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+
+            function paintLb() {
+                lbFrame.innerHTML = qrSvg(current[index], 420);
+                lbNum.textContent = current[index];
+                lbPos.textContent = (index + 1) + ' / ' + current.length;
+                lbPrev.disabled = index === 0;
+                lbNext.disabled = index === current.length - 1;
+            }
+
+            function step(dir) {
+                var next = index + dir;
+                if (next < 0 || next >= current.length) return;
+                lbFrame.classList.add(dir > 0 ? 'sliding-left' : 'sliding-right');
+                setTimeout(function () {
+                    index = next;
+                    paintLb();
+                    lbFrame.classList.remove('sliding-left', 'sliding-right');
+                    lbFrame.classList.add(dir > 0 ? 'sliding-right' : 'sliding-left');
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(function () {
+                            lbFrame.classList.remove('sliding-left', 'sliding-right');
+                        });
+                    });
+                }, 180);
+            }
+
+            lbPrev.addEventListener('click', function () { step(-1); });
+            lbNext.addEventListener('click', function () { step(1); });
+            $('lbClose').addEventListener('click', closeLb);
+            lightbox.addEventListener('click', function (e) {
+                if (e.target === lightbox || e.target === lbStage) closeLb();
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (!lightbox.classList.contains('show')) return;
+                if (e.key === 'Escape') closeLb();
+                else if (e.key === 'ArrowLeft') step(-1);
+                else if (e.key === 'ArrowRight') step(1);
+            });
+
+            /* ---------- 触摸滑动 ---------- */
+            var touchX = null, moved = 0;
+            lbStage.addEventListener('touchstart', function (e) {
+                touchX = e.touches[0].clientX;
+                moved = 0;
+                lbFrame.style.transition = 'none';
+            }, { passive: true });
+
+            lbStage.addEventListener('touchmove', function (e) {
+                if (touchX === null) return;
+                moved = e.touches[0].clientX - touchX;
+                lbFrame.style.transform = 'translateX(' + (moved * 0.6) + 'px)';
+            }, { passive: true });
+
+            lbStage.addEventListener('touchend', function () {
+                if (touchX === null) return;
+                lbFrame.style.transition = '';
+                lbFrame.style.transform = '';
+                if (moved < -40) step(1);
+                else if (moved > 40) step(-1);
+                touchX = null;
+            });
+        })();
+    </script>
+</body>
+
+</html>
