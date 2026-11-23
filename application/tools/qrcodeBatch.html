@@ -58,7 +58,7 @@
         }
 
         header h1 {
-            font-size: 1.35rem;
+            font-size: 1.6rem;
             font-weight: 700;
             letter-spacing: .04em;
         }
@@ -69,7 +69,7 @@
 
         header p {
             color: var(--ink-soft);
-            font-size: .9rem;
+            font-size: 1rem;
             letter-spacing: .06em;
         }
 
@@ -83,41 +83,40 @@
         }
 
         .panel .label {
-            font-size: .82rem;
+            font-size: .95rem;
             color: var(--ink-soft);
             letter-spacing: .12em;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
 
         .input-row {
             display: flex;
-            align-items: flex-end;
-            gap: 10px;
+            flex-direction: column;
+            gap: 16px;
         }
 
         .field-box {
-            flex: 1;
-            min-width: 0;
+            width: 100%;
         }
 
         .field-label {
             display: block;
-            font-size: .78rem;
+            font-size: .95rem;
             letter-spacing: .1em;
             color: var(--ink-soft);
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .num-field {
             width: 100%;
             font-family: var(--mono);
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             letter-spacing: .05em;
             color: var(--ink);
             background: transparent;
             border: none;
             border-bottom: 2px solid var(--line);
-            padding: 8px 4px;
+            padding: 10px 4px;
             outline: none;
             transition: border-color .2s;
         }
@@ -130,23 +129,17 @@
             color: #c9c5b8;
         }
 
-        .row-sep {
-            color: var(--ink-soft);
-            font-size: 1.2rem;
-            padding-bottom: 10px;
-        }
-
         .gen-btn {
             width: 100%;
-            margin-top: 14px;
+            margin-top: 18px;
             font-family: var(--serif);
-            font-size: 1rem;
+            font-size: 1.2rem;
             letter-spacing: .18em;
             color: #fff;
             background: var(--green);
             border: none;
             border-radius: 10px;
-            padding: 13px 0;
+            padding: 15px 0;
             cursor: pointer;
             transition: background .2s, transform .1s;
         }
@@ -161,13 +154,86 @@
 
         .hint {
             margin-top: 12px;
-            font-size: .8rem;
+            font-size: .95rem;
             color: var(--ink-soft);
             min-height: 1.2em;
         }
 
         .hint.error {
             color: #c0503f;
+        }
+
+        /* ---------- 历史记录 ---------- */
+        .history {
+            margin-top: 14px;
+        }
+
+        .history-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .history-head .label {
+            margin-bottom: 0;
+        }
+
+        #clearHistory {
+            font-family: var(--serif);
+            font-size: .92rem;
+            letter-spacing: .1em;
+            color: var(--green-deep);
+            background: none;
+            border: 1px solid #c4d6ca;
+            border-radius: 8px;
+            padding: 5px 12px;
+            cursor: pointer;
+            transition: background .2s;
+        }
+
+        #clearHistory:hover {
+            background: var(--green-mist);
+        }
+
+        .history-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .history-chip {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 3px;
+            background: var(--green-mist);
+            border: 1px solid #c4d6ca;
+            border-radius: 10px;
+            padding: 9px 14px;
+            cursor: pointer;
+            transition: transform .12s ease, box-shadow .12s ease;
+        }
+
+        .history-chip:active {
+            transform: scale(.96);
+        }
+
+        .history-chip:hover {
+            box-shadow: 0 6px 14px -8px rgba(31, 91, 61, .5);
+        }
+
+        .history-chip .hc-range {
+            font-family: var(--mono);
+            font-size: 1.05rem;
+            letter-spacing: .05em;
+            color: var(--green-deep);
+        }
+
+        .history-chip .hc-time {
+            font-size: .8rem;
+            color: var(--ink-soft);
+            letter-spacing: .04em;
         }
 
         /* ---------- 结果区 ---------- */
@@ -183,7 +249,7 @@
         }
 
         .result-bar .count {
-            font-size: .92rem;
+            font-size: 1.05rem;
             letter-spacing: .06em;
             color: var(--ink-soft);
         }
@@ -191,11 +257,11 @@
         .result-bar .count b {
             font-family: var(--mono);
             color: var(--green-deep);
-            font-size: 1.05rem;
+            font-size: 1.2rem;
         }
 
         .result-bar .tip {
-            font-size: .78rem;
+            font-size: .88rem;
             color: #a8a496;
         }
 
@@ -231,7 +297,7 @@
             display: block;
             text-align: center;
             font-family: var(--mono);
-            font-size: .95rem;
+            font-size: 1.05rem;
             letter-spacing: .1em;
             color: var(--ink-soft);
             padding: 8px 0 2px;
@@ -272,13 +338,13 @@
 
         .lb-top .lb-caption {
             font-family: var(--mono);
-            font-size: 1rem;
+            font-size: 1.15rem;
             letter-spacing: .08em;
         }
 
         .lb-top .lb-caption .pos {
             color: #8aa294;
-            font-size: .85rem;
+            font-size: .95rem;
             margin-left: 10px;
         }
 
@@ -287,8 +353,8 @@
             border: 1px solid #4a5a4f;
             color: #dfe7e0;
             border-radius: 8px;
-            font-size: .9rem;
-            padding: 6px 14px;
+            font-size: 1rem;
+            padding: 7px 14px;
             cursor: pointer;
             letter-spacing: .1em;
             transition: background .2s;
@@ -385,7 +451,7 @@
             text-align: center;
             color: #a8a496;
             padding: 70px 0 30px;
-            font-size: .95rem;
+            font-size: 1.05rem;
             letter-spacing: .1em;
         }
 
@@ -413,7 +479,6 @@
                     <input id="startInput" class="num-field" type="text" inputmode="numeric"
                         autocomplete="off" placeholder="010">
                 </div>
-                <span class="row-sep">~</span>
                 <div class="field-box">
                     <label class="field-label" for="endInput">结束数字</label>
                     <input id="endInput" class="num-field" type="text" inputmode="numeric"
@@ -422,6 +487,14 @@
             </div>
             <button class="gen-btn" id="genBtn">生 成</button>
             <div class="hint" id="hint">前导零位数按起始数字保留，例如起始 010、结束 020</div>
+        </section>
+
+        <section class="panel history" id="historyPanel" style="display:none">
+            <div class="history-head">
+                <span class="label">历史记录</span>
+                <button id="clearHistory">一键清理</button>
+            </div>
+            <div class="history-list" id="historyList"></div>
         </section>
 
         <div class="result-bar" id="resultBar">
@@ -462,6 +535,8 @@
             'use strict';
 
             var MAX_COUNT = 500;
+            var MAX_HISTORY = 10;
+            var HISTORY_KEY = 'qrcode-batch-history';
             var current = [];   // 编号字符串数组
             var index = 0;      // 放大视图当前序号
 
@@ -470,7 +545,8 @@
                 empty = $('empty'), resultBar = $('resultBar'), countNum = $('countNum'),
                 lightbox = $('lightbox'), lbFrame = $('lbFrame'), lbNum = $('lbNum'),
                 lbPos = $('lbPos'), lbPrev = $('lbPrev'), lbNext = $('lbNext'),
-                lbStage = $('lbStage');
+                lbStage = $('lbStage'), historyPanel = $('historyPanel'),
+                historyList = $('historyList');
 
             /* ---------- 区间解析 ---------- */
             function parseInputs() {
@@ -501,6 +577,59 @@
                 return q.createSvgTag({ cellSize: 4, margin: 2, width: px, scalable: true });
             }
 
+            /* ---------- 历史记录 ---------- */
+            function loadHistory() {
+                try {
+                    var list = JSON.parse(localStorage.getItem(HISTORY_KEY));
+                    return Array.isArray(list) ? list : [];
+                } catch (e) { return []; }
+            }
+
+            function saveHistory(list) {
+                try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) { }
+            }
+
+            function addHistory(startStr, endStr, cnt) {
+                var list = loadHistory().filter(function (it) {
+                    return !(it.s === startStr && it.e === endStr);
+                });
+                list.unshift({ s: startStr, e: endStr, c: cnt, t: Date.now() });
+                if (list.length > MAX_HISTORY) list = list.slice(0, MAX_HISTORY);
+                saveHistory(list);
+                renderHistory();
+            }
+
+            function fmtTime(ts) {
+                var d = new Date(ts);
+                var p = function (n) { return String(n).padStart(2, '0'); };
+                return (d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+            }
+
+            function renderHistory() {
+                var list = loadHistory();
+                historyPanel.style.display = list.length ? '' : 'none';
+                historyList.innerHTML = '';
+                list.forEach(function (it) {
+                    var chip = document.createElement('button');
+                    chip.className = 'history-chip';
+                    chip.innerHTML = '<span class="hc-range">' + it.s + '~' + it.e + ' · ' + it.c + '个</span>' +
+                        '<span class="hc-time">' + fmtTime(it.t) + '</span>';
+                    chip.addEventListener('click', function () {
+                        startInput.value = it.s;
+                        endInput.value = it.e;
+                        generate();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
+                    historyList.appendChild(chip);
+                });
+            }
+
+            $('clearHistory').addEventListener('click', function () {
+                if (!confirm('确定清空全部历史记录？')) return;
+                localStorage.removeItem(HISTORY_KEY);
+                renderHistory();
+            });
+
             /* ---------- 渲染网格 ---------- */
             function render(list) {
                 current = list;
@@ -530,6 +659,7 @@
                 hint.classList.remove('error');
                 hint.textContent = '已生成 ' + r.list.length + ' 个二维码（' +
                     r.list[0] + ' → ' + r.list[r.list.length - 1] + '）';
+                addHistory(startInput.value.trim(), endInput.value.trim(), r.list.length);
                 render(r.list);
             }
 
@@ -539,6 +669,7 @@
                     if (e.key === 'Enter') generate();
                 });
             });
+            renderHistory();
 
             /* ---------- 放大视图 ---------- */
             function openLb(i) {
