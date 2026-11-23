@@ -39,7 +39,8 @@
             background-image: radial-gradient(rgba(46, 125, 84, .10) 1px, transparent 1px);
             background-size: 22px 22px;
             min-height: 100vh;
-            padding: 32px 20px 64px;
+            min-height: 100dvh;
+            padding: 20px 14px 48px;
         }
 
         .wrap {
@@ -53,11 +54,11 @@
             align-items: baseline;
             gap: 14px;
             flex-wrap: wrap;
-            margin-bottom: 26px;
+            margin-bottom: 20px;
         }
 
         header h1 {
-            font-size: 1.7rem;
+            font-size: 1.35rem;
             font-weight: 700;
             letter-spacing: .04em;
         }
@@ -77,7 +78,7 @@
             background: var(--card);
             border: 1px solid var(--line);
             border-radius: 14px;
-            padding: 22px 24px;
+            padding: 16px;
             box-shadow: 0 1px 0 rgba(34, 50, 42, .05), 0 10px 30px -18px rgba(34, 50, 42, .25);
         }
 
@@ -90,35 +91,54 @@
 
         .input-row {
             display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 10px;
         }
 
-        #rangeInput {
+        .field-box {
             flex: 1;
-            min-width: 220px;
+            min-width: 0;
+        }
+
+        .field-label {
+            display: block;
+            font-size: .78rem;
+            letter-spacing: .1em;
+            color: var(--ink-soft);
+            margin-bottom: 4px;
+        }
+
+        .num-field {
+            width: 100%;
             font-family: var(--mono);
-            font-size: 1.15rem;
+            font-size: 1.25rem;
             letter-spacing: .05em;
             color: var(--ink);
             background: transparent;
             border: none;
             border-bottom: 2px solid var(--line);
-            padding: 10px 4px;
+            padding: 8px 4px;
             outline: none;
             transition: border-color .2s;
         }
 
-        #rangeInput:focus {
+        .num-field:focus {
             border-bottom-color: var(--green);
         }
 
-        #rangeInput::placeholder {
-            color: #b6b2a4;
-            letter-spacing: .02em;
+        .num-field::placeholder {
+            color: #c9c5b8;
+        }
+
+        .row-sep {
+            color: var(--ink-soft);
+            font-size: 1.2rem;
+            padding-bottom: 10px;
         }
 
         .gen-btn {
+            width: 100%;
+            margin-top: 14px;
             font-family: var(--serif);
             font-size: 1rem;
             letter-spacing: .18em;
@@ -126,7 +146,7 @@
             background: var(--green);
             border: none;
             border-radius: 10px;
-            padding: 12px 34px;
+            padding: 13px 0;
             cursor: pointer;
             transition: background .2s, transform .1s;
         }
@@ -181,8 +201,8 @@
 
         #grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 14px;
+            grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+            gap: 10px;
         }
 
         .qr-card {
@@ -228,6 +248,9 @@
         #lightbox {
             position: fixed;
             inset: 0;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
             background: rgba(24, 32, 27, .92);
             backdrop-filter: blur(4px);
             display: none;
@@ -243,7 +266,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 18px 22px;
+            padding: 12px 14px;
             color: #dfe7e0;
         }
 
@@ -277,18 +300,21 @@
 
         .lb-stage {
             flex: 1;
+            min-height: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             overflow: hidden;
-            padding: 0 70px;
+            padding: 0 10px;
         }
 
         .lb-frame {
             background: #fffdf7;
             border-radius: 16px;
-            padding: 20px;
+            padding: 12px;
+            max-width: 100%;
+            max-height: 100%;
             box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .7);
             transition: transform .22s ease, opacity .22s ease;
             touch-action: pan-y;
@@ -298,8 +324,10 @@
 
         .lb-frame svg {
             display: block;
-            width: min(58vmin, 420px);
-            height: min(58vmin, 420px);
+            width: min(68vw, 42vh);
+            width: min(68vw, 42dvh);
+            height: min(68vw, 42vh);
+            height: min(68vw, 42dvh);
         }
 
         .lb-frame.sliding-left {
@@ -316,13 +344,13 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            width: 46px;
-            height: 46px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             border: 1px solid #4a5a4f;
-            background: rgba(255, 255, 255, .05);
+            background: rgba(24, 32, 27, .55);
             color: #dfe7e0;
-            font-size: 1.3rem;
+            font-size: 1.05rem;
             cursor: pointer;
             transition: background .2s, opacity .2s;
         }
@@ -337,19 +365,19 @@
         }
 
         .lb-prev {
-            left: 14px;
+            left: 6px;
         }
 
         .lb-next {
-            right: 14px;
+            right: 6px;
         }
 
         .lb-bottom {
             text-align: center;
             color: #7e917f;
-            font-size: .75rem;
+            font-size: .7rem;
             letter-spacing: .15em;
-            padding: 14px 0 20px;
+            padding: 8px 0 12px;
         }
 
         /* ---------- 空状态 ---------- */
@@ -367,55 +395,6 @@
             opacity: .5;
         }
 
-        /* ---------- 移动端 ---------- */
-        @media (max-width: 560px) {
-            body {
-                padding: 20px 12px 48px;
-            }
-
-            header h1 {
-                font-size: 1.4rem;
-            }
-
-            .panel {
-                padding: 16px;
-            }
-
-            #grid {
-                grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-                gap: 10px;
-            }
-
-            .lb-stage {
-                padding: 0 12px;
-            }
-
-            .lb-arrow {
-                width: 38px;
-                height: 38px;
-            }
-
-            .lb-prev {
-                left: 6px;
-            }
-
-            .lb-next {
-                right: 6px;
-            }
-
-            .lb-frame {
-                padding: 14px;
-            }
-
-            .lb-frame svg {
-                width: min(72vmin, 340px);
-                height: min(72vmin, 340px);
-            }
-
-            .lb-bottom {
-                display: none;
-            }
-        }
     </style>
 </head>
 
@@ -423,17 +402,26 @@
     <div class="wrap">
         <header>
             <h1>批量二维码<span class="dot">.</span></h1>
-            <p>输入数字区间，一次生成一组二维码 · 点击放大 · 左右滑动切换</p>
+            <p>输入起止数字，一次生成一组二维码 · 点击放大 · 左右滑动切换</p>
         </header>
 
         <section class="panel">
             <div class="label">数字区间</div>
             <div class="input-row">
-                <input id="rangeInput" type="text" placeholder="例如：010~020" autocomplete="off"
-                    spellcheck="false">
-                <button class="gen-btn" id="genBtn">生 成</button>
+                <div class="field-box">
+                    <label class="field-label" for="startInput">起始数字</label>
+                    <input id="startInput" class="num-field" type="text" inputmode="numeric"
+                        autocomplete="off" placeholder="010">
+                </div>
+                <span class="row-sep">~</span>
+                <div class="field-box">
+                    <label class="field-label" for="endInput">结束数字</label>
+                    <input id="endInput" class="num-field" type="text" inputmode="numeric"
+                        autocomplete="off" placeholder="020">
+                </div>
             </div>
-            <div class="hint" id="hint">支持 ~ ～ - — 等分隔符，前导零位数将自动保留</div>
+            <button class="gen-btn" id="genBtn">生 成</button>
+            <div class="hint" id="hint">前导零位数按起始数字保留，例如起始 010、结束 020</div>
         </section>
 
         <div class="result-bar" id="resultBar">
@@ -478,22 +466,21 @@
             var index = 0;      // 放大视图当前序号
 
             var $ = function (id) { return document.getElementById(id); };
-            var input = $('rangeInput'), hint = $('hint'), grid = $('grid'),
+            var startInput = $('startInput'), endInput = $('endInput'), hint = $('hint'), grid = $('grid'),
                 empty = $('empty'), resultBar = $('resultBar'), countNum = $('countNum'),
                 lightbox = $('lightbox'), lbFrame = $('lbFrame'), lbNum = $('lbNum'),
                 lbPos = $('lbPos'), lbPrev = $('lbPrev'), lbNext = $('lbNext'),
                 lbStage = $('lbStage');
 
             /* ---------- 区间解析 ---------- */
-            function parseRange(text) {
-                var parts = text.trim().split(/[~～\-—–]+/);
-                if (parts.length !== 2) return { err: '请用分隔符输入区间，例如 010~020' };
-                var startStr = parts[0].trim(), endStr = parts[1].trim();
+            function parseInputs() {
+                var startStr = startInput.value.trim(), endStr = endInput.value.trim();
+                if (!startStr || !endStr) return { err: '请填写起始数字和结束数字' };
                 if (!/^\d+$/.test(startStr) || !/^\d+$/.test(endStr)) {
-                    return { err: '区间两端必须是纯数字，不含其他字符' };
+                    return { err: '起止两端必须是纯数字，不含其他字符' };
                 }
                 var start = parseInt(startStr, 10), end = parseInt(endStr, 10);
-                if (start > end) return { err: '起始数字不能大于终止数字' };
+                if (start > end) return { err: '起始数字不能大于结束数字' };
                 var count = end - start + 1;
                 if (count > MAX_COUNT) {
                     return { err: '一次最多生成 ' + MAX_COUNT + ' 个（当前区间共 ' + count + ' 个）' };
@@ -534,7 +521,7 @@
             }
 
             function generate() {
-                var r = parseRange(input.value);
+                var r = parseInputs();
                 if (r.err) {
                     hint.textContent = r.err;
                     hint.classList.add('error');
@@ -547,8 +534,10 @@
             }
 
             $('genBtn').addEventListener('click', generate);
-            input.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') generate();
+            [startInput, endInput].forEach(function (el) {
+                el.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') generate();
+                });
             });
 
             /* ---------- 放大视图 ---------- */
